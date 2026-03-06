@@ -1,0 +1,33 @@
+{
+  "name": "medical-learning-portal",
+  "version": "1.0.0",
+  "description": "Production-ready Medical Learning Portal Monorepo",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm run --parallel dev",
+    "dev:web": "pnpm --filter web-client dev",
+    "dev:admin": "pnpm --filter web-admin dev",
+    "dev:api": "pnpm --filter service-api dev",
+    "build": "pnpm run --parallel build",
+    "build:web": "pnpm --filter web-client build",
+    "build:admin": "pnpm --filter web-admin build",
+    "build:api": "pnpm --filter service-api build",
+    "lint": "pnpm run --parallel lint",
+    "test": "pnpm run --parallel test",
+    "clean": "pnpm run --parallel clean && rimraf node_modules",
+    "db:migrate": "pnpm --filter service-api db:migrate",
+    "db:seed": "pnpm --filter service-api db:seed"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^20.10.0",
+    "prettier": "^3.1.0",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.3.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}
