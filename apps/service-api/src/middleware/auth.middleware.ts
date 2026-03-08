@@ -268,7 +268,7 @@ export function adminOnlyMiddleware(
  */
 export async function optionalAuthMiddleware(
   req: AuthenticatedRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<void> {
   const authHeader = req.headers.authorization;

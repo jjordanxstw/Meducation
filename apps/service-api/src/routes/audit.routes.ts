@@ -54,7 +54,7 @@ auditRouter.get('/', authMiddleware, adminOnlyMiddleware, async (req: Authentica
  * GET /api/audit-logs/tables
  * Get list of tables with audit logs
  */
-auditRouter.get('/tables', authMiddleware, adminOnlyMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+auditRouter.get('/tables', authMiddleware, adminOnlyMiddleware, async (_req: AuthenticatedRequest, res: Response) => {
   res.json({
     success: true,
     data: [
