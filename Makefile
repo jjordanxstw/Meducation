@@ -1,59 +1,73 @@
 SHELL := /bin/sh
 
-.PHONY: help install service-api dev-service start-service typecheck-service dev-admin dev-client dev-all lint build
+.PHONY: help install dev-web dev-api dev-admin dev build-web build-api build-admin build lint test clean db-migrate db-seed
 
 ## Help
 help:
 	@echo "Usage: make <target>"
-	@echo "Targets:"
-	@echo "  install             Install workspace dependencies (pnpm install)"
-	@echo "  service-api         Run service-api in dev mode"
-	@echo "  dev-service         Alias for service-api"
-	@echo "  start-service       Run service-api start (production)"
-	@echo "  typecheck-service   Run TypeScript typecheck for service-api"
-	@echo "  dev-admin           Run web-admin in dev mode"
-	@echo "  dev-client          Run web-client in dev mode"
-	@echo "  dev-all             Start all three services (runs three terminals sequentially)"
+	@echo ""
+	@echo "Development:"
+	@echo "  dev:web             Run web-client in dev mode"
+	@echo "  dev:api             Run service-api in dev mode"
+	@echo "  dev:admin           Run web-admin in dev mode"
+	@echo "  dev                 Run all services in parallel"
+	@echo ""
+	@echo "Build:"
+	@echo "  build:web           Build web-client"
+	@echo "  build:api           Build service-api"
+	@echo "  build:admin         Build web-admin"
+	@echo "  build               Build all projects"
+	@echo ""
+	@echo "Other:"
+	@echo "  install             Install workspace dependencies"
+	@echo "  lint                Lint all projects"
+	@echo "  test                Test all projects"
+	@echo "  clean               Clean all build artifacts and node_modules"
+	@echo "  db:migrate          Run database migrations"
+	@echo "  db:seed             Seed the database"
 
-## Install dependencies for the whole monorepo
+## Install dependencies
 install:
 	pnpm install
 
-dev-service: service-api
+## Development
+dev-web:
+	pnpm run dev:web
 
-## service-api production start
-start-service:
-	pnpm --filter service-api run start
+dev-api:
+	pnpm run dev:api
 
-## service-api typecheck
-typecheck-service:
-	pnpm --filter service-api run typecheck
-
-## service-api dev
-service-api:
-	pnpm --filter service-api run dev
-
-## web-admin dev
 dev-admin:
-	pnpm --filter web-admin run dev
+	pnpm run dev:admin
 
-## web-client dev
-dev-client:
-	pnpm --filter web-client run dev
+dev:
+	pnpm run dev
 
-## Start all three (note: runs sequentially in same terminal). Use separate terminals for concurrency.
-dev-all:
-	@echo "Starting service-api..."
-	pnpm --filter service-api run dev
-	@echo "Starting web-admin... (open a new terminal if you want them concurrently)"
-	pnpm --filter web-admin run dev
-	@echo "Starting web-client... (open a new terminal if you want them concurrently)"
-	pnpm --filter web-client run dev
+## Build
+build-web:
+	pnpm run build:web
 
-## Lint (example for service-api)
-lint:
-	pnpm --filter service-api run lint
+build-api:
+	pnpm run build:api
 
-## Build all projects
+build-admin:
+	pnpm run build:admin
+
 build:
-	pnpm -w run build
+	pnpm run build
+
+## Other
+lint:
+	pnpm run lint
+
+test:
+	pnpm run test
+
+clean:
+	pnpm run clean
+
+db-migrate:
+	pnpm run db:migrate
+
+db-seed:
+	pnpm run db:seed
