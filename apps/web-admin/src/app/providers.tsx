@@ -16,6 +16,7 @@ import { RefineKbar, RefineKbarProvider } from '@refinedev/kbar';
 import {
   RefineThemes,
   ThemedLayout,
+  ThemedSider,
   useNotificationProvider,
 } from '@refinedev/antd';
 import routerBindings from '@refinedev/nextjs-router';
@@ -42,6 +43,43 @@ import {
 interface ProvidersProps {
   children: React.ReactNode;
 }
+
+const AdminSider: React.FC<{
+  Title?: React.FC<{ collapsed: boolean }>;
+  render?: (props: {
+    items: React.JSX.Element[];
+    logout: React.ReactNode;
+    collapsed: boolean;
+  }) => React.ReactNode;
+  meta?: Record<string, unknown>;
+}> = ({ render, ...props }) => {
+  return (
+    <ThemedSider
+      {...props}
+      render={({ items, logout, collapsed }) => {
+        const logoutWithClass = React.isValidElement(logout)
+          ? React.cloneElement(
+              logout as React.ReactElement<{ className?: string }>,
+              {
+                className: [
+                  (logout.props as { className?: string })?.className,
+                  'admin-sider-logout',
+                ]
+                  .filter(Boolean)
+                  .join(' '),
+              }
+            )
+          : logout;
+
+        if (render) {
+          return render({ items, logout: logoutWithClass, collapsed });
+        }
+
+        return [...items, logoutWithClass].filter(Boolean);
+      }}
+    />
+  );
+};
 
 export const Providers: React.FC<ProvidersProps> = ({ children }) => {
   const pathname = usePathname();
@@ -191,7 +229,7 @@ export const Providers: React.FC<ProvidersProps> = ({ children }) => {
                   key={`protected:${pathname}`}
                   redirectOnFail="/"
                 >
-                  <ThemedLayout>{children}</ThemedLayout>
+                  <ThemedLayout Sider={AdminSider}>{children}</ThemedLayout>
                 </Authenticated>
               )}
 

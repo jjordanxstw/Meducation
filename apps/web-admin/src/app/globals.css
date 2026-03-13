@@ -58,3 +58,13 @@ h1, h2, h3, h4, h5, h6 {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Keep the logout action pinned to the bottom of Refine sidebar */
+.ant-layout-sider .ant-layout-sider-children > .ant-menu {
+  display: flex;
+  flex-direction: column;
+}
+
+.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout {
+  margin-top: auto;
+}

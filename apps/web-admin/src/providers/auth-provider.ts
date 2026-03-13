@@ -15,14 +15,38 @@ import axios, { AxiosError } from 'axios';
 import { removeAuthCookie, sanitizeErrorMessage } from '@/lib/security';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+const AUTH_REQUEST_TIMEOUT_MS = 5000;
 
 // Create axios instance with credentials enabled
 const authAxios = axios.create({
   withCredentials: true, // Send httpOnly cookies
+  timeout: AUTH_REQUEST_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+const authRequestConfig = {
+  withCredentials: true,
+  timeout: AUTH_REQUEST_TIMEOUT_MS,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+};
+
+type AdminMeResponse = {
+  id: string;
+  full_name: string;
+  email: string;
+  username: string;
+  is_super_admin: boolean;
+  is_active: boolean;
+};
+
+async function fetchCurrentAdmin(): Promise<AdminMeResponse> {
+  const response = await axios.get<AdminMeResponse>(`${API_URL}/admin/auth/me`, authRequestConfig);
+  return response.data;
+}
 
 // Response interceptor - handle authentication failures
 authAxios.interceptors.response.use(
@@ -104,10 +128,7 @@ export const authProvider: AuthProvider = {
         username: sanitizedUsername,
         password,
       }, {
-        withCredentials: true, // Receive httpOnly cookie
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        ...authRequestConfig,
       });
 
       // Validate response structure
@@ -196,10 +217,7 @@ export const authProvider: AuthProvider = {
     // Call logout endpoint (backend clears httpOnly cookie)
     try {
       await axios.post(`${API_URL}/admin/auth/logout`, {}, {
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        ...authRequestConfig,
       });
       logSecurityEvent('logout_success');
     } catch (error) {
@@ -230,14 +248,9 @@ export const authProvider: AuthProvider = {
     // Verify authentication with server because access token cookie is httpOnly
     // and cannot be read via document.cookie in the browser.
     try {
-      const response = await axios.get(`${API_URL}/admin/auth/me`, {
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const me = await fetchCurrentAdmin();
 
-      if (response.data?.is_active === false) {
+      if (me.is_active === false) {
         removeAuthCookie();
         return { authenticated: false, redirectTo: '/' };
       }
@@ -253,14 +266,9 @@ export const authProvider: AuthProvider = {
 
   getPermissions: async () => {
     try {
-      const response = await axios.get(`${API_URL}/admin/auth/me`, {
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const me = await fetchCurrentAdmin();
 
-      return response.data?.is_super_admin ? 'super-admin' : 'admin';
+      return me.is_super_admin ? 'super-admin' : 'admin';
     } catch (error) {
       logSecurityEvent('get_permissions_failed', { error: sanitizeErrorMessage(error) });
       return null;
@@ -269,21 +277,16 @@ export const authProvider: AuthProvider = {
 
   getIdentity: async () => {
     try {
-      const response = await axios.get(`${API_URL}/admin/auth/me`, {
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const me = await fetchCurrentAdmin();
 
-      if (response.data) {
+      if (me) {
         return {
-          id: response.data.id,
-          name: response.data.full_name,
-          email: response.data.email,
-          username: response.data.username,
-          isSuperAdmin: response.data.is_super_admin,
-          isActive: response.data.is_active,
+          id: me.id,
+          name: me.full_name,
+          email: me.email,
+          username: me.username,
+          isSuperAdmin: me.is_super_admin,
+          isActive: me.is_active,
         };
       }
     } catch (error) {
