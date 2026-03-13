@@ -44,15 +44,11 @@ CREATE TABLE IF NOT EXISTS profiles (
     email TEXT NOT NULL UNIQUE,
     full_name TEXT NOT NULL,
     role user_role NOT NULL DEFAULT 'student',
-    year_level INTEGER CHECK (year_level BETWEEN 1 AND 6),
+    year_level INTEGER,
     avatar_url TEXT,
     student_id TEXT UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT valid_mahidol_email CHECK (
-        email ~ '^[a-zA-Z0-9._%+-]+@student\.mahidol\.(ac\.th|edu)$'
-        OR role = 'admin'
-    )
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles(email);
@@ -67,7 +63,7 @@ CREATE TABLE IF NOT EXISTS subjects (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     code TEXT NOT NULL UNIQUE,
-    year_level INTEGER NOT NULL CHECK (year_level BETWEEN 1 AND 6),
+    year_level INTEGER NOT NULL,
     description TEXT,
     thumbnail_url TEXT,
     order_index INTEGER NOT NULL DEFAULT 0,
@@ -158,8 +154,7 @@ CREATE TABLE IF NOT EXISTS calendar_events (
     color TEXT,
     created_by TEXT REFERENCES profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT valid_event_time CHECK (end_time >= start_time)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_calendar_start ON calendar_events(start_time);

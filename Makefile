@@ -29,8 +29,7 @@ help:
 	@echo "  db-status           Show migration status"
 	@echo ""
 	@echo "Admin:"
-	@echo "  create-admin        Create admin user with hashed password"
-	@echo "                      (USERNAME PASSWORD [FULL_NAME] [EMAIL])"
+	@echo "  create-admin        Create admin user (interactive)"
 	@echo ""
 	@echo "Other:"
 	@echo "  install             Install workspace dependencies"
@@ -107,17 +106,4 @@ db-status:
 
 ## Admin
 create-admin:
-ifndef USERNAME
-	@echo "Error: USERNAME is required"
-	@echo "Usage: make create-admin USERNAME PASSWORD [FULL_NAME] [EMAIL]"
-	@echo "Example: make create-admin USERNAME=admin PASSWORD=secret123 FULL_NAME='Admin User' EMAIL='admin@example.com'"
-	@exit 1
-endif
-ifndef PASSWORD
-	@echo "Error: PASSWORD is required"
-	@echo "Usage: make create-admin USERNAME PASSWORD [FULL_NAME] [EMAIL]"
-	@echo "Example: make create-admin USERNAME=admin PASSWORD=secret123 FULL_NAME='Admin User' EMAIL='admin@example.com'"
-	@exit 1
-endif
-	@echo "> Creating admin user: $(USERNAME)..."
-	@pnpm run admin:create "$(USERNAME)" "$(PASSWORD)" "$(FULL_NAME)" "$(EMAIL)"
+	pnpm run admin:create
