@@ -24,6 +24,7 @@
     "@nestjs/jwt": "^10",
     "@nestjs/passport": "^10",
     "@nestjs/platform-express": "^11.1.16",
+    "@nestjs/swagger": "^11.2.6",
     "@supabase/supabase-js": "^2.39.0",
     "class-transformer": "^0.5",
     "class-validator": "^0.14",
