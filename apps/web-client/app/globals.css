@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+body {
+  font-family: 'Prompt', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Kanit', sans-serif;
+  font-weight: 600;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* FullCalendar styles */
+.fc {
+  font-family: 'Prompt', sans-serif !important;
+}
+
+.fc .fc-toolbar-title {
+  font-family: 'Kanit', sans-serif !important;
+  font-weight: 700;
+  font-size: 1.5rem !important;
+  color: #0F172A;
+}
+
+.fc .fc-button {
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 8px 16px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+
+.fc .fc-button-primary {
+  background: linear-gradient(135deg, #0070F3 0%, #1d4ed8 100%) !important;
+  color: white !important;
+}
+
+.fc .fc-button-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+  transform: translateY(-1px) !important;
+}
+
+.fc .fc-today-button {
+  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%) !important;
+  color: white !important;
+}
+
+.fc .fc-daygrid-day.fc-day-today {
+  background-color: #eff6ff !important;
+}
+
+.fc .fc-event {
+  border-radius: 4px;
+  font-size: 0.75rem;
+  padding: 2px 4px;
+}
+
+/* Watermark styles */
+.watermark-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.watermark-overlay {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  z-index: 9999;
+  font-family: 'Prompt', sans-serif;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+}
+
+@keyframes watermark-float {
+  0%, 100% { transform: translate(0, 0) rotate(-15deg); }
+  25% { transform: translate(5%, 3%) rotate(-12deg); }
+  50% { transform: translate(10%, 0) rotate(-18deg); }
+  75% { transform: translate(5%, -3%) rotate(-12deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.watermark-animated {
+  animation: watermark-float 30s ease-in-out infinite;
+}
+
+/* Calendar custom styles */
+.fc-custom .fc-scrollgrid {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.fc-custom .fc-daygrid-day-frame {
+  min-height: 56px;
+}
+
+.fc-custom .fc-event {
+  border-radius: 8px !important;
+  padding: 6px 8px !important;
+  font-size: 0.85rem !important;
+}

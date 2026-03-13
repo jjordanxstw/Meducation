@@ -5,10 +5,10 @@ export class GlobalValidationPipe extends ValidationPipe {
   constructor() {
     super({
       whitelist: true, // Strip away properties that don't have decorators
-      forbidNonWhitelisted: true, // Throw an error if non-whitelisted values are provided
-      transform: true, // Automatically transform payloads to be objects typed according to their DTO classes
+      forbidNonWhitelisted: false, // Allow extra fields (for compatibility)
+      transform: false, // Disable automatic transformation
       transformOptions: {
-        enableImplicitConversion: true, // Allow implicit type conversion
+        enableImplicitConversion: false, // Disable implicit type conversion
       },
       exceptionFactory: (validationErrors: ValidationError[] = []) => {
         const errors = this.formatValidationErrors(validationErrors);

@@ -1,5 +1,6 @@
 /**
  * Login Page with Google OAuth
+ * SSR-compatible implementation with ClientOnly wrapper
  */
 
 import { useEffect } from 'react';
@@ -7,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button, Card, CardBody } from '@heroui/react';
 import { FcGoogle } from 'react-icons/fc';
 import { useAuthStore } from '../stores/auth.store';
+import { ClientOnly } from '../components/ClientOnly';
 
 declare global {
   interface Window {
@@ -27,16 +29,15 @@ declare global {
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
-export default function LoginPage() {
+/**
+ * Google Sign-In Component - Client-only
+ * This component only renders on the client side
+ */
+function GoogleSignInButton() {
+  const { setAuth, setLoading } = useAuthStore();
   const navigate = useNavigate();
-  const { isAuthenticated, setAuth, setLoading } = useAuthStore();
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/', { replace: true });
-      return;
-    }
-
     // Load Google Sign-In script
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
@@ -46,9 +47,11 @@ export default function LoginPage() {
     document.body.appendChild(script);
 
     return () => {
-      document.body.removeChild(script);
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
     };
-  }, [isAuthenticated, navigate]);
+  }, []);
 
   const initializeGoogleSignIn = () => {
     if (window.google) {
@@ -73,7 +76,7 @@ export default function LoginPage() {
   const handleGoogleCallback = async (response: { credential: string }) => {
     try {
       setLoading(true);
-      
+
       // Send token to backend for verification
       const res = await fetch('/api/v1/auth/verify', {
         method: 'POST',
@@ -98,6 +101,42 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  const handleSignInClick = () => {
+    if (window.google) {
+      window.google.accounts.id.prompt();
+    } else {
+      alert('Google Sign-In button not found — please wait for script to load or refresh the page');
+    }
+  };
+
+  return (
+    <>
+      <div id="google-signin-button" className="flex justify-center rounded-xl overflow-hidden w-full"></div>
+
+      <div className="text-center pt-2">
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl btn-primary text-sm sm:text-base font-medium w-full sm:w-auto justify-center"
+          onClick={handleSignInClick}
+        >
+          <FcGoogle className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
+          <span className="text-white">Sign in with Google</span>
+        </button>
+      </div>
+    </>
+  );
+}
+
+export default function LoginPage() {
+  const { isAuthenticated } = useAuthStore();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-blue-50 flex items-center justify-center p-4 sm:p-6">
@@ -128,24 +167,10 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div id="google-signin-button" className="flex justify-center rounded-xl overflow-hidden w-full"></div>
-
-            <div className="text-center pt-2">
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl btn-primary text-sm sm:text-base font-medium w-full sm:w-auto justify-center"
-                onClick={() => {
-                  if (window.google) {
-                    window.google.accounts.id.prompt();
-                  } else {
-                    alert('Google Sign-In button not found — please wait for script to load or refresh the page');
-                  }
-                }}
-              >
-                <FcGoogle className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
-                <span className="text-white">Sign in with Google</span>
-              </button>
-            </div>
+            {/* Client-only Google Sign-In */}
+            <ClientOnly fallback={<div className="h-12 flex items-center justify-center">Loading...</div>}>
+              <GoogleSignInButton />
+            </ClientOnly>
           </div>
 
           <p className="text-center text-medical-gray-400 text-xs mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-medical-gray-200 leading-relaxed">

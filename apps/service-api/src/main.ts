@@ -3,6 +3,7 @@ import { NestFactory, Reflector } from '@nestjs/core';
 import { VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import compression from 'compression';
 import { ServiceApiModule } from './service-api.module';
 import { GlobalValidationPipe } from './common/pipes/validation.pipe';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -22,6 +23,9 @@ async function bootstrap() {
 
   // JSON body parser
   app.use(express.json());
+
+  // Enable compression
+  app.use(compression());
 
   // Add request ID middleware first (before versioning)
   app.use(requestIdMiddleware);
@@ -49,7 +53,7 @@ async function bootstrap() {
 
   // Enable CORS for frontend integration and API testing tools
   const corsOrigins = configService
-    .get<string>('CORS_ORIGINS', 'http://localhost:5173,http://localhost:5174')
+    .get<string>('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5173,http://localhost:5174')
     .split(',');
 
   app.enableCors({
@@ -80,5 +84,6 @@ async function bootstrap() {
 
   await app.listen(port);
   console.log(`Medical Learning Portal API running on port ${port}`);
+  console.log(`API: http://localhost:${port}/api`);
 }
 void bootstrap();

@@ -1,5 +1,6 @@
 /**
  * Calendar Page with FullCalendar Integration
+ * SSR-compatible implementation with ClientOnly wrapper
  */
 
 import { useState, useMemo } from 'react';
@@ -33,6 +34,74 @@ import {
 } from '@medical-portal/shared';
 import type { CalendarEvent } from '@medical-portal/shared';
 import { FiCalendar, FiClock, FiMapPin, FiBook, FiInfo } from 'react-icons/fi';
+import { ClientOnly } from '../components/ClientOnly';
+
+/**
+ * FullCalendar Component - Client-only
+ * This component only renders on the client side
+ */
+function CalendarComponent({
+  events,
+  onEventClick,
+}: {
+  events: Record<string, unknown>[];
+  onEventClick: (clickInfo: EventClickArg) => void;
+}) {
+  return (
+    <div className="fc-custom">
+      <FullCalendar
+        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+        initialView="dayGridMonth"
+        headerToolbar={{
+          left: 'prev,next today',
+          center: 'title',
+          right: 'dayGridMonth,timeGridWeek',
+        }}
+        height="auto"
+        aspectRatio={1.35}
+        locale="en"
+        buttonText={{
+          today: 'Today',
+          month: 'Month',
+          week: 'Week',
+        }}
+        events={events}
+        eventClick={onEventClick}
+        dayMaxEvents={3}
+        moreLinkText={(n) => `+${n} more`}
+        nowIndicator
+        selectable={false}
+        eventDisplay="block"
+        eventTimeFormat={{
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        }}
+        views={{
+          dayGridMonth: {
+            dayMaxEvents: 3,
+          },
+          timeGridWeek: {
+            slotMinTime: '06:00:00',
+            slotMaxTime: '22:00:00',
+          },
+        }}
+      />
+    </div>
+  );
+}
+
+/**
+ * Calendar Skeleton for SSR fallback
+ */
+function CalendarSkeleton() {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 space-y-4">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+      <p className="text-medical-gray-500">Loading calendar...</p>
+    </div>
+  );
+}
 
 export default function CalendarPage() {
   const navigate = useNavigate();
@@ -160,56 +229,19 @@ export default function CalendarPage() {
         ))}
       </div>
 
-      {/* Calendar */}
+      {/* Calendar - Client-only */}
       <Card className="card-rounded shadow-xl border-0 overflow-hidden">
         <CardBody className="p-3 sm:p-4 md:p-6 lg:p-8">
-          <div className="fc-custom">
-            <FullCalendar
-              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-              initialView="dayGridMonth"
-              headerToolbar={{
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek',
-              }}
-              height="auto"
-              aspectRatio={1.35}
-              locale="en"
-              buttonText={{
-                today: 'Today',
-                month: 'Month',
-                week: 'Week',
-              }}
-              events={calendarEvents}
-              eventClick={handleEventClick}
-              dayMaxEvents={3}
-              moreLinkText={(n) => `+${n} more`}
-              nowIndicator
-              selectable={false}
-              eventDisplay="block"
-              eventTimeFormat={{
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-              }}
-              views={{
-                dayGridMonth: {
-                  dayMaxEvents: 3,
-                },
-                timeGridWeek: {
-                  slotMinTime: '06:00:00',
-                  slotMaxTime: '22:00:00',
-                },
-              }}
-            />
-          </div>
+          <ClientOnly fallback={<CalendarSkeleton />}>
+            <CalendarComponent events={calendarEvents} onEventClick={handleEventClick} />
+          </ClientOnly>
         </CardBody>
       </Card>
 
       {/* Event Detail Modal */}
-      <Modal 
-        isOpen={isOpen} 
-        onClose={onClose} 
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
         size="2xl"
         scrollBehavior="inside"
         placement="center"
@@ -323,8 +355,8 @@ export default function CalendarPage() {
               </ModalBody>
 
               <ModalFooter>
-                <Button 
-                  variant="light" 
+                <Button
+                  variant="light"
                   onPress={onClose}
                   className="font-semibold rounded-xl"
                 >
