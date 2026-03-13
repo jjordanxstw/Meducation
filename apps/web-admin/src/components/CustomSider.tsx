@@ -141,7 +141,6 @@ export const CustomSider: React.FC = () => {
         zIndex: 1000,
         backgroundColor: '#ffffff',
         borderRight: '1px solid #f0f0f0',
-        transition: 'width 0.3s ease',
       }}
       theme="light"
       trigger={null} // Disable default trigger
@@ -169,7 +168,6 @@ export const CustomSider: React.FC = () => {
             color: 'white',
             fontWeight: 'bold',
             fontSize: collapsed ? 14 : 18,
-            transition: 'all 0.3s ease',
           }}
         >
           M

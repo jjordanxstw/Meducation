@@ -29,18 +29,6 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-kanit), sans-serif;
 }
 
-/* Fade in animation */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 /* Loading spinner */
 .spinner {
   width: 40px;
@@ -56,38 +44,9 @@ h1, h2, h3, h4, h5, h6 {
   100% { transform: rotate(360deg); }
 }
 
-/* Skeleton loading animation */
-@keyframes skeleton-loading {
-  0% {
-    background-position: -200px 0;
-  }
-  100% {
-    background-position: calc(200px + 100%) 0;
-  }
-}
-
-.skeleton {
-  background: #f6f7f8;
-  background-image: linear-gradient(
-    90deg,
-    #f6f7f8 0px,
-    #edeef1 40px,
-    #f6f7f8 80px
-  );
-  background-size: 200px 100%;
-  background-repeat: no-repeat;
-  border-radius: 4px;
-  animation: skeleton-loading 1.5s ease-in-out infinite;
-}
-
 /* Prevent layout shift during sidebar load */
 #app-root {
   min-height: 100vh;
-}
-
-/* Smooth transitions for layout changes */
-.layout-transition {
-  transition: margin-left 0.3s ease, width 0.3s ease;
 }
 
 /* Hide scrollbar but allow scrolling */

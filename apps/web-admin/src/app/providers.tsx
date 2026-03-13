@@ -15,7 +15,6 @@ import { RefineKbar, RefineKbarProvider } from '@refinedev/kbar';
 import {
   useNotificationProvider,
 } from '@refinedev/antd';
-import { NextUIProvider } from '@nextui-org/react';
 import routerBindings from '@refinedev/nextjs-router';
 import { ConfigProvider, App as AntdApp, theme } from 'antd';
 import thTH from 'antd/locale/th_TH';
@@ -44,8 +43,7 @@ interface ProvidersProps {
 
 export const Providers: React.FC<ProvidersProps> = ({ children }) => {
   return (
-    <NextUIProvider>
-      <RefineKbarProvider>
+    <RefineKbarProvider>
         <ConfigProvider
           locale={thTH}
           theme={{
@@ -186,6 +184,5 @@ export const Providers: React.FC<ProvidersProps> = ({ children }) => {
           </AntdApp>
         </ConfigProvider>
       </RefineKbarProvider>
-    </NextUIProvider>
   );
 };

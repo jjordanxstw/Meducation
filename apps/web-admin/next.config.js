@@ -3,6 +3,9 @@ const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@medical-portal/shared'],
   devIndicators: false,
+  experimental: {
+    optimizePackageImports: ['antd', '@ant-design/icons', '@refinedev/antd', '@refinedev/core', '@refinedev/kbar'],
+  },
 
   // Security headers
   async headers() {

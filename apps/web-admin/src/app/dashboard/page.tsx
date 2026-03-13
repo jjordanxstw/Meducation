@@ -86,7 +86,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div style={{ animation: 'fadeIn 0.5s ease-in', padding: '24px' }}>
+    <div style={{ padding: '24px' }}>
       <div style={{ marginBottom: 24 }}>
         <Title level={2} style={{ fontFamily: 'Kanit', marginBottom: 8, fontWeight: 700, fontSize: 'clamp(1.5rem, 4vw, 2rem)' }}>
           แดชบอร์ด
@@ -121,18 +121,9 @@ export default function DashboardPage() {
                   borderRadius: 16,
                   border: 'none',
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-                  transition: 'all 0.3s ease',
                   cursor: 'pointer',
                 }}
                 hoverable
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.12)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)';
-                }}
               >
                 <Statistic
                   title={stat.title}
