@@ -7,9 +7,9 @@ export class GoogleAuthGuard {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const authHeader = request.headers.authorization;
 
-    // Check Authorization Bearer token
+    // First, try to get token from Authorization header
+    const authHeader = request.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const idToken = authHeader.substring(7);
       const user = await this.authService.getSessionFromHeader(idToken);
@@ -19,7 +19,20 @@ export class GoogleAuthGuard {
       }
     }
 
-    // Also try session cookie as fallback
+    // Try to get token from httpOnly cookie (student_access_token)
+    const accessToken = request.cookies?.student_access_token;
+    if (accessToken) {
+      const payload = await this.authService.verifySessionToken(accessToken);
+      if (payload && payload.sub) {
+        const user = await this.authService.getSessionFromCookie(accessToken);
+        if (user) {
+          request.user = user;
+          return true;
+        }
+      }
+    }
+
+    // Fallback to old session cookie for backward compatibility
     const cookieName = process.env.SESSION_COOKIE_NAME || 'session';
     const cookieHeader = request.headers.cookie;
     if (cookieHeader) {

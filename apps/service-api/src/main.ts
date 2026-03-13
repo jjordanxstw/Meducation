@@ -4,6 +4,7 @@ import { VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import { ServiceApiModule } from './service-api.module';
 import { GlobalValidationPipe } from './common/pipes/validation.pipe';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -23,6 +24,9 @@ async function bootstrap() {
 
   // JSON body parser
   app.use(express.json());
+
+  // Cookie parser for httpOnly cookie support
+  app.use(cookieParser());
 
   // Enable compression
   app.use(compression());

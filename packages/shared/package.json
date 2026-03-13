@@ -23,7 +23,7 @@
     }
   },
   "scripts": {
-    "build": "tsup && tsc --emitDeclarationOnly",
+    "build": "tsup",
     "dev": "tsup --watch",
     "clean": "rimraf dist",
     "lint": "eslint src --ext .ts",

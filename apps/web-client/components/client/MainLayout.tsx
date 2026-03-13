@@ -36,9 +36,20 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, profile, clearAuth } = useAuthStore();
 
-  const handleLogout = () => {
-    clearAuth();
-    window.location.href = '/login';
+  const handleLogout = async () => {
+    try {
+      // Call backend logout endpoint to revoke refresh token
+      await fetch('/api/v1/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Clear local auth state
+      clearAuth();
+      window.location.href = '/login';
+    }
   };
 
   return (

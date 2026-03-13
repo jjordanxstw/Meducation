@@ -47,7 +47,11 @@ export function sanitizeAdmin(admin: Admin): AdminResponse {
     email: admin.email,
     is_active: admin.is_active,
     is_super_admin: admin.is_super_admin,
-    last_login_at: admin.last_login_at?.toISOString(),
+    last_login_at: admin.last_login_at
+      ? typeof admin.last_login_at === 'string'
+        ? admin.last_login_at
+        : admin.last_login_at.toISOString()
+      : undefined,
   };
 }
 

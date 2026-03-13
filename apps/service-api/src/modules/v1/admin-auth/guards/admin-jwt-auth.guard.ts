@@ -2,6 +2,7 @@
  * Admin JWT Auth Guard
  * Validates JWT tokens for admin users
  * Separate from student JWT guard to prevent cross-access
+ * Supports both Authorization header and httpOnly cookie
  */
 
 import { Injectable, UnauthorizedException } from '@nestjs/common';
@@ -18,13 +19,23 @@ export class AdminJwtAuthGuard extends AuthGuard('jwt') {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     try {
       const request = context.switchToHttp().getRequest();
-      const authHeader = request.headers.authorization;
+      let token: string | undefined;
 
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        throw new UnauthorizedException('Missing or invalid authorization header');
+      // First, try to get token from Authorization header (for backward compatibility)
+      const authHeader = request.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
       }
 
-      const token = authHeader.substring(7);
+      // If no token in header, try to get from httpOnly cookie
+      if (!token) {
+        token = request.cookies?.admin_access_token;
+      }
+
+      if (!token) {
+        throw new UnauthorizedException('Missing or invalid authentication');
+      }
+
       const admin = await this.adminAuthService.verifyToken(token);
 
       if (!admin) {

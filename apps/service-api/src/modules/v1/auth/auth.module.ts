@@ -9,6 +9,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './controllers/auth.controller';
 import { AuthService } from './services/auth.service';
 import { WatermarkService } from './services/watermark.service';
+import { RefreshTokenService } from './services/refresh-token.service';
 
 @Module({
   imports: [
@@ -18,13 +19,13 @@ import { WatermarkService } from './services/watermark.service';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET') || 'dev-secret',
         signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '1h',
+          expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '15m',
         },
       }),
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, WatermarkService],
-  exports: [AuthService, WatermarkService],
+  providers: [AuthService, WatermarkService, RefreshTokenService],
+  exports: [AuthService, WatermarkService, RefreshTokenService],
 })
 export class AuthModule {}

@@ -15,7 +15,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CalendarService } from '../services/calendar.service';
-import { GoogleAuthGuard, AdminGuard } from '../../auth/guards';
+import { AnyAuthGuard } from '../../../../common';
+import { AdminGuard } from '../../auth/guards';
 import { Admin } from '../../../../common';
 import { CurrentUser } from '../../../../common';
 import { SkipEnvelope } from '../../../../common';
@@ -26,7 +27,7 @@ export class CalendarController {
   constructor(private readonly calendarService: CalendarService) {}
 
   @Get()
-  @UseGuards(GoogleAuthGuard)
+  @UseGuards(AnyAuthGuard)
   @SkipEnvelope()
   async findAll(
     @Query('start_date') startDate?: string,
@@ -39,7 +40,7 @@ export class CalendarController {
   }
 
   @Get('month/:year/:month')
-  @UseGuards(GoogleAuthGuard)
+  @UseGuards(AnyAuthGuard)
   @SkipEnvelope()
   async getByMonth(@Param('year') year: string, @Param('month') month: string) {
     const data = await this.calendarService.getByMonth(parseInt(year, 10), parseInt(month, 10));
@@ -47,7 +48,7 @@ export class CalendarController {
   }
 
   @Get('upcoming')
-  @UseGuards(GoogleAuthGuard)
+  @UseGuards(AnyAuthGuard)
   @SkipEnvelope()
   async getUpcoming(@Query('limit') limit?: string) {
     const data = await this.calendarService.getUpcoming(limit ? parseInt(limit, 10) : 10);
@@ -55,7 +56,7 @@ export class CalendarController {
   }
 
   @Get(':id')
-  @UseGuards(GoogleAuthGuard)
+  @UseGuards(AnyAuthGuard)
   @SkipEnvelope()
   async findOne(@Param('id') id: string) {
     const data = await this.calendarService.findOne(id);
@@ -63,7 +64,7 @@ export class CalendarController {
   }
 
   @Post()
-  @UseGuards(GoogleAuthGuard, AdminGuard)
+  @UseGuards(AnyAuthGuard, AdminGuard)
   @Admin()
   @SkipEnvelope()
   async create(@Body() createDto: any, @CurrentUser() user: UserWithoutPassword) {
@@ -72,7 +73,7 @@ export class CalendarController {
   }
 
   @Put(':id')
-  @UseGuards(GoogleAuthGuard, AdminGuard)
+  @UseGuards(AnyAuthGuard, AdminGuard)
   @Admin()
   @SkipEnvelope()
   async update(@Param('id') id: string, @Body() updateDto: any) {
@@ -81,7 +82,7 @@ export class CalendarController {
   }
 
   @Delete(':id')
-  @UseGuards(GoogleAuthGuard, AdminGuard)
+  @UseGuards(AnyAuthGuard, AdminGuard)
   @Admin()
   @SkipEnvelope()
   async delete(@Param('id') id: string) {
