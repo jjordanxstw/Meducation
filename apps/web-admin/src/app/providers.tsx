@@ -13,10 +13,10 @@ import { Refine } from '@refinedev/core';
 import { RefineKbar, RefineKbarProvider } from '@refinedev/kbar';
 import {
   ThemedLayout,
-  ThemedSider,
   ThemedTitle,
   useNotificationProvider,
 } from '@refinedev/antd';
+import CustomSider from '../components/CustomSider';
 import routerBindings from '@refinedev/nextjs-router';
 import { ConfigProvider, App as AntdApp, theme } from 'antd';
 import thTH from 'antd/locale/th_TH';
@@ -44,9 +44,8 @@ interface ProvidersProps {
 function ThemedLayoutWrapper({ children }: { children: React.ReactNode }) {
   return (
     <ThemedLayout
-      Title={({ collapsed }) => (
+      Title={() => (
         <ThemedTitle
-          collapsed={collapsed}
           text="Medical Admin"
           icon={
             <div
@@ -69,7 +68,7 @@ function ThemedLayoutWrapper({ children }: { children: React.ReactNode }) {
           }
         />
       )}
-      Sider={() => <ThemedSider fixed />}
+      Sider={CustomSider}
     >
       {children}
     </ThemedLayout>
