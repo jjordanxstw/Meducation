@@ -11,16 +11,26 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { Authenticated, Refine } from '@refinedev/core';
+import {
+  Authenticated,
+  Refine,
+  useIsExistAuthentication,
+  useLink,
+  useLogout,
+  useMenu,
+  useTranslate,
+  useWarnAboutChange,
+} from '@refinedev/core';
 import { RefineKbar, RefineKbarProvider } from '@refinedev/kbar';
 import {
   RefineThemes,
   ThemedLayout,
-  ThemedSider,
+  ThemedTitle,
   useNotificationProvider,
 } from '@refinedev/antd';
 import routerBindings from '@refinedev/nextjs-router';
-import { ConfigProvider, App as AntdApp } from 'antd';
+import { ConfigProvider, App as AntdApp, Button, Layout, Menu } from 'antd';
+import type { MenuProps } from 'antd';
 import thTH from 'antd/locale/th_TH';
 
 import { dataProvider } from '../providers/data-provider';
@@ -37,6 +47,9 @@ import {
   UserOutlined,
   AuditOutlined,
   DashboardOutlined,
+  LogoutOutlined,
+  LeftOutlined,
+  RightOutlined,
 } from '@ant-design/icons';
 
 // Types for children
@@ -46,38 +59,129 @@ interface ProvidersProps {
 
 const AdminSider: React.FC<{
   Title?: React.FC<{ collapsed: boolean }>;
-  render?: (props: {
-    items: React.JSX.Element[];
-    logout: React.ReactNode;
-    collapsed: boolean;
-  }) => React.ReactNode;
   meta?: Record<string, unknown>;
-}> = ({ render, ...props }) => {
-  return (
-    <ThemedSider
-      {...props}
-      render={({ items, logout, collapsed }) => {
-        const logoutWithClass = React.isValidElement(logout)
-          ? React.cloneElement(
-              logout as React.ReactElement<{ className?: string }>,
-              {
-                className: [
-                  (logout.props as { className?: string })?.className,
-                  'admin-sider-logout',
-                ]
-                  .filter(Boolean)
-                  .join(' '),
-              }
-            )
-          : logout;
+}> = ({ Title, meta }) => {
+  const [collapsed, setCollapsed] = React.useState(false);
+  const { menuItems, selectedKey, defaultOpenKeys } = useMenu({ meta });
+  const { mutate: logout } = useLogout();
+  const isAuthenticated = useIsExistAuthentication();
+  const { warnWhen, setWarnWhen } = useWarnAboutChange();
+  const translate = useTranslate();
+  const Link = useLink();
 
-        if (render) {
-          return render({ items, logout: logoutWithClass, collapsed });
+  const RenderTitle = Title ?? ThemedTitle;
+
+  const handleLogout = () => {
+    if (warnWhen) {
+      const confirmed = window.confirm(
+        translate(
+          'warnWhenUnsavedChanges',
+          'Are you sure you want to leave? You have unsaved changes.'
+        )
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      setWarnWhen(false);
+    }
+
+    logout();
+  };
+
+  const mapToMenuItems = React.useCallback(
+    (tree: typeof menuItems): MenuProps['items'] => {
+      return tree.map((item) => {
+        const label = item.label ?? item.meta?.label ?? item.name;
+
+        if (item.children.length > 0) {
+          return {
+            key: item.key,
+            icon: item.meta?.icon,
+            label,
+            children: mapToMenuItems(item.children) as NonNullable<MenuProps['items']>,
+          };
         }
 
-        return [...items, logoutWithClass].filter(Boolean);
+        return {
+          key: item.key,
+          icon: item.meta?.icon,
+          label: <Link to={item.list ?? ''}>{label}</Link>,
+        };
+      });
+    },
+    [Link, menuItems]
+  );
+
+  const items = React.useMemo<NonNullable<MenuProps['items']>>(() => {
+    const mapped = (mapToMenuItems(menuItems) ?? []) as NonNullable<MenuProps['items']>;
+
+    if (isAuthenticated) {
+      mapped.push({
+        type: 'divider',
+      });
+      mapped.push({
+        key: 'logout',
+        icon: <LogoutOutlined />,
+        label: translate('buttons.logout', 'Logout'),
+        onClick: handleLogout,
+      });
+    }
+
+    return mapped;
+  }, [handleLogout, isAuthenticated, mapToMenuItems, menuItems, translate]);
+
+  const collapseIcon = collapsed ? <RightOutlined /> : <LeftOutlined />;
+
+  return (
+    <Layout.Sider
+      collapsible
+      collapsed={collapsed}
+      onCollapse={(value) => setCollapsed(value)}
+      collapsedWidth={80}
+      breakpoint="lg"
+      style={{
+        backgroundColor: '#fff',
+        borderRight: '1px solid #f0f0f0',
       }}
-    />
+      trigger={
+        <Button
+          type="text"
+          style={{
+            borderRadius: 0,
+            height: '100%',
+            width: '100%',
+          }}
+        >
+          {collapseIcon}
+        </Button>
+      }
+    >
+      <div
+        style={{
+          width: collapsed ? '80px' : '200px',
+          padding: collapsed ? '0' : '0 16px',
+          display: 'flex',
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          alignItems: 'center',
+          height: '64px',
+        }}
+      >
+        <RenderTitle collapsed={collapsed} />
+      </div>
+      <Menu
+        mode="inline"
+        selectedKeys={selectedKey ? [selectedKey] : []}
+        defaultOpenKeys={defaultOpenKeys}
+        items={items}
+        style={{
+          border: 'none',
+          height: 'calc(100% - 64px)',
+          overflow: 'auto',
+        }}
+      />
+    </Layout.Sider>
   );
 };
 
