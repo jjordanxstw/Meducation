@@ -78,7 +78,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       <Content
         style={{
           marginLeft: siderWidth,
-          transition: 'margin-left 0.3s ease',
           minHeight: '100vh',
           backgroundColor: '#f8fafc',
         }}
