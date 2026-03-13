@@ -2,6 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@medical-portal/shared'],
+  devIndicators: false,
 
   async rewrites() {
     return [
