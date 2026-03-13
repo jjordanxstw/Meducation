@@ -1,102 +1,315 @@
 /**
  * Auth Provider for Refine
+ * Handles secure cookie-based authentication for admin users
+ *
+ * Security improvements:
+ * - Uses httpOnly cookies (set by backend) as primary auth method
+ * - Proper token validation and cleanup
+ * - Secure error handling
+ *
+ * Note: Cookies are set by the backend as httpOnly for security.
  */
 
 import type { AuthProvider } from '@refinedev/core';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+import { removeAuthCookie, getAuthCookie, isTokenExpired, sanitizeErrorMessage } from '@/lib/security';
 
-const API_URL = '/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+
+// Create axios instance with credentials enabled
+const authAxios = axios.create({
+  withCredentials: true, // Send httpOnly cookies
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Response interceptor - handle authentication failures
+authAxios.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => {
+    const originalRequest = error.config as any & { _retry?: boolean };
+
+    // Handle 401 Unauthorized
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      // Clear invalid cookie
+      removeAuthCookie();
+
+      // Don't retry - force logout
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        window.location.href = '/';
+      }
+    }
+
+    // Handle 403 Forbidden
+    if (error.response?.status === 403) {
+      console.error('[Security] Access forbidden:', error.config?.url);
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+/**
+ * Validate token structure
+ */
+function isValidTokenStructure(token: unknown): token is string {
+  return typeof token === 'string' && token.split('.').length === 3;
+}
+
+/**
+ * Log security events (for audit purposes)
+ */
+function logSecurityEvent(event: string, details?: Record<string, unknown>): void {
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[Security Audit] ${event}`, details);
+  }
+  // In production, send to audit logging service
+  // await auditService.logSecurityEvent(event, details);
+}
 
 export const authProvider: AuthProvider = {
-  login: async ({ credential }) => {
-    try {
-      const response = await axios.post(`${API_URL}/auth/verify`, { credential }, { withCredentials: true });
-
-      if (response.data.success) {
-        const { profile } = response.data.data;
-
-        // Check if user is admin
-        if (profile.role !== 'admin') {
-          return {
-            success: false,
-            error: {
-              name: 'AccessDenied',
-              message: 'คุณไม่มีสิทธิ์เข้าถึงหน้า Admin',
-            },
-          };
+  login: async ({ username, password }) => {
+    // Input validation
+    if (!username || !password) {
+      return {
+        success: false,
+        error: {
+          name: 'ValidationError',
+          message: 'กรุณาระบุชื่อผู้ใช้และรหัสผ่าน'
         }
+      };
+    }
 
-        // Server sets httpOnly cookie; do not persist tokens client-side.
+    // Sanitize username to prevent injection
+    const sanitizedUsername = username.trim().slice(0, 100);
+
+    try {
+      // Username/password login for admin
+      const response = await axios.post(`${API_URL}/admin/auth/login`, {
+        username: sanitizedUsername,
+        password,
+      }, {
+        withCredentials: true, // Receive httpOnly cookie
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      // Validate response structure
+      if (!response.data?.accessToken) {
+        logSecurityEvent('login_failed', { reason: 'invalid_response_structure' });
         return {
-          success: true,
-          redirectTo: '/',
+          success: false,
+          error: {
+            name: 'LoginError',
+            message: 'Invalid response from server'
+          }
         };
       }
 
-      return { success: false, error: { name: 'LoginError', message: 'เข้าสู่ระบบไม่สำเร็จ' } };
+      // Validate token structure
+      if (!isValidTokenStructure(response.data.accessToken)) {
+        logSecurityEvent('login_failed', { reason: 'invalid_token_structure' });
+        return {
+          success: false,
+          error: {
+            name: 'LoginError',
+            message: 'Invalid authentication token received'
+          }
+        };
+      }
+
+      // Check admin status safely
+      const admin = response.data.admin;
+      if (!admin) {
+        logSecurityEvent('login_failed', { reason: 'no_admin_data', username: sanitizedUsername });
+        return {
+          success: false,
+          error: {
+            name: 'LoginError',
+            message: 'ไม่พบข้อมูลผู้ใช้'
+          },
+        };
+      }
+
+      if (!admin.is_active) {
+        logSecurityEvent('login_blocked', {
+          reason: 'account_inactive',
+          username: sanitizedUsername,
+          adminId: admin.id
+        });
+        return {
+          success: false,
+          error: {
+            name: 'AccessDenied',
+            message: 'บัญชีผู้ใช้ถูกระงับ กรุณาติดต่อผู้ดูแลระบบ'
+          },
+        };
+      }
+
+      logSecurityEvent('login_success', {
+        username: sanitizedUsername,
+        adminId: admin.id,
+        isSuperAdmin: admin.is_super_admin,
+      });
+
+      return {
+        success: true,
+        redirectTo: '/dashboard',
+      };
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { error?: { message?: string } } } };
-      return { success: false, error: { name: 'LoginError', message: err.response?.data?.error?.message || 'เข้าสู่ระบบไม่สำเร็จ' } };
+      const err = error as AxiosError<{ message?: string }>;
+      const errorMessage = err.response?.data?.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+
+      logSecurityEvent('login_failed', {
+        reason: 'authentication_failed',
+        username: sanitizedUsername,
+        error: errorMessage,
+      });
+
+      return {
+        success: false,
+        error: {
+          name: 'LoginError',
+          message: sanitizeErrorMessage(errorMessage),
+        },
+      };
     }
   },
 
   logout: async () => {
+    // Call logout endpoint (backend clears httpOnly cookie)
     try {
-      await axios.post(`${API_URL}/auth/logout`, {}, { withCredentials: true });
+      await axios.post(`${API_URL}/admin/auth/logout`, {}, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      logSecurityEvent('logout_success');
     } catch (error) {
-      console.warn('Logout API call failed:', error);
+      // Log but don't fail logout on API error
+      logSecurityEvent('logout_api_failed', { error: sanitizeErrorMessage(error) });
+      console.warn('[Auth] Logout API call failed:', error);
     }
 
-    return { success: true, redirectTo: '/login' };
+    // Also clear client-side cookie for middleware compatibility
+    removeAuthCookie();
+
+    // Clear any session storage
+    if (typeof window !== 'undefined') {
+      try {
+        window.sessionStorage.clear();
+      } catch {
+        // Ignore sessionStorage errors
+      }
+    }
+
+    return {
+      success: true,
+      redirectTo: '/',
+    };
   },
 
   check: async () => {
-    try {
-      const response = await axios.get(`${API_URL}/auth/me`, { withCredentials: true });
-      if (response.data?.success) {
-        const { profile } = response.data.data;
-        if (profile?.role === 'admin') return { authenticated: true };
-      }
-    } catch (error) {
-      console.warn('Auth check failed:', error);
+    const token = getAuthCookie();
+
+    // No token found
+    if (!token) {
+      return { authenticated: false, redirectTo: '/' };
     }
-    return { authenticated: false, redirectTo: '/login' };
+
+    // Token is expired
+    if (isTokenExpired(token)) {
+      removeAuthCookie();
+      return { authenticated: false, redirectTo: '/' };
+    }
+
+    // Verify with server
+    try {
+      const response = await axios.get(`${API_URL}/admin/auth/me`, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.data?.is_active === false) {
+        removeAuthCookie();
+        return { authenticated: false, redirectTo: '/' };
+      }
+
+      return { authenticated: true };
+    } catch (error) {
+      // Auth check failed - clear invalid token
+      removeAuthCookie();
+      logSecurityEvent('auth_check_failed', { error: sanitizeErrorMessage(error) });
+      return { authenticated: false, redirectTo: '/' };
+    }
   },
 
   getPermissions: async () => {
+    const token = getAuthCookie();
+    if (!token || isTokenExpired(token)) return null;
+
     try {
-      const response = await axios.get(`${API_URL}/auth/me`, { withCredentials: true });
-      return response.data?.data?.profile?.role || null;
+      const response = await axios.get(`${API_URL}/admin/auth/me`, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return response.data?.is_super_admin ? 'super-admin' : 'admin';
     } catch (error) {
-      console.warn('getPermissions failed:', error);
+      logSecurityEvent('get_permissions_failed', { error: sanitizeErrorMessage(error) });
       return null;
     }
   },
 
   getIdentity: async () => {
+    const token = getAuthCookie();
+    if (!token || isTokenExpired(token)) return null;
+
     try {
-      const response = await axios.get(`${API_URL}/auth/me`, { withCredentials: true });
-      if (response.data?.success) {
-        const { user, profile } = response.data.data;
+      const response = await axios.get(`${API_URL}/admin/auth/me`, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.data) {
         return {
-          id: user.id,
-          name: profile?.full_name || user.name,
-          email: user.email,
-          avatar: user.picture,
-          role: profile?.role,
+          id: response.data.id,
+          name: response.data.full_name,
+          email: response.data.email,
+          username: response.data.username,
+          isSuperAdmin: response.data.is_super_admin,
+          isActive: response.data.is_active,
         };
       }
     } catch (error) {
-      console.warn('getIdentity failed:', error);
+      logSecurityEvent('get_identity_failed', { error: sanitizeErrorMessage(error) });
     }
 
     return null;
   },
 
   onError: async (error) => {
-    if (error.response?.status === 401) {
-      return { logout: true };
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 401) {
+        logSecurityEvent('unauthorized_access', { url: error.config?.url });
+        return { logout: true, redirectTo: '/' };
+      }
+      if (error.response?.status === 403) {
+        logSecurityEvent('forbidden_access', { url: error.config?.url });
+      }
     }
     return { error };
   },
 };
+
+// Export auth axios instance for use in data provider
+export { authAxios };

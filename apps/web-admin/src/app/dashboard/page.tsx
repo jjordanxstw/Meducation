@@ -5,7 +5,7 @@
  */
 
 import { useList } from '@refinedev/core';
-import { Card, Col, Row, Statistic, Table, Typography, Tag } from 'antd';
+import { Card, Col, Row, Statistic, Table, Typography, Tag, Skeleton } from 'antd';
 import {
   BookOutlined,
   UserOutlined,
@@ -16,13 +16,15 @@ import {
 const { Title, Text } = Typography;
 
 export default function DashboardPage() {
-  // Get counts
-  const { result: subjectsResult } = useList({ resource: 'subjects' });
-  const { result: profilesResult } = useList({ resource: 'profiles' });
-  const { result: calendarResult } = useList({ resource: 'calendar' });
-  const { result: auditResult } = useList({
+  // Get counts with loading states
+  const { result: subjectsResult, isLoading: subjectsLoading } = useList({ resource: 'subjects' });
+  const { result: profilesResult, isLoading: profilesLoading } = useList({ resource: 'profiles' });
+  const { result: calendarResult, isLoading: calendarLoading } = useList({ resource: 'calendar' });
+  const { result: auditResult, isLoading: auditLoading } = useList({
     resource: 'audit-logs',
   });
+
+  const isLoading = subjectsLoading || profilesLoading || calendarLoading || auditLoading;
 
   const stats = [
     {
@@ -84,7 +86,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div style={{ animation: 'fadeIn 0.5s ease-in', padding: '0 8px' }}>
+    <div style={{ animation: 'fadeIn 0.5s ease-in', padding: '24px' }}>
       <div style={{ marginBottom: 24 }}>
         <Title level={2} style={{ fontFamily: 'Kanit', marginBottom: 8, fontWeight: 700, fontSize: 'clamp(1.5rem, 4vw, 2rem)' }}>
           แดชบอร์ด
@@ -95,41 +97,58 @@ export default function DashboardPage() {
       </div>
 
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        {stats.map((stat, index) => (
-          <Col xs={24} sm={12} lg={6} key={index}>
-            <Card
-              style={{
-                background: stat.color,
-                borderRadius: 16,
-                border: 'none',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-                transition: 'all 0.3s ease',
-                cursor: 'pointer',
-              }}
-              hoverable
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.12)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)';
-              }}
-            >
-              <Statistic
-                title={stat.title}
-                value={stat.value}
-                prefix={stat.icon}
-                valueStyle={{
-                  fontFamily: 'Kanit',
-                  fontSize: 'clamp(1.5rem, 4vw, 1.75rem)',
-                  fontWeight: 700,
-                  color: '#0f172a',
+        {isLoading ? (
+          // Show skeleton cards while loading
+          [1, 2, 3, 4].map((index) => (
+            <Col xs={24} sm={12} lg={6} key={index}>
+              <Card
+                style={{
+                  borderRadius: 16,
+                  border: 'none',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
                 }}
-              />
-            </Card>
-          </Col>
-        ))}
+              >
+                <Skeleton active />
+              </Card>
+            </Col>
+          ))
+        ) : (
+          stats.map((stat, index) => (
+            <Col xs={24} sm={12} lg={6} key={index}>
+              <Card
+                style={{
+                  background: stat.color,
+                  borderRadius: 16,
+                  border: 'none',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer',
+                }}
+                hoverable
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.12)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)';
+                }}
+              >
+                <Statistic
+                  title={stat.title}
+                  value={stat.value}
+                  prefix={stat.icon}
+                  valueStyle={{
+                    fontFamily: 'Kanit',
+                    fontSize: 'clamp(1.5rem, 4vw, 1.75rem)',
+                    fontWeight: 700,
+                    color: '#0f172a',
+                  }}
+                />
+              </Card>
+            </Col>
+          ))
+        )}
       </Row>
 
       <Row gutter={[16, 16]}>
@@ -142,15 +161,19 @@ export default function DashboardPage() {
             }
             style={{ borderRadius: 16, border: 'none' }}
           >
-            <Table
-              dataSource={auditResult?.data?.slice(0, 5) || []}
-              columns={auditColumns}
-              pagination={false}
-              size="small"
-              rowKey="id"
-              style={{ borderRadius: 12 }}
-              scroll={{ x: 'max-content' }}
-            />
+            {auditLoading ? (
+              <Skeleton active paragraph={{ rows: 5 }} />
+            ) : (
+              <Table
+                dataSource={auditResult?.data?.slice(0, 5) || []}
+                columns={auditColumns}
+                pagination={false}
+                size="small"
+                rowKey="id"
+                style={{ borderRadius: 12 }}
+                scroll={{ x: 'max-content' }}
+              />
+            )}
           </Card>
         </Col>
 
@@ -163,42 +186,46 @@ export default function DashboardPage() {
             }
             style={{ borderRadius: 16, border: 'none' }}
           >
-            <Table
-              dataSource={subjectsResult?.data?.slice(0, 5) || []}
-              columns={[
-                {
-                  title: 'รหัส',
-                  dataIndex: 'code',
-                  key: 'code',
-                  render: (text: string) => (
-                    <Tag color="blue" style={{ borderRadius: 6, fontSize: '0.75rem' }}>
-                      {text}
-                    </Tag>
-                  ),
-                },
-                {
-                  title: 'ชื่อวิชา',
-                  dataIndex: 'name',
-                  key: 'name',
-                  ellipsis: true,
-                },
-                {
-                  title: 'ชั้นปี',
-                  dataIndex: 'year_level',
-                  key: 'year_level',
-                  render: (v: number) => (
-                    <Tag color="cyan" style={{ borderRadius: 6, fontSize: '0.75rem' }}>
-                      ปี {v}
-                    </Tag>
-                  ),
-                },
-              ]}
-              pagination={false}
-              size="small"
-              rowKey="id"
-              style={{ borderRadius: 12 }}
-              scroll={{ x: 'max-content' }}
-            />
+            {subjectsLoading ? (
+              <Skeleton active paragraph={{ rows: 5 }} />
+            ) : (
+              <Table
+                dataSource={subjectsResult?.data?.slice(0, 5) || []}
+                columns={[
+                  {
+                    title: 'รหัส',
+                    dataIndex: 'code',
+                    key: 'code',
+                    render: (text: string) => (
+                      <Tag color="blue" style={{ borderRadius: 6, fontSize: '0.75rem' }}>
+                        {text}
+                      </Tag>
+                    ),
+                  },
+                  {
+                    title: 'ชื่อวิชา',
+                    dataIndex: 'name',
+                    key: 'name',
+                    ellipsis: true,
+                  },
+                  {
+                    title: 'ชั้นปี',
+                    dataIndex: 'year_level',
+                    key: 'year_level',
+                    render: (v: number) => (
+                      <Tag color="cyan" style={{ borderRadius: 6, fontSize: '0.75rem' }}>
+                        ปี {v}
+                      </Tag>
+                    ),
+                  },
+                ]}
+                pagination={false}
+                size="small"
+                rowKey="id"
+                style={{ borderRadius: 12 }}
+                scroll={{ x: 'max-content' }}
+              />
+            )}
           </Card>
         </Col>
       </Row>

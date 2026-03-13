@@ -16,7 +16,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { SubjectsService } from '../services/subjects.service';
-import { GoogleAuthGuard, AdminGuard } from '../../auth/guards';
+import { AnyAuthGuard } from '../../../../common';
+import { AdminGuard } from '../../auth/guards';
 import { Admin } from '../../../../common';
 import { SkipEnvelope } from '../../../../common';
 
@@ -27,9 +28,10 @@ export class SubjectsController {
   /**
    * GET /api/v1/subjects
    * Get all subjects with optional filtering
+   * Accessible by both students (Google OAuth) and admins (JWT)
    */
   @Get()
-  @UseGuards(GoogleAuthGuard)
+  @UseGuards(AnyAuthGuard)
   @SkipEnvelope()
   async findAll(
     @Query('year_level') yearLevel?: string,
@@ -49,9 +51,10 @@ export class SubjectsController {
   /**
    * GET /api/v1/subjects/:id
    * Get subject with full hierarchy (sections, lectures, resources)
+   * Accessible by both students (Google OAuth) and admins (JWT)
    */
   @Get(':id')
-  @UseGuards(GoogleAuthGuard)
+  @UseGuards(AnyAuthGuard)
   @SkipEnvelope()
   async findOne(@Param('id') id: string) {
     const data = await this.subjectsService.findOne(id);
@@ -67,7 +70,7 @@ export class SubjectsController {
    * Create new subject (admin only)
    */
   @Post()
-  @UseGuards(GoogleAuthGuard, AdminGuard)
+  @UseGuards(AnyAuthGuard, AdminGuard)
   @Admin()
   @SkipEnvelope()
   async create(@Body() createDto: any) {
@@ -84,7 +87,7 @@ export class SubjectsController {
    * Update subject (admin only)
    */
   @Put(':id')
-  @UseGuards(GoogleAuthGuard, AdminGuard)
+  @UseGuards(AnyAuthGuard, AdminGuard)
   @Admin()
   @SkipEnvelope()
   async update(@Param('id') id: string, @Body() updateDto: any) {
@@ -101,7 +104,7 @@ export class SubjectsController {
    * Delete subject (admin only)
    */
   @Delete(':id')
-  @UseGuards(GoogleAuthGuard, AdminGuard)
+  @UseGuards(AnyAuthGuard, AdminGuard)
   @Admin()
   @SkipEnvelope()
   async delete(@Param('id') id: string) {
@@ -118,7 +121,7 @@ export class SubjectsController {
    * Reorder subjects (admin only)
    */
   @Patch('reorder')
-  @UseGuards(GoogleAuthGuard, AdminGuard)
+  @UseGuards(AnyAuthGuard, AdminGuard)
   @Admin()
   @SkipEnvelope()
   async reorder(@Body() body: { items: Array<{ id: string; order_index: number }> }) {

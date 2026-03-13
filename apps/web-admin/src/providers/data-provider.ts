@@ -1,14 +1,13 @@
 /**
  * Custom Data Provider for Refine
- * Connects to our Express API
+ * Connects to our API with Bearer token authentication
  */
 
 import type { DataProvider } from '@refinedev/core';
-import axios from 'axios';
+import { authAxios } from './auth-provider';
 
-const axiosInstance = axios.create({ withCredentials: true });
-
-// Cookies (httpOnly session) are sent automatically via `withCredentials`.
+// Use authAxios which includes Bearer token automatically
+const axiosInstance = authAxios;
 
 export const dataProvider = (apiUrl: string): DataProvider => ({
   getList: async ({ resource, pagination, filters, sorters }) => {

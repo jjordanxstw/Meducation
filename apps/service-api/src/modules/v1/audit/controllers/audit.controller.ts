@@ -11,7 +11,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuditService } from '../services/audit.service';
-import { GoogleAuthGuard, AdminGuard } from '../../auth/guards';
+import { AnyAuthGuard } from '../../../../common';
+import { AdminGuard } from '../../auth/guards';
 import { Admin } from '../../../../common';
 import { SkipEnvelope } from '../../../../common';
 import { AuditAction } from '@medical-portal/shared';
@@ -21,7 +22,7 @@ export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
   @Get()
-  @UseGuards(GoogleAuthGuard, AdminGuard)
+  @UseGuards(AnyAuthGuard, AdminGuard)
   @Admin()
   @SkipEnvelope()
   async findAll(
@@ -50,7 +51,7 @@ export class AuditController {
   }
 
   @Get('tables')
-  @UseGuards(GoogleAuthGuard, AdminGuard)
+  @UseGuards(AnyAuthGuard, AdminGuard)
   @Admin()
   @SkipEnvelope()
   async getTables() {
@@ -59,7 +60,7 @@ export class AuditController {
   }
 
   @Get('record/:table/:id')
-  @UseGuards(GoogleAuthGuard, AdminGuard)
+  @UseGuards(AnyAuthGuard, AdminGuard)
   @Admin()
   @SkipEnvelope()
   async getRecordHistory(@Param('table') table: string, @Param('id') id: string) {

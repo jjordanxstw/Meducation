@@ -13,7 +13,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ProfilesService } from '../services/profiles.service';
-import { GoogleAuthGuard, AdminGuard } from '../../auth/guards';
+import { AnyAuthGuard } from '../../../../common';
+import { AdminGuard } from '../../auth/guards';
 import { Admin } from '../../../../common';
 import { CurrentUser } from '../../../../common';
 import { SkipEnvelope } from '../../../../common';
@@ -24,7 +25,7 @@ export class ProfilesController {
   constructor(private readonly profilesService: ProfilesService) {}
 
   @Get()
-  @UseGuards(GoogleAuthGuard, AdminGuard)
+  @UseGuards(AnyAuthGuard, AdminGuard)
   @Admin()
   @SkipEnvelope()
   async findAll(
@@ -43,7 +44,7 @@ export class ProfilesController {
   }
 
   @Get(':id')
-  @UseGuards(GoogleAuthGuard)
+  @UseGuards(AnyAuthGuard)
   @SkipEnvelope()
   async findOne(@Param('id') id: string) {
     const data = await this.profilesService.findOne(id);
@@ -51,7 +52,7 @@ export class ProfilesController {
   }
 
   @Patch(':id')
-  @UseGuards(GoogleAuthGuard)
+  @UseGuards(AnyAuthGuard)
   @SkipEnvelope()
   async update(
     @Param('id') id: string,

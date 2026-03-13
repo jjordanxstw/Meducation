@@ -7,11 +7,13 @@ import { Module } from '@nestjs/common';
 import { AuditController } from './controllers/audit.controller';
 import { AuditService } from './services/audit.service';
 import { AuthModule } from '../auth/auth.module';
+import { AdminAuthModule } from '../admin-auth/admin-auth.module';
+import { AnyAuthGuard } from '../../../common';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, AdminAuthModule],
   controllers: [AuditController],
-  providers: [AuditService],
+  providers: [AuditService, AnyAuthGuard],
   exports: [AuditService],
 })
 export class AuditModule {}

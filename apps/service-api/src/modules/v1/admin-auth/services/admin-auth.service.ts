@@ -135,6 +135,23 @@ export class AdminAuthService {
   }
 
   /**
+   * Sign JWT Token for Admin
+   * Creates a new JWT token for the given admin user
+   */
+  async signToken(admin: AdminResponse): Promise<string> {
+    const payload = {
+      sub: admin.id,
+      username: admin.username,
+      type: 'admin',
+    };
+
+    return this.jwtService.signAsync(payload, {
+      secret: this.jwtSecret,
+      expiresIn: this.jwtExpiresIn,
+    });
+  }
+
+  /**
    * Change Password
    * Admin must provide current password to change it
    */
