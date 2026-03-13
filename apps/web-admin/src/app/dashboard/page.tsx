@@ -2,11 +2,22 @@
 
 /**
  * Admin Dashboard Page
- * Uses Refine built-in welcome page to keep the dashboard lightweight.
+ * Lightweight landing page to avoid extra initialization requests.
  */
 
-import { WelcomePage } from '@refinedev/antd';
+import { Card, Space, Typography } from 'antd';
+
+const { Title, Text } = Typography;
 
 export default function DashboardPage() {
-  return <WelcomePage />;
+  return (
+    <Card>
+      <Space direction="vertical" size={4}>
+        <Title level={3} style={{ margin: 0 }}>
+          Dashboard
+        </Title>
+        <Text type="secondary">เลือกเมนูทางซ้ายเพื่อเริ่มจัดการข้อมูลระบบ</Text>
+      </Space>
+    </Card>
+  );
 }
