@@ -21,15 +21,41 @@
     "lint": "pnpm run --parallel lint",
     "test": "pnpm run --parallel test",
     "clean": "pnpm run --parallel clean && rimraf node_modules",
-    "db:migrate": "pnpm --filter service-api db:migrate",
-    "db:seed": "pnpm --filter service-api db:seed"
+    "db": "tsx database/scripts/migrate.ts",
+    "db:status": "tsx database/scripts/migrate.ts status",
+    "db:apply": "tsx database/scripts/migrate-apply.ts",
+    "db:migrate": "tsx database/scripts/migrate-apply.ts",
+    "db:reset": "tsx database/scripts/reset.ts",
+    "db:seed": "tsx database/scripts/seed.ts",
+    "db:generate": "tsx database/scripts/generate-migration.ts",
+    "admin:create": "tsx database/scripts/create-admin.ts"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20.10.0",
+    "@types/pg": "^8.18.0",
     "prettier": "^3.1.0",
     "rimraf": "^5.0.5",
+    "tsx": "^4.6.2",
     "typescript": "^5.3.0"
   },
-  "packageManager": "pnpm@8.15.0"
+  "pnpm": {
+    "overrides": {
+      "axios": "^1.13.5",
+      "minimatch": "^9.0.7",
+      "rollup": "^4.59.0",
+      "lodash": "^4.17.23",
+      "lodash-es": "^4.17.23",
+      "ajv": "^8.18.0",
+      "qs": "^6.14.2",
+      "file-type": "^21.3.1"
+    }
+  },
+  "packageManager": "pnpm@8.15.0",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "bcrypt": "^6.0.0",
+    "pg": "^8.20.0"
+  }
 }
