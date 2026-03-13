@@ -6,17 +6,14 @@
 
 import { useList } from '@refinedev/core';
 import { Edit, useForm } from '@refinedev/antd';
+import { useParams } from 'next/navigation';
 import { Form, Input, InputNumber, Switch, Select } from 'antd';
 import type { Section, Subject } from '@medical-portal/shared';
 
 const { TextArea } = Input;
 
-interface SectionEditPageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default async function SectionEditPage({ params }: SectionEditPageProps) {
-  const { id } = await params;
+export default function SectionEditPage() {
+  const { id } = useParams<{ id: string }>();
   const { formProps, saveButtonProps } = useForm<Section>({ id });
 
   const { result: subjectsDataResult } = useList<Subject>({

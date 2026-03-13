@@ -5,21 +5,18 @@
  */
 
 import { Edit, useForm } from '@refinedev/antd';
+import { useParams } from 'next/navigation';
 import { Form, Input, Select } from 'antd';
 import { UserRole, YEAR_LEVELS } from '@medical-portal/shared';
 import type { Profile } from '@medical-portal/shared';
-
-interface ProfileEditPageProps {
-  params: Promise<{ id: string }>;
-}
 
 const roleOptions = [
   { label: 'นักศึกษา', value: UserRole.STUDENT },
   { label: 'ผู้ดูแลระบบ', value: UserRole.ADMIN },
 ];
 
-export default async function ProfileEditPage({ params }: ProfileEditPageProps) {
-  const { id } = await params;
+export default function ProfileEditPage() {
+  const { id } = useParams<{ id: string }>();
   const { formProps, saveButtonProps } = useForm<Profile>({ id });
 
   return (

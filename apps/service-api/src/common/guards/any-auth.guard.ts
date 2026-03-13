@@ -44,6 +44,17 @@ export class AnyAuthGuard {
       }
     }
 
+    // Fallback to admin access token cookie (httpOnly cookie flow)
+    const adminAccessToken = request.cookies?.admin_access_token;
+    if (adminAccessToken) {
+      const admin = await this.adminAuthService.verifyToken(adminAccessToken);
+      if (admin) {
+        request.admin = admin;
+        request.user = null;
+        return true;
+      }
+    }
+
     // Fallback to session cookie (for students)
     const cookieName = process.env.SESSION_COOKIE_NAME || 'session';
     const cookieHeader = request.headers.cookie;

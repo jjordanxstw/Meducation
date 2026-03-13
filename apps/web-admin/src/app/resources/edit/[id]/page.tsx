@@ -6,6 +6,7 @@
 
 import { useList } from '@refinedev/core';
 import { Edit, useForm } from '@refinedev/antd';
+import { useParams } from 'next/navigation';
 import { Form, Input, InputNumber, Switch, Select } from 'antd';
 import { ResourceType } from '@medical-portal/shared';
 import type { Resource, Lecture } from '@medical-portal/shared';
@@ -17,12 +18,8 @@ const resourceTypeOptions = [
   { label: '🔗 External Link', value: ResourceType.EXTERNAL },
 ];
 
-interface ResourceEditPageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default async function ResourceEditPage({ params }: ResourceEditPageProps) {
-  const { id } = await params;
+export default function ResourceEditPage() {
+  const { id } = useParams<{ id: string }>();
   const { formProps, saveButtonProps } = useForm<Resource>({ id });
 
   const { result: lecturesDataResult } = useList<Lecture>({

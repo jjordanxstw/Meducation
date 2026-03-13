@@ -12,7 +12,7 @@
 
 import type { AuthProvider } from '@refinedev/core';
 import axios, { AxiosError } from 'axios';
-import { removeAuthCookie, getAuthCookie, isTokenExpired, sanitizeErrorMessage } from '@/lib/security';
+import { removeAuthCookie, sanitizeErrorMessage } from '@/lib/security';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
@@ -69,7 +69,10 @@ function logSecurityEvent(event: string, details?: Record<string, unknown>): voi
 }
 
 export const authProvider: AuthProvider = {
-  login: async ({ username, password }) => {
+  login: async (params) => {
+    const username = (params as { username?: string } | undefined)?.username;
+    const password = (params as { password?: string } | undefined)?.password;
+
     // Input validation
     if (!username || !password) {
       return {
@@ -83,6 +86,17 @@ export const authProvider: AuthProvider = {
 
     // Sanitize username to prevent injection
     const sanitizedUsername = username.trim().slice(0, 100);
+
+    // Username must be a normal user id, not an email address
+    if (sanitizedUsername.includes('@')) {
+      return {
+        success: false,
+        error: {
+          name: 'ValidationError',
+          message: 'กรุณาเข้าสู่ระบบด้วยรหัสผู้ใช้ (ห้ามใช้อีเมล)'
+        }
+      };
+    }
 
     try {
       // Username/password login for admin
@@ -213,20 +227,8 @@ export const authProvider: AuthProvider = {
   },
 
   check: async () => {
-    const token = getAuthCookie();
-
-    // No token found
-    if (!token) {
-      return { authenticated: false, redirectTo: '/' };
-    }
-
-    // Token is expired
-    if (isTokenExpired(token)) {
-      removeAuthCookie();
-      return { authenticated: false, redirectTo: '/' };
-    }
-
-    // Verify with server
+    // Verify authentication with server because access token cookie is httpOnly
+    // and cannot be read via document.cookie in the browser.
     try {
       const response = await axios.get(`${API_URL}/admin/auth/me`, {
         withCredentials: true,
@@ -250,9 +252,6 @@ export const authProvider: AuthProvider = {
   },
 
   getPermissions: async () => {
-    const token = getAuthCookie();
-    if (!token || isTokenExpired(token)) return null;
-
     try {
       const response = await axios.get(`${API_URL}/admin/auth/me`, {
         withCredentials: true,
@@ -269,9 +268,6 @@ export const authProvider: AuthProvider = {
   },
 
   getIdentity: async () => {
-    const token = getAuthCookie();
-    if (!token || isTokenExpired(token)) return null;
-
     try {
       const response = await axios.get(`${API_URL}/admin/auth/me`, {
         withCredentials: true,
