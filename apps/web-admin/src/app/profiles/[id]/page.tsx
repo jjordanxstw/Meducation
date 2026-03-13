@@ -6,16 +6,13 @@
 
 import { useShow } from '@refinedev/core';
 import { Show } from '@refinedev/antd';
+import { useParams } from 'next/navigation';
 import { Descriptions, Tag } from 'antd';
 import { UserRole } from '@medical-portal/shared';
 import type { Profile } from '@medical-portal/shared';
 
-interface ProfileShowPageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default async function ProfileShowPage({ params }: ProfileShowPageProps) {
-  const { id } = await params;
+export default function ProfileShowPage() {
+  const { id } = useParams<{ id: string }>();
   const { result } = useShow<Profile>({ id });
   const record = result;
 

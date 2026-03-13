@@ -5,17 +5,14 @@
  */
 
 import { Edit, useForm } from '@refinedev/antd';
+import { useParams } from 'next/navigation';
 import { Form, Input, InputNumber, Switch } from 'antd';
 import type { Subject } from '@medical-portal/shared';
 
 const { TextArea } = Input;
 
-interface SubjectEditPageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default async function SubjectEditPage({ params }: SubjectEditPageProps) {
-  const { id } = await params;
+export default function SubjectEditPage() {
+  const { id } = useParams<{ id: string }>();
   const { formProps, saveButtonProps } = useForm<Subject>({
     id,
   });

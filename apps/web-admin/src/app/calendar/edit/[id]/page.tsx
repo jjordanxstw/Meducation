@@ -6,6 +6,7 @@
 
 import { useList, useShow } from '@refinedev/core';
 import { Edit, useForm } from '@refinedev/antd';
+import { useParams } from 'next/navigation';
 import { Form, Input, Switch, Select, DatePicker } from 'antd';
 import dayjs from 'dayjs';
 import { EventType } from '@medical-portal/shared';
@@ -21,12 +22,8 @@ const eventTypeOptions = [
   { label: '📅 Event', value: EventType.EVENT },
 ];
 
-interface CalendarEditPageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default async function CalendarEditPage({ params }: CalendarEditPageProps) {
-  const { id } = await params;
+export default function CalendarEditPage() {
+  const { id } = useParams<{ id: string }>();
   const { formProps, saveButtonProps } = useForm<CalendarEvent>({ id });
 
   const { result: subjectsDataResult } = useList<Subject>({

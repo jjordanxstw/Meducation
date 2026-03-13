@@ -6,17 +6,14 @@
 
 import { useShow } from '@refinedev/core';
 import { Show } from '@refinedev/antd';
+import { useParams } from 'next/navigation';
 import { Typography, Descriptions, Tag } from 'antd';
 import type { Subject } from '@medical-portal/shared';
 
 const { Title } = Typography;
 
-interface SubjectShowPageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default async function SubjectShowPage({ params }: SubjectShowPageProps) {
-  const { id } = await params;
+export default function SubjectShowPage() {
+  const { id } = useParams<{ id: string }>();
   const { result } = useShow<Subject>({ id });
   const record = result;
 

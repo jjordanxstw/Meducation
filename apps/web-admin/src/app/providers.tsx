@@ -9,20 +9,22 @@
  * - RefineKbar (command palette)
  */
 
-import React, { Suspense } from 'react';
-import { Refine } from '@refinedev/core';
+import React from 'react';
+import { usePathname } from 'next/navigation';
+import { Authenticated, Refine } from '@refinedev/core';
 import { RefineKbar, RefineKbarProvider } from '@refinedev/kbar';
 import {
+  RefineThemes,
+  ThemedLayout,
   useNotificationProvider,
 } from '@refinedev/antd';
 import routerBindings from '@refinedev/nextjs-router';
-import { ConfigProvider, App as AntdApp, theme } from 'antd';
+import { ConfigProvider, App as AntdApp } from 'antd';
 import thTH from 'antd/locale/th_TH';
 
 import { dataProvider } from '../providers/data-provider';
 import { authProvider } from '../providers/auth-provider';
-import { DashboardLayout } from '../components/DashboardLayout';
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import { i18nProvider } from '../providers/i18n-provider';
 
 // Icons
 import {
@@ -42,12 +44,15 @@ interface ProvidersProps {
 }
 
 export const Providers: React.FC<ProvidersProps> = ({ children }) => {
+  const pathname = usePathname();
+  const isAuthRoute = pathname === '/' || pathname === '/login';
+
   return (
     <RefineKbarProvider>
         <ConfigProvider
           locale={thTH}
           theme={{
-            algorithm: theme.defaultAlgorithm,
+            ...RefineThemes.Blue,
             token: {
               colorPrimary: '#0070F3',
               fontFamily: 'Prompt, sans-serif',
@@ -88,6 +93,7 @@ export const Providers: React.FC<ProvidersProps> = ({ children }) => {
             <Refine
               dataProvider={dataProvider(process.env.NEXT_PUBLIC_API_URL || '/api/v1')}
               authProvider={authProvider}
+              i18nProvider={i18nProvider}
               routerProvider={routerBindings}
               notificationProvider={useNotificationProvider}
               resources={[
@@ -173,11 +179,21 @@ export const Providers: React.FC<ProvidersProps> = ({ children }) => {
                 syncWithLocation: true,
                 warnWhenUnsavedChanges: true,
                 projectId: 'medical-portal-admin',
+                title: {
+                  text: 'Medical Admin',
+                },
               }}
             >
-              <Suspense fallback={<LoadingSpinner />}>
-                <DashboardLayout>{children}</DashboardLayout>
-              </Suspense>
+              {isAuthRoute ? (
+                children
+              ) : (
+                <Authenticated
+                  key={`protected:${pathname}`}
+                  redirectOnFail="/"
+                >
+                  <ThemedLayout>{children}</ThemedLayout>
+                </Authenticated>
+              )}
 
               <RefineKbar />
             </Refine>

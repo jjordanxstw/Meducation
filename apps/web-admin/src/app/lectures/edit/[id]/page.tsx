@@ -6,18 +6,15 @@
 
 import { useList } from '@refinedev/core';
 import { Edit, useForm } from '@refinedev/antd';
+import { useParams } from 'next/navigation';
 import { Form, Input, InputNumber, Switch, Select, DatePicker } from 'antd';
 import dayjs from 'dayjs';
 import type { Lecture, Section } from '@medical-portal/shared';
 
 const { TextArea } = Input;
 
-interface LectureEditPageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default async function LectureEditPage({ params }: LectureEditPageProps) {
-  const { id } = await params;
+export default function LectureEditPage() {
+  const { id } = useParams<{ id: string }>();
   const { formProps, saveButtonProps } = useForm<Lecture>({ id });
 
   const { result: sectionsDataResult } = useList<Section>({
