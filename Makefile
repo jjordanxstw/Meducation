@@ -1,7 +1,5 @@
-SHELL := /bin/sh
-
-# Database configuration
-SUPABASE_PROJECT_ID := $(shell grep -s SUPABASE_URL .env | sed 's/.*\/\/\([^.]*\)\.supabase\.co.*/\1/' | head -1)
+# Makefile with Windows compatibility
+# Note: For Windows, some commands may require WSL or Git Bash
 
 .PHONY: help install dev-web dev-api dev-admin dev build-web build-api build-admin build lint test clean db db-migrate db-reset db-seed db-generate create-admin
 
@@ -10,9 +8,9 @@ help:
 	@echo "Usage: make <target>"
 	@echo ""
 	@echo "Development:"
-	@echo "  dev:web             Run web-client in dev mode"
-	@echo "  dev:api             Run service-api in dev mode"
-	@echo "  dev:admin           Run web-admin in dev mode"
+	@echo "  dev:web             Run web-client in dev mode (port 3001)"
+	@echo "  dev:api             Run service-api in dev mode (port 3000)"
+	@echo "  dev:admin           Run web-admin in dev mode (port 3002)"
 	@echo "  dev                 Run all services in parallel"
 	@echo ""
 	@echo "Build:"
