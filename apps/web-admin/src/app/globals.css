@@ -68,3 +68,35 @@ h1, h2, h3, h4, h5, h6 {
 .ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout {
   margin-top: auto;
 }
+
+/* Fix sidebar collapse trigger z-index to stay behind white background */
+.ant-layout-sider-trigger {
+  position: absolute !important;
+  bottom: 0;
+  z-index: 0 !important;
+}
+
+.sidebar-collapse-trigger {
+  z-index: 0 !important;
+}
+
+/* Ensure the sider children (content) is above the trigger */
+.ant-layout-sider-children {
+  position: relative;
+  z-index: 1;
+  background-color: #fff;
+}
+
+/* Sidebar collapse trigger - always white background */
+.sidebar-collapse-trigger,
+.ant-layout-sider-trigger .ant-btn,
+.ant-layout-sider-trigger button {
+  background-color: #fff !important;
+}
+
+.sidebar-collapse-trigger:hover,
+.ant-layout-sider-trigger .ant-btn:hover,
+.ant-layout-sider-trigger button:hover {
+  background-color: #fff !important;
+  color: #0070F3 !important;
+}

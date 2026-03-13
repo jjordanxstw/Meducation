@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Authenticated,
   Refine,
@@ -20,6 +20,7 @@ import {
   useMenu,
   useTranslate,
   useWarnAboutChange,
+  useIsAuthenticated,
 } from '@refinedev/core';
 import { RefineKbar, RefineKbarProvider } from '@refinedev/kbar';
 import {
@@ -29,7 +30,7 @@ import {
   useNotificationProvider,
 } from '@refinedev/antd';
 import routerBindings from '@refinedev/nextjs-router';
-import { ConfigProvider, App as AntdApp, Button, Layout, Menu } from 'antd';
+import { ConfigProvider, App as AntdApp, Button, Layout, Menu, Spin } from 'antd';
 import type { MenuProps } from 'antd';
 import thTH from 'antd/locale/th_TH';
 
@@ -56,6 +57,39 @@ import {
 interface ProvidersProps {
   children: React.ReactNode;
 }
+
+// Loading component for auth state
+const AuthLoadingFallback: React.FC = () => (
+  <div
+    style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: '100vh',
+      background: '#f8fafc',
+    }}
+  >
+    <Spin size="large" tip="กำลังโหลด..." />
+  </div>
+);
+
+// Wrapper component to handle authenticated users on root path
+const RootPathAuthHandler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { data: isAuthenticated, isLoading } = useIsAuthenticated();
+  const router = useRouter();
+
+  React.useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  if (isLoading) {
+    return <AuthLoadingFallback />;
+  }
+
+  return <>{children}</>;
+};
 
 const AdminSider: React.FC<{
   Title?: React.FC<{ collapsed: boolean }>;
@@ -144,6 +178,7 @@ const AdminSider: React.FC<{
       style={{
         backgroundColor: '#fff',
         borderRight: '1px solid #f0f0f0',
+        position: 'relative',
       }}
       trigger={
         <Button
@@ -152,7 +187,12 @@ const AdminSider: React.FC<{
             borderRadius: 0,
             height: '100%',
             width: '100%',
+            position: 'relative',
+            zIndex: 1,
+            backgroundColor: '#fff',
+            borderTop: '1px solid #f0f0f0',
           }}
+          className="sidebar-collapse-trigger"
         >
           {collapseIcon}
         </Button>
@@ -187,7 +227,6 @@ const AdminSider: React.FC<{
 
 export const Providers: React.FC<ProvidersProps> = ({ children }) => {
   const pathname = usePathname();
-  const isAuthRoute = pathname === '/' || pathname === '/login';
 
   return (
     <RefineKbarProvider>
@@ -326,12 +365,15 @@ export const Providers: React.FC<ProvidersProps> = ({ children }) => {
                 },
               }}
             >
-              {isAuthRoute ? (
+              {pathname === '/' ? (
+                <RootPathAuthHandler>{children}</RootPathAuthHandler>
+              ) : pathname === '/login' ? (
                 children
               ) : (
                 <Authenticated
                   key={`protected:${pathname}`}
                   redirectOnFail="/"
+                  fallback={<AuthLoadingFallback />}
                 >
                   <ThemedLayout Sider={AdminSider}>{children}</ThemedLayout>
                 </Authenticated>
