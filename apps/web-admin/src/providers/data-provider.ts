@@ -12,10 +12,11 @@ const axiosInstance = axios.create({ withCredentials: true });
 
 export const dataProvider = (apiUrl: string): DataProvider => ({
   getList: async ({ resource, pagination, filters, sorters }) => {
-    const { current = 1, pageSize = 15 } = pagination ?? {};
+    const page = (pagination as any)?.current ?? 1;
+    const pageSize = (pagination as any)?.pageSize ?? 15;
 
     const params: Record<string, unknown> = {
-      page: current,
+      page,
       pageSize,
     };
 
@@ -90,7 +91,7 @@ export const dataProvider = (apiUrl: string): DataProvider => ({
     return { data: [] };
   },
 
-  custom: async ({ url, method, filters, sorters, payload, query, headers }) => {
+  custom: async ({ url, method, payload, query, headers }) => {
     let requestUrl = url;
 
     if (query) {

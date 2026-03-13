@@ -13,7 +13,7 @@ export const authProvider: AuthProvider = {
       const response = await axios.post(`${API_URL}/auth/verify`, { credential }, { withCredentials: true });
 
       if (response.data.success) {
-        const { user, profile } = response.data.data;
+        const { profile } = response.data.data;
 
         // Check if user is admin
         if (profile.role !== 'admin') {
