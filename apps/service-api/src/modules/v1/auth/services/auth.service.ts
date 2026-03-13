@@ -100,6 +100,45 @@ export class AuthService {
 
   /**
    * Get or create user profile in database
+   *
+   * DEVELOPER NOTES: Database Constraints
+   * =====================================
+   *
+   * 1. Email Domain Constraint (valid_mahidol_email):
+   *    - The database has a CHECK constraint on the profiles.email column
+   *    - Only allows emails from specific Mahidol University domains
+   *    - Error code: '23514' (CHECK constraint violation)
+   *    - Error message: "new row for relation 'profiles' violates check constraint 'valid_mahidol_email'"
+   *
+   * 2. Allowed Domains Configuration:
+   *    - Configured via ALLOWED_EMAIL_DOMAINS environment variable
+   *    - Default: '@student.mahidol.edu,@student.mahidol.ac.th'
+   *    - To allow other domains during development, update this variable
+   *
+   * 3. Common Debugging Scenarios:
+   *    a) User sees "valid_mahidol_email" error:
+   *       - Check the email domain in the error log
+   *       - Verify ALLOWED_EMAIL_DOMAINS includes that domain
+   *       - For development: Add '@gmail.com' or other test domains
+   *       - For production: Keep only Mahidol domains for security
+   *
+   *    b) Admin users bypassing domain check:
+   *       - Set role='admin' when manually inserting into database
+   *       - Admins can have any email domain (see isAllowedEmail method)
+   *
+   *    c) Error codes:
+   *       - PGRST116: Profile not found (safe to create new)
+   *       - 23514: CHECK constraint violation (email domain not allowed)
+   *       - 23505: UNIQUE violation (userId already exists)
+   *
+   * 4. Testing with non-Mahidol emails:
+   *    - Set ALLOWED_EMAIL_DOMAINS=@test.com,@gmail.com in .env
+   *    - Or insert profile directly into database with admin role
+   *
+   * @param userId - Google OAuth subject identifier (unique per Google account)
+   * @param email - User's email address (must match valid_mahidol_email constraint)
+   * @param name - User's display name from Google profile
+   * @returns Profile object if successful, null if creation fails
    */
   async getOrCreateProfile(
     userId: string,
@@ -133,7 +172,24 @@ export class AuthService {
           .single();
 
         if (createError) {
-          this.logger.error('Failed to create profile:', createError);
+          // Detailed error logging for constraint violations
+          if (createError.code === '23514') {
+            this.logger.error(
+              `Database constraint violation: Email domain not allowed. ` +
+              `Email: ${email}. ` +
+              `Allowed domains: ${this.allowedEmailDomains.join(', ')}. ` +
+              `To allow this domain, update ALLOWED_EMAIL_DOMAINS environment variable. ` +
+              `For testing, you can add temporary domains like @gmail.com`,
+              createError
+            );
+          } else if (createError.code === '23505') {
+            this.logger.error(
+              `Duplicate key violation: User ID ${userId} already exists in profiles table`,
+              createError
+            );
+          } else {
+            this.logger.error('Failed to create profile:', createError);
+          }
           return null;
         }
 
@@ -162,6 +218,16 @@ export class AuthService {
 
   /**
    * Verify Google credential and create session
+   *
+   * FLOW:
+   * 1. Verify Google ID token with Google's servers
+   * 2. Get or create user profile in database
+   * 3. Validate email domain (must match ALLOWED_EMAIL_DOMAINS)
+   * 4. Sign server session JWT
+   * 5. Return user data and session token
+   *
+   * If login fails with "valid_mahidol_email" constraint error, see
+   * getOrCreateProfile() method documentation for debugging steps.
    */
   async verifyCredential(credential: string): Promise<{
     user: UserWithoutPassword;
