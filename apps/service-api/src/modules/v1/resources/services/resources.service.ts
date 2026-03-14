@@ -25,6 +25,47 @@ export class ResourcesService {
     });
   }
 
+  private validateResourcePayload(payload: any): void {
+    if (!payload || payload.url === undefined || payload.url === null) {
+      return;
+    }
+
+    if (typeof payload.url !== 'string' || payload.url.trim().length === 0) {
+      throw new AppException(
+        ErrorCode.RESOURCE_URL_INVALID,
+        { field: 'url' },
+        'Resource URL is invalid',
+      );
+    }
+
+    try {
+      new URL(payload.url);
+    } catch {
+      throw new AppException(
+        ErrorCode.RESOURCE_URL_INVALID,
+        { field: 'url', value: payload.url },
+        'Resource URL is invalid',
+      );
+    }
+  }
+
+  private mapResourceWriteError(error: { code?: string; message?: string; details?: string | null; hint?: string | null }): never {
+    if (error.code === '23505') {
+      const signature = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`.toLowerCase();
+
+      if (signature.includes('idx_resources_lecture_label_unique_ci') || signature.includes('(lecture_id, lower(label))') || signature.includes('(lecture_id, label)')) {
+        throw new AppException(ErrorCode.RESOURCE_LABEL_DUPLICATE, { field: 'label' });
+      }
+      if (signature.includes('idx_resources_lecture_url_unique') || signature.includes('(lecture_id, url)')) {
+        throw new AppException(ErrorCode.RESOURCE_URL_DUPLICATE, { field: 'url' });
+      }
+
+      throw new AppException(ErrorCode.RESOURCE_CONFLICT, { resource: 'resource' }, 'Duplicate resource data');
+    }
+
+    throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'resource' });
+  }
+
   async findAll(lectureId?: string, type?: string, isActive: boolean = true) {
     let query = this.supabaseAdmin.from('resources').select('*');
 
@@ -63,6 +104,8 @@ export class ResourcesService {
   }
 
   async create(data: any) {
+    this.validateResourcePayload(data);
+
     const { data: result, error } = await this.supabaseAdmin
       .from('resources')
       .insert(data)
@@ -71,13 +114,15 @@ export class ResourcesService {
 
     if (error) {
       this.logger.warn(`Failed to create resource (code=${error.code ?? 'unknown'})`);
-      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'resource' }, 'Failed to create resource');
+      this.mapResourceWriteError(error);
     }
 
     return result;
   }
 
   async bulkCreate(resources: any[]) {
+    resources.forEach((item) => this.validateResourcePayload(item));
+
     const { data, error } = await this.supabaseAdmin
       .from('resources')
       .insert(resources)
@@ -85,13 +130,15 @@ export class ResourcesService {
 
     if (error) {
       this.logger.warn(`Failed to create resources (code=${error.code ?? 'unknown'})`);
-      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'resource_bulk' }, 'Failed to create resources');
+      this.mapResourceWriteError(error);
     }
 
     return data;
   }
 
   async update(id: string, data: any) {
+    this.validateResourcePayload(data);
+
     const { data: oldData } = await this.supabaseAdmin
       .from('resources')
       .select('*')
@@ -107,7 +154,7 @@ export class ResourcesService {
 
     if (error) {
       this.logger.warn(`Failed to update resource (code=${error.code ?? 'unknown'})`);
-      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'resource', id }, 'Failed to update resource');
+      this.mapResourceWriteError(error);
     }
 
     return { oldData, newData: result };

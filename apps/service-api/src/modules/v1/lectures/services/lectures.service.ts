@@ -25,6 +25,20 @@ export class LecturesService {
     });
   }
 
+  private mapLectureWriteError(error: { code?: string; message?: string; details?: string | null; hint?: string | null }): never {
+    if (error.code === '23505') {
+      const signature = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`.toLowerCase();
+
+      if (signature.includes('idx_lectures_section_title_unique_ci') || signature.includes('(section_id, lower(title))') || signature.includes('(section_id, title)')) {
+        throw new AppException(ErrorCode.LECTURE_TITLE_DUPLICATE, { field: 'title' });
+      }
+
+      throw new AppException(ErrorCode.RESOURCE_CONFLICT, { resource: 'lecture' }, 'Duplicate lecture data');
+    }
+
+    throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'lecture' });
+  }
+
   async findAll(sectionId?: string, isActive: boolean = true) {
     let query = this.supabaseAdmin.from('lectures').select('*');
 
@@ -73,7 +87,7 @@ export class LecturesService {
 
     if (error) {
       this.logger.warn(`Failed to create lecture (code=${error.code ?? 'unknown'})`);
-      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'lecture' }, 'Failed to create lecture');
+      this.mapLectureWriteError(error);
     }
 
     return result;
@@ -95,7 +109,7 @@ export class LecturesService {
 
     if (error) {
       this.logger.warn(`Failed to update lecture (code=${error.code ?? 'unknown'})`);
-      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'lecture', id }, 'Failed to update lecture');
+      this.mapLectureWriteError(error);
     }
 
     return { oldData, newData: result };
