@@ -1,7 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
+import { ServiceApiService } from './service-api.service';
 
-@Controller()
+@Controller({ version: '1' })
 export class ServiceApiController {
+  constructor(private readonly serviceApiService: ServiceApiService) {}
+
   @Get()
   getInfo() {
     return {
@@ -9,6 +12,11 @@ export class ServiceApiController {
       version: '1.0.0',
       status: 'ok',
     };
+  }
+
+  @Get('health')
+  getHealth() {
+    return this.serviceApiService.getHealthStatus();
   }
 }
 

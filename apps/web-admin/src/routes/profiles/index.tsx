@@ -4,11 +4,13 @@
  */
 
 import { List, useTable, EditButton, ShowButton } from '@refinedev/antd';
+import { useTranslate } from '@refinedev/core';
 import { Table, Space, Tag, Avatar } from 'antd';
 import { UserRole } from '@medical-portal/shared';
 import type { Profile } from '@medical-portal/shared';
 
 const ProfilesList = () => {
+  const t = useTranslate();
   const { tableProps } = useTable<Profile>({
     syncWithLocation: true,
   });
@@ -31,27 +33,29 @@ const ProfilesList = () => {
             </Avatar>
           )}
         />
-        <Table.Column dataIndex="full_name" title="ชื่อ-นามสกุล" ellipsis />
-        <Table.Column dataIndex="email" title="อีเมล" ellipsis />
-        <Table.Column dataIndex="student_id" title="รหัสนักศึกษา" ellipsis />
+        <Table.Column dataIndex="full_name" title={t('pages.profiles.fields.fullName', {}, 'Full Name')} ellipsis />
+        <Table.Column dataIndex="email" title={t('pages.profiles.fields.email', {}, 'Email')} ellipsis />
+        <Table.Column dataIndex="student_id" title={t('pages.profiles.fields.studentId', {}, 'Student ID')} ellipsis />
         <Table.Column
           dataIndex="year_level"
-          title="ชั้นปี"
+          title={t('pages.profiles.fields.yearLevel', {}, 'Year Level')}
           width={80}
-          render={(value) => (value ? `ปี ${value}` : '-')}
+          render={(value) => (value ? `${t('common.yearPrefix', {}, 'Year')} ${value}` : t('common.notAvailable', {}, '-'))}
         />
         <Table.Column
           dataIndex="role"
-          title="สิทธิ์"
+          title={t('pages.profiles.fields.role', {}, 'Role')}
           width={120}
           render={(value) => (
             <Tag color={value === UserRole.ADMIN ? 'gold' : 'blue'}>
-              {value === UserRole.ADMIN ? 'ผู้ดูแล' : 'นักศึกษา'}
+              {value === UserRole.ADMIN
+                ? t('pages.profiles.roles.admin', {}, 'Admin')
+                : t('pages.profiles.roles.student', {}, 'Student')}
             </Tag>
           )}
         />
         <Table.Column
-          title="การจัดการ"
+          title={t('common.actions', {}, 'Actions')}
           fixed="right"
           width={120}
           render={(_, record: Profile) => (

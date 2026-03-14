@@ -11,9 +11,18 @@ import { StrictMode } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { Refine } from '@refinedev/core';
 
+import '@fontsource/kanit/400.css';
+import '@fontsource/kanit/500.css';
+import '@fontsource/kanit/600.css';
+import '@fontsource/kanit/700.css';
+import '@fontsource/prompt/300.css';
+import '@fontsource/prompt/400.css';
+import '@fontsource/prompt/500.css';
+import '@fontsource/prompt/600.css';
+
 import { dataProvider } from './providers/data-provider';
 import { authProvider } from './providers/auth-provider';
-import { i18nProvider } from './providers/i18n-provider';
+import { i18nProvider, LOCALE_CHANGED_EVENT } from './providers/i18n-provider';
 import { ConfigProvider, App as AntdApp } from 'antd';
 import { RefineThemes, useNotificationProvider } from '@refinedev/antd';
 import routerBindings from '@refinedev/react-router-v6';
@@ -22,7 +31,7 @@ import './index.css';
 
 // Import router and resources
 import { router } from './routes';
-import { resources } from './resources';
+import { buildResources } from './resources';
 
 const resolvedApiUrl = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -44,10 +53,26 @@ function assertValidApiUrl(apiUrl: string): void {
 assertValidApiUrl(resolvedApiUrl);
 
 const Root: React.FC = () => {
+  const [locale, setLocale] = React.useState(i18nProvider.getLocale() ?? 'th');
+
+  React.useEffect(() => {
+    const onLocaleChange = (event: Event) => {
+      const customEvent = event as CustomEvent<string>;
+      setLocale(customEvent.detail || (i18nProvider.getLocale() ?? 'th'));
+    };
+
+    window.addEventListener(LOCALE_CHANGED_EVENT, onLocaleChange);
+    return () => {
+      window.removeEventListener(LOCALE_CHANGED_EVENT, onLocaleChange);
+    };
+  }, []);
+
   const refineDataProvider = React.useMemo(
     () => dataProvider(resolvedApiUrl),
     []
   );
+
+  const resources = buildResources((key: string, fallback: string) => i18nProvider.translate(key, {}, fallback));
 
   return (
     <ConfigProvider
@@ -92,6 +117,7 @@ const Root: React.FC = () => {
     >
       <AntdApp>
         <Refine
+          key={locale}
           dataProvider={refineDataProvider}
           authProvider={authProvider}
           i18nProvider={i18nProvider}

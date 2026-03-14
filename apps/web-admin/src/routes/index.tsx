@@ -8,6 +8,7 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { Authenticated } from '@refinedev/core';
 import { ThemedLayout } from '@refinedev/antd';
+import { AppLayoutHeader } from './layout-header';
 
 import { LoginPage } from './auth';
 import DashboardPage from './dashboard';
@@ -54,7 +55,7 @@ const ProtectedLayout = () => (
     redirectOnFail="/login"
     loading={<AuthLoadingFallback />}
   >
-    <ThemedLayout>
+    <ThemedLayout Header={AppLayoutHeader}>
       <Outlet />
     </ThemedLayout>
   </Authenticated>

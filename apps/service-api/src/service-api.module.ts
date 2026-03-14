@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ServiceApiController } from './service-api.controller';
+import { ServiceApiService } from './service-api.service';
 import { V1Module } from './modules/v1/v1.module';
 
 const appEnv = process.env.APP_ENV?.trim();
@@ -26,5 +27,6 @@ envFilePath.push('.env');
     V1Module,
   ],
   controllers: [ServiceApiController],
+  providers: [ServiceApiService],
 })
 export class ServiceApiModule {}

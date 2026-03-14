@@ -3,7 +3,7 @@
  * Migrated from src/app/lectures/edit/[id]/page.tsx
  */
 
-import { useList } from '@refinedev/core';
+import { useList, useTranslate } from '@refinedev/core';
 import { Edit, useForm } from '@refinedev/antd';
 import { useParams } from 'react-router-dom';
 import { Form, Input, InputNumber, Switch, Select, DatePicker } from 'antd';
@@ -13,6 +13,7 @@ import type { Lecture, Section } from '@medical-portal/shared';
 const { TextArea } = Input;
 
 const LecturesEdit = () => {
+  const t = useTranslate();
   const { id } = useParams<{ id: string }>();
   const { formProps, saveButtonProps } = useForm<Lecture>({ id });
 
@@ -26,7 +27,7 @@ const LecturesEdit = () => {
     <Edit saveButtonProps={saveButtonProps} recordItemId={id}>
       <Form {...formProps} layout="vertical" style={{ maxWidth: 600 }}>
         <Form.Item
-          label="หมวดหมู่"
+          label={t('pages.lectures.fields.section', {}, 'Section')}
           name="section_id"
           rules={[{ required: true }]}
         >
@@ -41,19 +42,19 @@ const LecturesEdit = () => {
         </Form.Item>
 
         <Form.Item
-          label="หัวข้อบทเรียน"
+          label={t('pages.lectures.fields.title', {}, 'Lecture Title')}
           name="title"
           rules={[{ required: true }]}
         >
           <Input />
         </Form.Item>
 
-        <Form.Item label="คำอธิบาย" name="description">
+        <Form.Item label={t('pages.lectures.fields.description', {}, 'Description')} name="description">
           <TextArea rows={3} />
         </Form.Item>
 
         <Form.Item
-          label="วันที่บรรยาย"
+          label={t('pages.lectures.fields.lectureDate', {}, 'Lecture Date')}
           name="lecture_date"
           getValueProps={(value) => ({
             value: value ? dayjs(value) : null,
@@ -63,15 +64,15 @@ const LecturesEdit = () => {
           <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
         </Form.Item>
 
-        <Form.Item label="ผู้บรรยาย" name="lecturer_name">
+        <Form.Item label={t('pages.lectures.fields.lecturerName', {}, 'Lecturer')} name="lecturer_name">
           <Input />
         </Form.Item>
 
-        <Form.Item label="ลำดับการแสดงผล" name="order_index">
+        <Form.Item label={t('pages.lectures.fields.orderIndex', {}, 'Display Order')} name="order_index">
           <InputNumber min={0} style={{ width: '100%' }} />
         </Form.Item>
 
-        <Form.Item label="เปิดใช้งาน" name="is_active" valuePropName="checked">
+        <Form.Item label={t('pages.lectures.fields.isActive', {}, 'Active')} name="is_active" valuePropName="checked">
           <Switch />
         </Form.Item>
       </Form>

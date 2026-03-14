@@ -3,12 +3,13 @@
  * Migrated from src/app/sections/page.tsx
  */
 
-import { useList } from '@refinedev/core';
+import { useList, useTranslate } from '@refinedev/core';
 import { List, useTable, EditButton, DeleteButton } from '@refinedev/antd';
 import { Table, Space, Tag } from 'antd';
 import type { Section, Subject } from '@medical-portal/shared';
 
 const SectionsList = () => {
+  const t = useTranslate();
   const { tableProps } = useTable<Section>({
     syncWithLocation: true,
   });
@@ -21,7 +22,7 @@ const SectionsList = () => {
   const subjectMap = new Map(subjects.map((s) => [s.id, s]));
 
   return (
-    <List>
+    <List createButtonProps={{ children: t('buttons.create', {}, 'Create') }}>
       <Table
         {...tableProps}
         rowKey="id"
@@ -30,32 +31,32 @@ const SectionsList = () => {
       >
         <Table.Column
           dataIndex="subject_id"
-          title="รายวิชา"
+          title={t('pages.sections.fields.subject', {}, 'Subject')}
           ellipsis
           render={(value) => {
             const subject = subjectMap.get(value);
             return subject ? `${subject.code} - ${subject.name}` : value;
           }}
         />
-        <Table.Column dataIndex="name" title="ชื่อหมวดหมู่" ellipsis />
+        <Table.Column dataIndex="name" title={t('pages.sections.fields.name', {}, 'Section Name')} ellipsis />
         <Table.Column
           dataIndex="order_index"
-          title="ลำดับ"
+          title={t('common.order', {}, 'Order')}
           width={80}
           sorter
         />
         <Table.Column
           dataIndex="is_active"
-          title="สถานะ"
+          title={t('common.status', {}, 'Status')}
           width={100}
           render={(value) => (
             <Tag color={value ? 'green' : 'red'}>
-              {value ? 'เปิด' : 'ปิด'}
+              {value ? t('common.active', {}, 'Active') : t('common.inactive', {}, 'Inactive')}
             </Tag>
           )}
         />
         <Table.Column
-          title="การจัดการ"
+          title={t('common.actions', {}, 'Actions')}
           fixed="right"
           width={120}
           render={(_, record: Section) => (
