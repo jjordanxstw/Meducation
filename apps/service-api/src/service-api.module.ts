@@ -3,11 +3,25 @@ import { ConfigModule } from '@nestjs/config';
 import { ServiceApiController } from './service-api.controller';
 import { V1Module } from './modules/v1/v1.module';
 
+const appEnv = process.env.APP_ENV?.trim();
+const nodeEnv = process.env.NODE_ENV?.trim();
+const envFilePath = ['.env.local'];
+
+if (appEnv) {
+  envFilePath.push(`.env.${appEnv}`);
+}
+
+if (nodeEnv && nodeEnv !== appEnv) {
+  envFilePath.push(`.env.${nodeEnv}`);
+}
+
+envFilePath.push('.env');
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env.local', '.env'],
+      envFilePath,
     }),
     V1Module,
   ],

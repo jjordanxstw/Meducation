@@ -24,6 +24,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { Response } from 'express';
+import { ConfigService } from '@nestjs/config';
 import { AdminAuthService } from '../services/admin-auth.service';
 import { AdminRefreshTokenService } from '../services/admin-refresh-token.service';
 import { AdminLoginDto, ChangePasswordDto } from '../dto';
@@ -79,13 +80,56 @@ function extractRequestInfo(req: Request) {
   };
 }
 
+type CookieSameSite = 'strict' | 'lax' | 'none';
+
+function resolveCookieSameSite(configService: ConfigService, isProduction: boolean): CookieSameSite {
+  const rawValue = configService.get<string>('ADMIN_COOKIE_SAMESITE')?.toLowerCase();
+
+  if (rawValue === 'strict' || rawValue === 'lax' || rawValue === 'none') {
+    return rawValue;
+  }
+
+  return isProduction ? 'strict' : 'lax';
+}
+
+function resolveCookieSecure(configService: ConfigService, isProduction: boolean): boolean {
+  const rawValue = configService.get<string>('ADMIN_COOKIE_SECURE')?.toLowerCase();
+
+  if (rawValue === 'true') {
+    return true;
+  }
+
+  if (rawValue === 'false') {
+    return false;
+  }
+
+  return isProduction;
+}
+
 @ApiTags('Admin Authentication')
 @Controller('admin/auth')
 export class AdminAuthController {
   constructor(
     private readonly adminAuthService: AdminAuthService,
     private readonly refreshTokenService: AdminRefreshTokenService,
+    private readonly configService: ConfigService,
   ) {}
+
+  private getBaseCookieOptions(expiresAt?: Date) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const sameSite = resolveCookieSameSite(this.configService, isProduction);
+    const secure = resolveCookieSecure(this.configService, isProduction) || sameSite === 'none';
+    const domain = this.configService.get<string>('ADMIN_COOKIE_DOMAIN')?.trim();
+
+    return {
+      httpOnly: true,
+      secure,
+      sameSite,
+      ...(expiresAt ? { maxAge: expiresAt.getTime() - Date.now() } : {}),
+      path: '/',
+      ...(domain ? { domain } : {}),
+    };
+  }
 
   /**
    * Admin Login
@@ -143,14 +187,7 @@ export class AdminAuthController {
     });
 
     // Set httpOnly cookies for security
-    const isProduction = process.env.NODE_ENV === 'production';
-    const cookieOptions = {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? ('strict' as const) : ('lax' as const),
-      maxAge: refreshTokenResult.expiresAt.getTime() - Date.now(),
-      path: '/',
-    };
+    const cookieOptions = this.getBaseCookieOptions(refreshTokenResult.expiresAt);
 
     // Set access token cookie (short-lived, 15min)
     response.cookie('admin_access_token', result.accessToken, {
@@ -231,14 +268,7 @@ export class AdminAuthController {
     const accessToken = await this.adminAuthService.signToken(admin);
 
     // Set new cookies
-    const isProduction = process.env.NODE_ENV === 'production';
-    const cookieOptions = {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? ('strict' as const) : ('lax' as const),
-      maxAge: rotationResult.expiresAt.getTime() - Date.now(),
-      path: '/',
-    };
+    const cookieOptions = this.getBaseCookieOptions(rotationResult.expiresAt);
 
     response.cookie('admin_access_token', accessToken, {
       ...cookieOptions,
@@ -344,18 +374,7 @@ export class AdminAuthController {
     }
 
     // Clear httpOnly cookies (use same settings as login)
-    const isProduction = process.env.NODE_ENV === 'production';
-    const cookieOptions: {
-      path: string;
-      httpOnly: boolean;
-      secure: boolean;
-      sameSite: 'strict' | 'lax' | 'none';
-    } = {
-      path: '/',
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'strict' : 'lax', // Use 'lax' for development, 'none' requires secure: true
-    };
+    const cookieOptions = this.getBaseCookieOptions();
 
     response.clearCookie('admin_access_token', cookieOptions);
     response.clearCookie('admin_refresh_token', cookieOptions);
