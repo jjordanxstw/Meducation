@@ -3,7 +3,7 @@
  * Uses React Router v6 with Refine.dev v4
  */
 
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { Authenticated } from '@refinedev/core';
 import { ThemedLayout } from '@refinedev/antd';
 import React from 'react';
@@ -46,110 +46,53 @@ const AuthLoadingFallback = () => (
   </div>
 );
 
-// Protected route wrapper
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+// Protected layout wrapper - shared across all authenticated routes
+const ProtectedLayout = () => (
   <Authenticated
-    key="protected-auth"
-    redirectOnFail="/"
+    key="root-auth"
+    redirectOnFail="/login"
     loading={<AuthLoadingFallback />}
   >
     <ThemedLayout>
-      {children}
+      <Outlet />
     </ThemedLayout>
   </Authenticated>
 );
 
 export const router = createBrowserRouter([
   {
-    path: '/',
+    path: '/login',
     element: <LoginPage />,
   },
   {
-    path: '/dashboard',
-    element: <ProtectedRoute><DashboardPage /></ProtectedRoute>,
-  },
-  {
-    path: '/subjects',
-    element: <ProtectedRoute><SubjectsList /></ProtectedRoute>,
-  },
-  {
-    path: '/subjects/create',
-    element: <ProtectedRoute><SubjectsCreate /></ProtectedRoute>,
-  },
-  {
-    path: '/subjects/edit/:id',
-    element: <ProtectedRoute><SubjectsEdit /></ProtectedRoute>,
-  },
-  {
-    path: '/subjects/show/:id',
-    element: <ProtectedRoute><SubjectsShow /></ProtectedRoute>,
-  },
-  {
-    path: '/sections',
-    element: <ProtectedRoute><SectionsList /></ProtectedRoute>,
-  },
-  {
-    path: '/sections/create',
-    element: <ProtectedRoute><SectionsCreate /></ProtectedRoute>,
-  },
-  {
-    path: '/sections/edit/:id',
-    element: <ProtectedRoute><SectionsEdit /></ProtectedRoute>,
-  },
-  {
-    path: '/lectures',
-    element: <ProtectedRoute><LecturesList /></ProtectedRoute>,
-  },
-  {
-    path: '/lectures/create',
-    element: <ProtectedRoute><LecturesCreate /></ProtectedRoute>,
-  },
-  {
-    path: '/lectures/edit/:id',
-    element: <ProtectedRoute><LecturesEdit /></ProtectedRoute>,
-  },
-  {
-    path: '/resources',
-    element: <ProtectedRoute><ResourcesList /></ProtectedRoute>,
-  },
-  {
-    path: '/resources/create',
-    element: <ProtectedRoute><ResourcesCreate /></ProtectedRoute>,
-  },
-  {
-    path: '/resources/edit/:id',
-    element: <ProtectedRoute><ResourcesEdit /></ProtectedRoute>,
-  },
-  {
-    path: '/calendar',
-    element: <ProtectedRoute><CalendarList /></ProtectedRoute>,
-  },
-  {
-    path: '/calendar/create',
-    element: <ProtectedRoute><CalendarCreate /></ProtectedRoute>,
-  },
-  {
-    path: '/calendar/edit/:id',
-    element: <ProtectedRoute><CalendarEdit /></ProtectedRoute>,
-  },
-  {
-    path: '/profiles',
-    element: <ProtectedRoute><ProfilesList /></ProtectedRoute>,
-  },
-  {
-    path: '/profiles/edit/:id',
-    element: <ProtectedRoute><ProfilesEdit /></ProtectedRoute>,
-  },
-  {
-    path: '/profiles/show/:id',
-    element: <ProtectedRoute><ProfilesShow /></ProtectedRoute>,
-  },
-  {
-    path: '/audit-logs',
-    element: <ProtectedRoute><AuditLogsList /></ProtectedRoute>,
+    path: '/',
+    element: <ProtectedLayout />,
+    children: [
+      { path: 'dashboard', element: <DashboardPage /> },
+      { path: 'subjects', element: <SubjectsList /> },
+      { path: 'subjects/create', element: <SubjectsCreate /> },
+      { path: 'subjects/edit/:id', element: <SubjectsEdit /> },
+      { path: 'subjects/show/:id', element: <SubjectsShow /> },
+      { path: 'sections', element: <SectionsList /> },
+      { path: 'sections/create', element: <SectionsCreate /> },
+      { path: 'sections/edit/:id', element: <SectionsEdit /> },
+      { path: 'lectures', element: <LecturesList /> },
+      { path: 'lectures/create', element: <LecturesCreate /> },
+      { path: 'lectures/edit/:id', element: <LecturesEdit /> },
+      { path: 'resources', element: <ResourcesList /> },
+      { path: 'resources/create', element: <ResourcesCreate /> },
+      { path: 'resources/edit/:id', element: <ResourcesEdit /> },
+      { path: 'calendar', element: <CalendarList /> },
+      { path: 'calendar/create', element: <CalendarCreate /> },
+      { path: 'calendar/edit/:id', element: <CalendarEdit /> },
+      { path: 'profiles', element: <ProfilesList /> },
+      { path: 'profiles/edit/:id', element: <ProfilesEdit /> },
+      { path: 'profiles/show/:id', element: <ProfilesShow /> },
+      { path: 'audit-logs', element: <AuditLogsList /> },
+    ],
   },
   {
     path: '*',
-    element: <Navigate to="/" replace />,
+    element: <Navigate to="/login" replace />,
   },
 ]);

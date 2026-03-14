@@ -354,7 +354,7 @@ export class AdminAuthController {
       path: '/',
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? 'strict' : 'none',
+      sameSite: isProduction ? 'strict' : 'lax', // Use 'lax' for development, 'none' requires secure: true
     };
 
     response.clearCookie('admin_access_token', cookieOptions);

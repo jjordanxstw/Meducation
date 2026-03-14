@@ -17,8 +17,9 @@ import { RefineThemes, useNotificationProvider } from '@refinedev/antd';
 import thTH from 'antd/locale/th_TH';
 import './index.css';
 
-// Import router
+// Import router and resources
 import { router } from './routes';
+import { resources } from './resources';
 
 const Root: React.FC = () => {
   const refineDataProvider = React.useMemo(
@@ -73,6 +74,11 @@ const Root: React.FC = () => {
           authProvider={authProvider}
           i18nProvider={i18nProvider}
           notificationProvider={useNotificationProvider}
+          resources={resources}
+          routerProvider={{
+            type: 'react-router-v6',
+            router,
+          }}
           options={{
             syncWithLocation: true,
             warnWhenUnsavedChanges: true,
