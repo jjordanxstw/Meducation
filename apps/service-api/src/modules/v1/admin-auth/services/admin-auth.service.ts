@@ -135,7 +135,16 @@ export class AdminAuthService {
 
       return sanitizeAdmin(admin);
     } catch (error) {
-      this.logger.warn('Token verification failed:', error);
+      // Keep token validation failures concise to avoid noisy stack traces in normal traffic.
+      const errorName = error instanceof Error ? error.name : 'TokenError';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown token verification error';
+
+      if (errorName === 'JsonWebTokenError' || errorName === 'TokenExpiredError' || errorName === 'NotBeforeError') {
+        this.logger.warn(`Token verification failed (${errorName}): ${errorMessage}`);
+      } else {
+        this.logger.warn(`Token verification failed (${errorName})`);
+      }
+
       return null;
     }
   }
