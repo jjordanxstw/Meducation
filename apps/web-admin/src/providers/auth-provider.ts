@@ -70,6 +70,44 @@ type AdminLoginResponse = {
 
 let refreshPromise: Promise<boolean> | null = null;
 let authCheckPromise: Promise<{ authenticated: boolean; redirectTo?: string }> | null = null;
+let permissionsPromise: Promise<string | null> | null = null;
+let identityPromise: Promise<ReturnType<typeof fetchCurrentAdmin> | null> | null = null;
+
+// Short-term cache for identity and permissions (30 seconds)
+let cachedIdentity: AdminMeResponse | null = null;
+let cachedPermissions: string | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL_MS = 30000; // 30 seconds
+
+// Flag to prevent auth checks after token failure
+let hasTokenFailed = false;
+let tokenFailureTime = 0;
+const TOKEN_FAILURE_BLOCK_MS = 5000; // Block auth checks for 5 seconds after token failure
+
+function isCacheValid(): boolean {
+  return Date.now() - cacheTimestamp < CACHE_TTL_MS;
+}
+
+function clearCache(): void {
+  cachedIdentity = null;
+  cachedPermissions = null;
+  cacheTimestamp = 0;
+}
+
+function markTokenFailed(): void {
+  hasTokenFailed = true;
+  tokenFailureTime = Date.now();
+}
+
+function isTokenFailedRecently(): boolean {
+  if (!hasTokenFailed) return false;
+  const elapsed = Date.now() - tokenFailureTime;
+  if (elapsed > TOKEN_FAILURE_BLOCK_MS) {
+    hasTokenFailed = false;
+    return false;
+  }
+  return true;
+}
 
 function isAuthEndpoint(url?: string): boolean {
   if (!url) return false;
@@ -118,7 +156,10 @@ async function fetchCurrentAdmin(): Promise<AdminMeResponse> {
   return response.data;
 }
 
-// Response interceptor - refresh-first strategy for expired access token
+// Flag to prevent multiple simultaneous redirects
+let isRedirecting = false;
+
+// Response interceptor - simplified error handling
 authAxios.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -130,17 +171,63 @@ authAxios.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    const isRefreshRequest = url?.includes('/admin/auth/refresh') || originalRequest.headers?.['X-Auth-Refresh'] === '1';
-    if (isRefreshRequest) {
+    // Check if already on login page to prevent infinite loop
+    const currentPath = window.location.pathname;
+    const isOnLoginPage = currentPath === '/login';
+
+    // Silent handling for 401 errors - no console logs needed
+    const isAuthRequest = url?.includes('/admin/auth/');
+    const isMeRequest = url?.includes('/admin/auth/me');
+    const isRefreshRequest = url?.includes('/admin/auth/refresh');
+
+    // Mark token as failed to prevent further auth checks
+    markTokenFailed();
+
+    // For /auth/me with 401, clear cookies and redirect to login
+    if (isMeRequest && status === 401 && !isRedirecting && !isOnLoginPage) {
+      isRedirecting = true;
+      clearCache();
+      // Clear cookies immediately
+      try {
+        await authAxios.post(CLEAR_AUTH_ROUTE, {}, { withCredentials: true });
+      } catch {
+        // Ignore clear errors
+      }
+      window.location.href = '/login';
       return Promise.reject(error);
     }
 
-    // Retry once for non-auth API calls after attempting refresh
+    // For refresh token failure, redirect to login
+    if (isRefreshRequest && status === 401 && !isRedirecting && !isOnLoginPage) {
+      isRedirecting = true;
+      clearCache();
+      // Clear cookies immediately
+      try {
+        await authAxios.post(CLEAR_AUTH_ROUTE, {}, { withCredentials: true });
+      } catch {
+        // Ignore clear errors
+      }
+      window.location.href = '/login';
+      return Promise.reject(error);
+    }
+
+    // Don't retry for auth endpoints - just reject silently
+    if (isAuthRequest) {
+      return Promise.reject(error);
+    }
+
+    // For non-auth endpoints, try refresh once
     if (!originalRequest._retry && !isAuthEndpoint(url)) {
       originalRequest._retry = true;
       const refreshed = await refreshAccessToken();
       if (refreshed) {
         return authAxios(originalRequest);
+      }
+      // Refresh failed - redirect to login (unless already there)
+      if (!isRedirecting && !isOnLoginPage) {
+        isRedirecting = true;
+        clearCache();
+        window.location.href = '/login';
       }
     }
 
@@ -288,8 +375,10 @@ export const authProvider: AuthProvider = {
   },
 
   logout: async () => {
-    // Attempt backend logout (token revocation); if token is already invalid,
-    // we still clear cookie server-side via local clear route.
+    // Clear cached data
+    clearCache();
+
+    // Attempt backend logout (token revocation)
     try {
       await authAxios.post(`${API_URL}/admin/auth/logout`, {}, {
         ...authRequestConfig,
@@ -299,13 +388,27 @@ export const authProvider: AuthProvider = {
       logSecurityEvent('logout_api_failed', { error: sanitizeErrorMessage(error) });
     }
 
+    // Also call clear auth endpoint to ensure cookies are cleared
+    try {
+      await authAxios.post(CLEAR_AUTH_ROUTE, {}, {
+        withCredentials: true,
+      });
+    } catch (error) {
+      // Ignore errors from clear endpoint
+    }
+
     return {
       success: true,
-      redirectTo: CLEAR_AUTH_ROUTE,
+      redirectTo: '/login',
     };
   },
 
   check: async () => {
+    // If token failed recently, immediately return not authenticated
+    if (isTokenFailedRecently()) {
+      return { authenticated: false, redirectTo: '/login' };
+    }
+
     // Deduplicate concurrent checks from route transitions and Refine hooks.
     if (authCheckPromise) {
       return authCheckPromise;
@@ -316,34 +419,26 @@ export const authProvider: AuthProvider = {
         const me = await fetchCurrentAdmin();
 
         if (!me.is_active) {
-          return { authenticated: false, redirectTo: CLEAR_AUTH_ROUTE };
+          return { authenticated: false, redirectTo: '/login' };
         }
+
+        // Reset token failure flag on successful auth
+        hasTokenFailed = false;
 
         return { authenticated: true };
       } catch (error) {
         const err = error as AxiosError;
         const status = err.response?.status;
 
+        // For auth failures (401/403), mark token as failed and return not authenticated
         if (isAuthFailureStatus(status)) {
-          // Try refresh once before forcing logout.
-          const refreshed = await refreshAccessToken();
-          if (refreshed) {
-            try {
-              const me = await fetchCurrentAdmin();
-              if (me.is_active) {
-                return { authenticated: true };
-              }
-            } catch {
-              // Fall through to clear auth.
-            }
-          }
-
+          markTokenFailed();
           logSecurityEvent('auth_check_failed', {
             status,
             error: sanitizeErrorMessage(error),
           });
 
-          return { authenticated: false, redirectTo: CLEAR_AUTH_ROUTE };
+          return { authenticated: false, redirectTo: '/login' };
         }
 
         // If API is completely unreachable (network error), treat as not authenticated
@@ -352,7 +447,7 @@ export const authProvider: AuthProvider = {
           logSecurityEvent('auth_check_api_unreachable', {
             error: sanitizeErrorMessage(error),
           });
-          return { authenticated: false };
+          return { authenticated: false, redirectTo: '/login' };
         }
 
         // Keep session on other transient errors
@@ -370,42 +465,89 @@ export const authProvider: AuthProvider = {
   },
 
   getPermissions: async () => {
-    try {
-      const me = await fetchCurrentAdmin();
-
-      return me.is_super_admin ? 'super-admin' : 'admin';
-    } catch (error) {
-      logSecurityEvent('get_permissions_failed', { error: sanitizeErrorMessage(error) });
-      return null;
+    if (permissionsPromise) {
+      return permissionsPromise;
     }
+
+    // Return cached result if still valid
+    if (cachedPermissions !== null && isCacheValid()) {
+      return cachedPermissions;
+    }
+
+    permissionsPromise = (async () => {
+      try {
+        const me = await fetchCurrentAdmin();
+        const permissions = me.is_super_admin ? 'super-admin' : 'admin';
+
+        // Cache the result
+        cachedIdentity = me;
+        cachedPermissions = permissions;
+        cacheTimestamp = Date.now();
+
+        return permissions;
+      } catch (error) {
+        logSecurityEvent('get_permissions_failed', { error: sanitizeErrorMessage(error) });
+        return null;
+      } finally {
+        permissionsPromise = null;
+      }
+    })();
+
+    return permissionsPromise;
   },
 
   getIdentity: async () => {
-    try {
-      const me = await fetchCurrentAdmin();
-
-      if (me) {
-        return {
-          id: me.id,
-          name: me.full_name,
-          email: me.email,
-          username: me.username,
-          isSuperAdmin: me.is_super_admin,
-          isActive: me.is_active,
-        };
-      }
-    } catch (error) {
-      logSecurityEvent('get_identity_failed', { error: sanitizeErrorMessage(error) });
+    if (identityPromise) {
+      return identityPromise;
     }
 
-    return null;
+    // Return cached result if still valid
+    if (cachedIdentity !== null && isCacheValid()) {
+      return {
+        id: cachedIdentity.id,
+        name: cachedIdentity.full_name,
+        email: cachedIdentity.email,
+        username: cachedIdentity.username,
+        isSuperAdmin: cachedIdentity.is_super_admin,
+        isActive: cachedIdentity.is_active,
+      };
+    }
+
+    identityPromise = (async () => {
+      try {
+        const me = await fetchCurrentAdmin();
+
+        if (me) {
+          // Cache the result
+          cachedIdentity = me;
+          cacheTimestamp = Date.now();
+
+          return {
+            id: me.id,
+            name: me.full_name,
+            email: me.email,
+            username: me.username,
+            isSuperAdmin: me.is_super_admin,
+            isActive: me.is_active,
+          };
+        }
+      } catch (error) {
+        logSecurityEvent('get_identity_failed', { error: sanitizeErrorMessage(error) });
+      } finally {
+        identityPromise = null;
+      }
+
+      return null;
+    })();
+
+    return identityPromise;
   },
 
   onError: async (error) => {
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {
         logSecurityEvent('unauthorized_access', { url: error.config?.url });
-        return { logout: true, redirectTo: CLEAR_AUTH_ROUTE };
+        return { logout: true, redirectTo: '/login' };
       }
       if (error.response?.status === 403) {
         logSecurityEvent('forbidden_access', { url: error.config?.url });

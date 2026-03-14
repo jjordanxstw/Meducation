@@ -21,6 +21,14 @@ body {
   overflow-x: hidden;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 body {
   font-family: var(--font-prompt), sans-serif;
 }
@@ -99,4 +107,27 @@ h1, h2, h3, h4, h5, h6 {
 .ant-layout-sider-trigger button:hover {
   background-color: #fff !important;
   color: #0070F3 !important;
+}
+
+/* Fix Refine ThemedLayout scroll issues - only show scrollbar when content actually overflows */
+.refine-layout .ant-layout-content {
+  overflow: visible;
+  min-height: 0;
+}
+
+/* Prevent double scrollbars on body level */
+.ant-layout {
+  overflow: visible;
+  min-height: 100vh;
+}
+
+/* Fix Refine layout container */
+.refine-layout {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Ensure content area doesn't have unnecessary scrollbar */
+.refine-layout .ant-layout-content > div {
+  overflow: visible;
 }
