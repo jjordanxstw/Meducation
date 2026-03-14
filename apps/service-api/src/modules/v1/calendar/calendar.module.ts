@@ -4,16 +4,16 @@
  */
 
 import { Module } from '@nestjs/common';
-import { CalendarController } from './controllers/calendar.controller';
+import { CalendarPublicController } from './controllers/calendar.controller';
+import { CalendarAdminController } from './controllers/calendar.admin.controller';
 import { CalendarService } from './services/calendar.service';
 import { AuthModule } from '../auth/auth.module';
 import { AdminAuthModule } from '../admin-auth/admin-auth.module';
-import { AnyAuthGuard } from '../../../common';
 
 @Module({
   imports: [AuthModule, AdminAuthModule],
-  controllers: [CalendarController],
-  providers: [CalendarService, AnyAuthGuard],
+  controllers: [CalendarPublicController, CalendarAdminController],
+  providers: [CalendarService],
   exports: [CalendarService],
 })
 export class CalendarModule {}

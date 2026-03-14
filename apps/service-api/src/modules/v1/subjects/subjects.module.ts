@@ -4,16 +4,16 @@
  */
 
 import { Module } from '@nestjs/common';
-import { SubjectsController } from './controllers/subjects.controller';
+import { SubjectsPublicController } from './controllers/subjects.controller';
+import { SubjectsAdminController } from './controllers/subjects.admin.controller';
 import { SubjectsService } from './services/subjects.service';
 import { AuthModule } from '../auth/auth.module';
 import { AdminAuthModule } from '../admin-auth/admin-auth.module';
-import { AnyAuthGuard } from '../../../common';
 
 @Module({
   imports: [AuthModule, AdminAuthModule],
-  controllers: [SubjectsController],
-  providers: [SubjectsService, AnyAuthGuard],
+  controllers: [SubjectsPublicController, SubjectsAdminController],
+  providers: [SubjectsService],
   exports: [SubjectsService],
 })
 export class SubjectsModule {}

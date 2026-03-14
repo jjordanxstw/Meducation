@@ -4,16 +4,16 @@
  */
 
 import { Module } from '@nestjs/common';
-import { ProfilesController } from './controllers/profiles.controller';
+import { ProfilesPublicController } from './controllers/profiles.controller';
+import { ProfilesAdminController } from './controllers/profiles.admin.controller';
 import { ProfilesService } from './services/profiles.service';
 import { AuthModule } from '../auth/auth.module';
 import { AdminAuthModule } from '../admin-auth/admin-auth.module';
-import { AnyAuthGuard } from '../../../common';
 
 @Module({
   imports: [AuthModule, AdminAuthModule],
-  controllers: [ProfilesController],
-  providers: [ProfilesService, AnyAuthGuard],
+  controllers: [ProfilesPublicController, ProfilesAdminController],
+  providers: [ProfilesService],
   exports: [ProfilesService],
 })
 export class ProfilesModule {}
