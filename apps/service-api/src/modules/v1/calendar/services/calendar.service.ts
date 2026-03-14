@@ -25,6 +25,79 @@ export class CalendarService {
     });
   }
 
+  private parseIsoDate(value: unknown, field: string): Date {
+    if (typeof value !== 'string' || !value.trim()) {
+      throw new AppException(
+        ErrorCode.CALENDAR_TIME_RANGE_INVALID,
+        { field, reason: 'missing_or_invalid' },
+        'Calendar event time range is invalid',
+      );
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new AppException(
+        ErrorCode.CALENDAR_TIME_RANGE_INVALID,
+        { field, reason: 'invalid_date' },
+        'Calendar event time range is invalid',
+      );
+    }
+
+    return parsed;
+  }
+
+  private async ensureValidEventTimeWindow(
+    payload: Record<string, unknown>,
+    options?: { excludeId?: string },
+  ): Promise<void> {
+    const start = this.parseIsoDate(payload.start_time, 'start_time');
+    const end = this.parseIsoDate(payload.end_time, 'end_time');
+
+    if (end <= start) {
+      throw new AppException(
+        ErrorCode.CALENDAR_TIME_RANGE_INVALID,
+        { field: 'end_time', reason: 'must_be_after_start_time' },
+        'Calendar event time range is invalid',
+      );
+    }
+
+    const overlapQuery = this.supabaseAdmin
+      .from('calendar_events')
+      .select('id')
+      .lt('start_time', end.toISOString())
+      .gt('end_time', start.toISOString())
+      .limit(1);
+
+    if (options?.excludeId) {
+      overlapQuery.neq('id', options.excludeId);
+    }
+
+    const subjectId = payload.subject_id as string | null | undefined;
+    if (subjectId === null || subjectId === undefined || subjectId === '') {
+      overlapQuery.is('subject_id', null);
+    } else {
+      overlapQuery.eq('subject_id', subjectId);
+    }
+
+    const { data: overlapRows, error: overlapError } = await overlapQuery;
+
+    if (overlapError) {
+      this.logger.warn(`Failed to validate calendar overlap (code=${overlapError.code ?? 'unknown'})`);
+      throw new AppException(
+        ErrorCode.RESOURCE_OPERATION_FAILED,
+        { resource: 'calendar_event_validation' },
+        'Failed to validate calendar event',
+      );
+    }
+
+    if (overlapRows && overlapRows.length > 0) {
+      throw new AppException(
+        ErrorCode.CALENDAR_EVENT_TIME_CONFLICT,
+        { conflictingEventId: overlapRows[0].id },
+      );
+    }
+  }
+
   async findAll(startDate?: string, endDate?: string, type?: string, subjectId?: string) {
     let query = this.supabaseAdmin
       .from('calendar_events')
@@ -123,6 +196,8 @@ export class CalendarService {
       }
     }
 
+    await this.ensureValidEventTimeWindow(eventData);
+
     const { data: result, error } = await this.supabaseAdmin
       .from('calendar_events')
       .insert(eventData)
@@ -143,6 +218,13 @@ export class CalendarService {
       .select('*')
       .eq('id', id)
       .single();
+
+    if (!oldData) {
+      throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'calendar_event', id }, 'Calendar event not found');
+    }
+
+    const mergedPayload = { ...oldData, ...(data || {}) };
+    await this.ensureValidEventTimeWindow(mergedPayload, { excludeId: id });
 
     const { data: result, error } = await this.supabaseAdmin
       .from('calendar_events')

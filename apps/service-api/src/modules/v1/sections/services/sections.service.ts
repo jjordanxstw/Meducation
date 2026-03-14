@@ -25,6 +25,20 @@ export class SectionsService {
     });
   }
 
+  private mapSectionWriteError(error: { code?: string; message?: string; details?: string | null; hint?: string | null }): never {
+    if (error.code === '23505') {
+      const signature = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`.toLowerCase();
+
+      if (signature.includes('idx_sections_subject_name_unique_ci') || signature.includes('(subject_id, lower(name))') || signature.includes('(subject_id, name)')) {
+        throw new AppException(ErrorCode.SECTION_NAME_DUPLICATE, { field: 'name' });
+      }
+
+      throw new AppException(ErrorCode.RESOURCE_CONFLICT, { resource: 'section' }, 'Duplicate section data');
+    }
+
+    throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'section' });
+  }
+
   async findAll(subjectId?: string, isActive: boolean = true) {
     let query = this.supabaseAdmin.from('sections').select('*');
 
@@ -68,7 +82,7 @@ export class SectionsService {
 
     if (error) {
       this.logger.warn(`Failed to create section (code=${error.code ?? 'unknown'})`);
-      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'section' }, 'Failed to create section');
+      this.mapSectionWriteError(error);
     }
 
     return result;
@@ -90,7 +104,7 @@ export class SectionsService {
 
     if (error) {
       this.logger.warn(`Failed to update section (code=${error.code ?? 'unknown'})`);
-      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'section', id }, 'Failed to update section');
+      this.mapSectionWriteError(error);
     }
 
     return { oldData, newData: result };

@@ -25,6 +25,23 @@ export class ProfilesService {
     });
   }
 
+  private mapProfileWriteError(error: { code?: string; message?: string; details?: string | null; hint?: string | null }): never {
+    if (error.code === '23505') {
+      const signature = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`.toLowerCase();
+
+      if (signature.includes('idx_profiles_email_unique_ci') || signature.includes('profiles_email_key') || signature.includes('(email)')) {
+        throw new AppException(ErrorCode.PROFILE_EMAIL_DUPLICATE, { field: 'email' });
+      }
+      if (signature.includes('idx_profiles_student_id_unique_nonnull') || signature.includes('profiles_student_id_key') || signature.includes('(student_id)')) {
+        throw new AppException(ErrorCode.PROFILE_STUDENT_ID_DUPLICATE, { field: 'student_id' });
+      }
+
+      throw new AppException(ErrorCode.RESOURCE_CONFLICT, { resource: 'profile' }, 'Duplicate profile data');
+    }
+
+    throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'profile' });
+  }
+
   async findAll(page: number = 1, pageSize: number = 20, role?: string, yearLevel?: number) {
     let query = this.supabaseAdmin
       .from('profiles')
@@ -96,7 +113,7 @@ export class ProfilesService {
 
     if (error) {
       this.logger.warn(`Failed to update profile (code=${error.code ?? 'unknown'})`);
-      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'profile', id }, 'Failed to update profile');
+      this.mapProfileWriteError(error);
     }
 
     return { oldData, newData: result };
