@@ -10,10 +10,23 @@
 
 import type { AuthProvider } from '@refinedev/core';
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { sanitizeErrorMessage } from '@/lib/security';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
-const AUTH_REQUEST_TIMEOUT_MS = process.env.NODE_ENV === 'production' ? 8000 : 15000;
+/**
+ * Sanitize error message to prevent XSS attacks
+ */
+function sanitizeErrorMessage(error: unknown): string {
+  if (typeof error === 'string') {
+    return error.replace(/[<>]/g, '');
+  }
+  if (error instanceof Error) {
+    return error.message.replace(/[<>]/g, '');
+  }
+  return 'เกิดข้อผิดพลาด';
+}
+
+const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
+const AUTH_REQUEST_TIMEOUT_MS = import.meta.env.MODE === 'production' ? 8000 : 15000;
+const AUTH_CHECK_TIMEOUT_MS = 5000; // Shorter timeout for initial auth check
 const CLEAR_AUTH_ROUTE = '/api/auth/clear';
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
@@ -98,7 +111,10 @@ async function refreshAccessToken(): Promise<boolean> {
 }
 
 async function fetchCurrentAdmin(): Promise<AdminMeResponse> {
-  const response = await authAxios.get<AdminMeResponse>(`${API_URL}/admin/auth/me`, authRequestConfig);
+  const response = await authAxios.get<AdminMeResponse>(`${API_URL}/admin/auth/me`, {
+    ...authRequestConfig,
+    timeout: AUTH_CHECK_TIMEOUT_MS, // Use shorter timeout for auth check
+  });
   return response.data;
 }
 
@@ -143,7 +159,7 @@ function isValidTokenStructure(token: unknown): token is string {
  * Log security events (for audit purposes)
  */
 function logSecurityEvent(event: string, details?: Record<string, unknown>): void {
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     console.log(`[Security Audit] ${event}`, details);
   }
   // In production, send to audit logging service
@@ -330,7 +346,16 @@ export const authProvider: AuthProvider = {
           return { authenticated: false, redirectTo: CLEAR_AUTH_ROUTE };
         }
 
-        // Keep session on transient network/server errors to avoid forced loops.
+        // If API is completely unreachable (network error), treat as not authenticated
+        // This ensures the login page shows immediately when API is down
+        if (!status || err.code === 'ERR_NETWORK' || err.code === 'ECONNREFUSED') {
+          logSecurityEvent('auth_check_api_unreachable', {
+            error: sanitizeErrorMessage(error),
+          });
+          return { authenticated: false };
+        }
+
+        // Keep session on other transient errors
         logSecurityEvent('auth_check_transient_error', {
           error: sanitizeErrorMessage(error),
         });
