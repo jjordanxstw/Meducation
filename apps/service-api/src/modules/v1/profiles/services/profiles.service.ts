@@ -3,9 +3,11 @@
  * Handles user profile business logic
  */
 
-import { Injectable, ForbiddenException, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { AppException } from '../../../../common/errors';
+import { ErrorCode } from '@medical-portal/shared';
 
 @Injectable()
 export class ProfilesService {
@@ -43,8 +45,8 @@ export class ProfilesService {
       .range(from, to);
 
     if (error) {
-      this.logger.error('Failed to fetch profiles', error);
-      throw new BadRequestException('Failed to fetch profiles');
+      this.logger.warn(`Failed to fetch profiles (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'profile' }, 'Failed to fetch profiles');
     }
 
     return {
@@ -66,7 +68,7 @@ export class ProfilesService {
       .single();
 
     if (error) {
-      throw new NotFoundException('Profile not found');
+      throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'profile', id }, 'Profile not found');
     }
 
     return data;
@@ -75,7 +77,7 @@ export class ProfilesService {
   async update(id: string, data: any, requestingUserId?: string, requestingUserRole?: string) {
     // Users can only update their own profile unless admin
     if (requestingUserId !== id && requestingUserRole !== 'admin') {
-      throw new ForbiddenException('You can only update your own profile');
+      throw new AppException(ErrorCode.AUTHZ_FORBIDDEN, { resource: 'profile', targetId: id }, 'You can only update your own profile');
     }
 
     // Get old data for audit
@@ -93,8 +95,8 @@ export class ProfilesService {
       .single();
 
     if (error) {
-      this.logger.error('Failed to update profile', error);
-      throw new BadRequestException('Failed to update profile');
+      this.logger.warn(`Failed to update profile (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'profile', id }, 'Failed to update profile');
     }
 
     return { oldData, newData: result };

@@ -3,9 +3,11 @@
  * Handles section business logic
  */
 
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { AppException } from '../../../../common/errors';
+import { ErrorCode } from '@medical-portal/shared';
 
 @Injectable()
 export class SectionsService {
@@ -36,8 +38,8 @@ export class SectionsService {
     const { data, error } = await query.order('order_index');
 
     if (error) {
-      this.logger.error('Failed to fetch sections', error);
-      throw new BadRequestException('Failed to fetch sections');
+      this.logger.warn(`Failed to fetch sections (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'section' }, 'Failed to fetch sections');
     }
 
     return data;
@@ -51,7 +53,7 @@ export class SectionsService {
       .single();
 
     if (error) {
-      throw new NotFoundException('Section not found');
+      throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'section', id }, 'Section not found');
     }
 
     return data;
@@ -65,8 +67,8 @@ export class SectionsService {
       .single();
 
     if (error) {
-      this.logger.error('Failed to create section', error);
-      throw new BadRequestException('Failed to create section');
+      this.logger.warn(`Failed to create section (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'section' }, 'Failed to create section');
     }
 
     return result;
@@ -87,8 +89,8 @@ export class SectionsService {
       .single();
 
     if (error) {
-      this.logger.error('Failed to update section', error);
-      throw new BadRequestException('Failed to update section');
+      this.logger.warn(`Failed to update section (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'section', id }, 'Failed to update section');
     }
 
     return { oldData, newData: result };
@@ -104,8 +106,8 @@ export class SectionsService {
     const { error } = await this.supabaseAdmin.from('sections').delete().eq('id', id);
 
     if (error) {
-      this.logger.error('Failed to delete section', error);
-      throw new BadRequestException('Failed to delete section');
+      this.logger.warn(`Failed to delete section (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'section', id }, 'Failed to delete section');
     }
 
     return { oldData };
@@ -119,8 +121,8 @@ export class SectionsService {
         .eq('id', item.id);
 
       if (error) {
-        this.logger.error('Failed to reorder sections', error);
-        throw new BadRequestException('Failed to reorder sections');
+        this.logger.warn(`Failed to reorder sections (code=${error.code ?? 'unknown'})`);
+        throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'section_order' }, 'Failed to reorder sections');
       }
     }
 

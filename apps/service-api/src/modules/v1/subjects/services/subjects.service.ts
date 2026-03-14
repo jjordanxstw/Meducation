@@ -3,9 +3,11 @@
  * Handles subject business logic
  */
 
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { AppException } from '../../../../common/errors';
+import { ErrorCode } from '@medical-portal/shared';
 
 @Injectable()
 export class SubjectsService {
@@ -26,6 +28,23 @@ export class SubjectsService {
     });
   }
 
+  private mapSubjectWriteError(error: { code?: string; message?: string; details?: string | null; hint?: string | null }): never {
+    if (error.code === '23505') {
+      const signature = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`.toLowerCase();
+
+      if (signature.includes('subjects_code_key') || signature.includes('(code)')) {
+        throw new AppException(ErrorCode.SUBJECT_CODE_DUPLICATE, { field: 'code' });
+      }
+      if (signature.includes('idx_subjects_name_unique_ci') || signature.includes('subjects_name_key') || signature.includes('(name)')) {
+        throw new AppException(ErrorCode.SUBJECT_NAME_DUPLICATE, { field: 'name' });
+      }
+
+      throw new AppException(ErrorCode.RESOURCE_CONFLICT, { resource: 'subject' }, 'Duplicate subject data');
+    }
+
+    throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'subject' });
+  }
+
   async findAll(yearLevel?: number, isActive: boolean = true) {
     let query = this.supabaseAdmin
       .from('subjects')
@@ -42,8 +61,8 @@ export class SubjectsService {
     const { data, error } = await query.order('order_index');
 
     if (error) {
-      this.logger.error('Failed to fetch subjects', error);
-      throw new BadRequestException('Failed to fetch subjects');
+      this.logger.warn(`Failed to fetch subjects (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'subject' }, 'Failed to fetch subjects');
     }
 
     return data;
@@ -58,7 +77,7 @@ export class SubjectsService {
       .single();
 
     if (subjectError) {
-      throw new NotFoundException('Subject not found');
+      throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'subject', id }, 'Subject not found');
     }
 
     // Get sections with lectures and resources
@@ -76,7 +95,7 @@ export class SubjectsService {
       .order('order_index');
 
     if (sectionsError) {
-      throw new BadRequestException('Failed to fetch sections');
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'section', subjectId: id }, 'Failed to fetch sections');
     }
 
     // Sort nested data
@@ -107,8 +126,8 @@ export class SubjectsService {
       .single();
 
     if (error) {
-      this.logger.error('Failed to create subject', error);
-      throw new BadRequestException('Failed to create subject');
+      this.logger.warn(`Failed to create subject (code=${error.code ?? 'unknown'})`);
+      this.mapSubjectWriteError(error);
     }
 
     return result;
@@ -130,8 +149,8 @@ export class SubjectsService {
       .single();
 
     if (error) {
-      this.logger.error('Failed to update subject', error);
-      throw new BadRequestException('Failed to update subject');
+      this.logger.warn(`Failed to update subject (code=${error.code ?? 'unknown'})`);
+      this.mapSubjectWriteError(error);
     }
 
     return { oldData, newData: result };
@@ -151,8 +170,8 @@ export class SubjectsService {
       .eq('id', id);
 
     if (error) {
-      this.logger.error('Failed to delete subject', error);
-      throw new BadRequestException('Failed to delete subject');
+      this.logger.warn(`Failed to delete subject (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'subject', id }, 'Failed to delete subject');
     }
 
     return { oldData };
@@ -166,8 +185,8 @@ export class SubjectsService {
         .eq('id', item.id);
 
       if (error) {
-        this.logger.error('Failed to reorder subjects', error);
-        throw new BadRequestException('Failed to reorder subjects');
+        this.logger.warn(`Failed to reorder subjects (code=${error.code ?? 'unknown'})`);
+        throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'subject_order' }, 'Failed to reorder subjects');
       }
     }
 

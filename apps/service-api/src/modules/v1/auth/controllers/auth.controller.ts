@@ -11,12 +11,10 @@ import {
   UseGuards,
   Res,
   ValidationPipe,
-  BadRequestException,
   Request,
   HttpCode,
   HttpStatus,
   Param,
-  UnauthorizedException,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
@@ -27,7 +25,9 @@ import { VerifyTokenDto } from '../dto';
 import { GoogleAuthGuard } from '../guards';
 import { CurrentUser } from '../../../../common';
 import { SkipEnvelope } from '../../../../common';
+import { AppException } from '../../../../common/errors';
 import type { UserWithoutPassword } from '../entities/profile.entity';
+import { ErrorCode } from '@medical-portal/shared';
 
 /**
  * Student Auth Request Interface
@@ -211,7 +211,7 @@ export class AuthController {
     data: ReturnType<WatermarkService['generatePayload']>;
   }> {
     if (!user.profile) {
-      throw new BadRequestException('User profile not found');
+      throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'profile', userId: user.id }, 'User profile not found');
     }
 
     const watermarkPayload = this.watermarkService.generatePayload({
@@ -301,7 +301,7 @@ export class AuthController {
     const studentReq = req as StudentRequest;
     const refreshToken = studentReq.cookies?.student_refresh_token;
     if (!refreshToken) {
-      throw new UnauthorizedException('Refresh token not found');
+      throw new AppException(ErrorCode.AUTH_REFRESH_TOKEN_MISSING);
     }
 
     const requestInfo = extractRequestInfo(req);
@@ -315,19 +315,19 @@ export class AuthController {
     // Get user info to sign new access token
     const tokenInfo = await this.refreshTokenService.verifyRefreshToken(rotationResult.token);
     if (!tokenInfo) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'refresh' }, 'Invalid refresh token');
     }
 
     // Get user info from session
     const sessionPayload = await this.authService.verifySessionToken(refreshToken);
     if (!sessionPayload || !sessionPayload.sub) {
-      throw new UnauthorizedException('Invalid session');
+      throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'session' }, 'Invalid session');
     }
 
     // Re-verify Google token to get latest user info
     const user = await this.authService.getSessionFromCookie(refreshToken);
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'user' }, 'User not found');
     }
 
     // Generate new access token
@@ -407,7 +407,7 @@ export class AuthController {
   }> {
     const success = await this.refreshTokenService.revokeRefreshToken(tokenId);
     if (!success) {
-      throw new UnauthorizedException('Session not found or already revoked');
+      throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'session' }, 'Session not found or already revoked');
     }
 
     return {
@@ -434,12 +434,12 @@ export class AuthController {
     const studentReq = req as StudentRequest;
     const currentRefreshToken = studentReq.cookies?.student_refresh_token;
     if (!currentRefreshToken) {
-      throw new UnauthorizedException('No refresh token found');
+      throw new AppException(ErrorCode.AUTH_REFRESH_TOKEN_MISSING, undefined, 'No refresh token found');
     }
 
     const tokenInfo = await this.refreshTokenService.verifyRefreshToken(currentRefreshToken);
     if (!tokenInfo) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'refresh' }, 'Invalid refresh token');
     }
 
     const count = await this.refreshTokenService.revokeOtherSessions(user.id, tokenInfo.tokenId);

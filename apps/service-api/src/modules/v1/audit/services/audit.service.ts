@@ -3,10 +3,12 @@
  * Handles audit logging
  */
 
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { AuditAction } from '@medical-portal/shared';
+import { ErrorCode } from '@medical-portal/shared';
+import { AppException } from '../../../../common/errors';
 
 export interface AuditContext {
   userId: string;
@@ -80,8 +82,8 @@ export class AuditService {
       .range(from, to);
 
     if (error) {
-      this.logger.error('Failed to fetch audit logs', error);
-      throw new BadRequestException('Failed to fetch audit logs');
+      this.logger.warn(`Failed to fetch audit logs (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'audit_log' }, 'Failed to fetch audit logs');
     }
 
     return {

@@ -8,9 +8,11 @@
  * 3. Session cookie (for students)
  */
 
-import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ExecutionContext } from '@nestjs/common';
 import { AuthService } from '../../modules/v1/auth/services/auth.service';
 import { AdminAuthService } from '../../modules/v1/admin-auth/services/admin-auth.service';
+import { AppException } from '../errors';
+import { ErrorCode } from '@medical-portal/shared';
 
 @Injectable()
 export class AnyAuthGuard {
@@ -74,7 +76,7 @@ export class AnyAuthGuard {
       }
     }
 
-    throw new UnauthorizedException('Missing or invalid authentication');
+    throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, undefined, 'Missing or invalid authentication');
   }
 }
 

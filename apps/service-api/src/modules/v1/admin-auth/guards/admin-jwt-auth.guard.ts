@@ -5,10 +5,12 @@
  * Supports both Authorization header and httpOnly cookie
  */
 
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ExecutionContext } from '@nestjs/common';
 import { AdminAuthService } from '../services/admin-auth.service';
+import { AppException } from '../../../../common/errors';
+import { ErrorCode } from '@medical-portal/shared';
 
 @Injectable()
 export class AdminJwtAuthGuard extends AuthGuard('jwt') {
@@ -33,20 +35,20 @@ export class AdminJwtAuthGuard extends AuthGuard('jwt') {
       }
 
       if (!token) {
-        throw new UnauthorizedException('Missing or invalid authentication');
+        throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, undefined, 'Missing or invalid authentication');
       }
 
       const admin = await this.adminAuthService.verifyToken(token);
 
       if (!admin) {
-        throw new UnauthorizedException('Invalid or expired token');
+        throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'admin_access' }, 'Invalid or expired token');
       }
 
       // Attach admin to request
       request.admin = admin;
       return true;
     } catch (error) {
-      throw new UnauthorizedException('Invalid or expired token');
+      throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'admin_access' }, 'Invalid or expired token');
     }
   }
 }

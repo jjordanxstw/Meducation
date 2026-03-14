@@ -8,6 +8,8 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ErrorEnvelope } from '../dto/response-envelope.dto';
+import { AppException } from '../errors';
+import { ErrorCode } from '@medical-portal/shared';
 
 declare module 'express' {
   interface Request {
@@ -18,6 +20,23 @@ declare module 'express' {
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
+
+  private mapStatusToErrorCode(status: number): ErrorCode {
+    switch (status) {
+      case HttpStatus.BAD_REQUEST:
+        return ErrorCode.VALIDATION_FAILED;
+      case HttpStatus.UNAUTHORIZED:
+        return ErrorCode.AUTH_TOKEN_INVALID;
+      case HttpStatus.FORBIDDEN:
+        return ErrorCode.AUTHZ_FORBIDDEN;
+      case HttpStatus.NOT_FOUND:
+        return ErrorCode.RESOURCE_NOT_FOUND;
+      case HttpStatus.CONFLICT:
+        return ErrorCode.RESOURCE_CONFLICT;
+      default:
+        return ErrorCode.SYSTEM_INTERNAL_ERROR;
+    }
+  }
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -44,6 +63,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     let message: string | string[] | object;
     let error: string | undefined;
+    let errorCode: string | undefined;
+    let i18nKey: string | undefined;
+    let context: Record<string, unknown> | undefined;
+
+    if (exception instanceof AppException) {
+      errorCode = exception.errorCode;
+      i18nKey = exception.i18nKey;
+      context = exception.context;
+    }
 
     if (typeof exceptionResponse === 'string') {
       message = exceptionResponse;
@@ -54,8 +82,22 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const responseObj = exceptionResponse as Record<string, unknown>;
       message = (responseObj.message as string | string[] | object) || exceptionResponse;
       error = responseObj.error as string | undefined;
+
+      if (!errorCode && typeof responseObj.errorCode === 'string') {
+        errorCode = responseObj.errorCode;
+      }
+      if (!i18nKey && typeof responseObj.i18nKey === 'string') {
+        i18nKey = responseObj.i18nKey;
+      }
+      if (!context && typeof responseObj.context === 'object' && responseObj.context !== null) {
+        context = responseObj.context as Record<string, unknown>;
+      }
     } else {
       message = 'Internal server error';
+    }
+
+    if (!errorCode) {
+      errorCode = this.mapStatusToErrorCode(status);
     }
 
     const timestamp = new Date().toISOString();
@@ -70,6 +112,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
         method: request.method,
         message,
         error,
+        errorCode,
+        i18nKey,
+        ...(context ? { context } : {}),
       },
       meta: {
         requestId,
@@ -79,12 +124,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (status >= 500) {
       this.logger.error(
-        `${request.method} ${request.url} [${requestId}]`,
-        exception instanceof Error ? exception.stack : String(exception),
+        `${request.method} ${request.url} ${status} [${requestId}] [${errorCode}]`,
       );
     } else {
       this.logger.warn(
-        `${request.method} ${request.url} ${status} [${requestId}] - ${JSON.stringify(message)}`,
+        `${request.method} ${request.url} ${status} [${requestId}] [${errorCode}]`,
       );
     }
 

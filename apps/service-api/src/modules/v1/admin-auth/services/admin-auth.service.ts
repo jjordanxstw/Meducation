@@ -4,7 +4,7 @@
  * Separate from student OAuth authentication
  */
 
-import { Injectable, UnauthorizedException, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -15,6 +15,8 @@ import {
   sanitizeAdmin,
 } from '../entities/admin.entity';
 import { ChangePasswordResponseDto } from '../dto';
+import { AppException } from '../../../../common/errors';
+import { ErrorCode } from '@medical-portal/shared';
 
 @Injectable()
 export class AdminAuthService {
@@ -66,20 +68,20 @@ export class AdminAuthService {
 
     if (error || !admin) {
       this.logger.warn(`Admin login failed: User "${username}" not found`);
-      throw new UnauthorizedException('Invalid username or password');
+      throw new AppException(ErrorCode.AUTH_INVALID_CREDENTIALS);
     }
 
     // Check if admin is active
     if (!admin.is_active) {
       this.logger.warn(`Admin login failed: User "${username}" is inactive`);
-      throw new UnauthorizedException('Account is inactive. Please contact system administrator.');
+      throw new AppException(ErrorCode.AUTH_ACCOUNT_INACTIVE);
     }
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, admin.password_hash);
     if (!isPasswordValid) {
       this.logger.warn(`Admin login failed: Invalid password for user "${username}"`);
-      throw new UnauthorizedException('Invalid username or password');
+      throw new AppException(ErrorCode.AUTH_INVALID_CREDENTIALS);
     }
 
     // Update last login timestamp
@@ -183,19 +185,23 @@ export class AdminAuthService {
       .single();
 
     if (error || !admin) {
-      throw new UnauthorizedException('Admin not found');
+      throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'admin' }, 'Admin not found');
     }
 
     // Verify current password
     const isPasswordValid = await bcrypt.compare(currentPassword, admin.password_hash);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Current password is incorrect');
+      throw new AppException(ErrorCode.AUTH_INVALID_CREDENTIALS, undefined, 'Current password is incorrect');
     }
 
     // Check if new password is same as current
     const isSamePassword = await bcrypt.compare(newPassword, admin.password_hash);
     if (isSamePassword) {
-      throw new BadRequestException('New password must be different from current password');
+      throw new AppException(
+        ErrorCode.VALIDATION_INVALID_INPUT,
+        { field: 'newPassword', reason: 'must_be_different' },
+        'New password must be different from current password',
+      );
     }
 
     // Hash new password
@@ -212,8 +218,8 @@ export class AdminAuthService {
       .eq('id', adminId);
 
     if (updateError) {
-      this.logger.error('Failed to update password:', updateError);
-      throw new Error('Failed to update password');
+      this.logger.warn(`Failed to update password (code=${updateError.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'admin_password' }, 'Failed to update password');
     }
 
     this.logger.log(`Password changed for admin "${admin.username}"`);

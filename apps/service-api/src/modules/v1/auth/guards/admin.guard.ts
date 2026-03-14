@@ -1,7 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ADMIN_KEY } from '../../../../common';
 import type { UserWithoutPassword } from '../entities/profile.entity';
+import { AppException } from '../../../../common/errors';
+import { ErrorCode } from '@medical-portal/shared';
 
 @Injectable()
 export class AdminGuard implements CanActivate {
@@ -22,7 +24,7 @@ export class AdminGuard implements CanActivate {
     const user: UserWithoutPassword = request.user;
 
     if (!user?.profile || user.profile.role !== 'admin') {
-      throw new ForbiddenException('This action requires administrator privileges');
+      throw new AppException(ErrorCode.AUTHZ_ADMIN_REQUIRED);
     }
 
     return true;

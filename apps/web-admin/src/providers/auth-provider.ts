@@ -10,6 +10,7 @@
 
 import type { AuthProvider } from '@refinedev/core';
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { resolveApiErrorMessage } from '../utils/api-error';
 
 /**
  * Sanitize error message to prevent XSS attacks
@@ -362,8 +363,7 @@ export const authProvider: AuthProvider = {
         redirectTo: '/dashboard',
       };
     } catch (error: unknown) {
-      const err = error as AxiosError<{ message?: string }>;
-      const errorMessage = err.response?.data?.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+      const errorMessage = resolveApiErrorMessage(error, 'errors.auth.invalidCredentials');
 
       logSecurityEvent('login_failed', {
         reason: 'authentication_failed',
@@ -554,10 +554,23 @@ export const authProvider: AuthProvider = {
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {
         logSecurityEvent('unauthorized_access', { url: error.config?.url });
-        return { logout: true, redirectTo: '/login' };
+        return {
+          logout: true,
+          redirectTo: '/login',
+          error: {
+            name: 'Unauthorized',
+            message: resolveApiErrorMessage(error, 'errors.auth.tokenInvalid'),
+          },
+        };
       }
       if (error.response?.status === 403) {
         logSecurityEvent('forbidden_access', { url: error.config?.url });
+        return {
+          error: {
+            name: 'Forbidden',
+            message: resolveApiErrorMessage(error, 'errors.authorization.forbidden'),
+          },
+        };
       }
     }
     return { error };

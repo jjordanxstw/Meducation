@@ -15,7 +15,6 @@ import {
   HttpStatus,
   Res,
   Param,
-  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -30,6 +29,8 @@ import { AdminRefreshTokenService } from '../services/admin-refresh-token.servic
 import { AdminLoginDto, ChangePasswordDto } from '../dto';
 import { AdminJwtAuthGuard } from '../guards/admin-jwt-auth.guard';
 import { SkipEnvelope } from '../../../../common';
+import { AppException } from '../../../../common/errors';
+import { ErrorCode } from '@medical-portal/shared';
 
 /**
  * Current Admin Request Interface
@@ -241,7 +242,7 @@ export class AdminAuthController {
     const adminReq = req as AdminRequest;
     const refreshToken = adminReq.cookies?.admin_refresh_token;
     if (!refreshToken) {
-      throw new UnauthorizedException('Refresh token not found');
+      throw new AppException(ErrorCode.AUTH_REFRESH_TOKEN_MISSING);
     }
 
     const requestInfo = extractRequestInfo(req);
@@ -255,13 +256,13 @@ export class AdminAuthController {
     // Get user info to sign new access token
     const tokenInfo = await this.refreshTokenService.verifyRefreshToken(rotationResult.token);
     if (!tokenInfo) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'refresh' }, 'Invalid refresh token');
     }
 
     // Get admin info
     const admin = await this.adminAuthService.getAdminById(tokenInfo.userId);
     if (!admin || !admin.is_active) {
-      throw new UnauthorizedException('Admin account not found or inactive');
+      throw new AppException(ErrorCode.AUTH_ACCOUNT_INACTIVE, { adminId: tokenInfo.userId }, 'Admin account not found or inactive');
     }
 
     // Generate new access token
@@ -433,7 +434,7 @@ export class AdminAuthController {
   async revokeSession(@Param('tokenId') tokenId: string) {
     const success = await this.refreshTokenService.revokeRefreshToken(tokenId);
     if (!success) {
-      throw new UnauthorizedException('Session not found or already revoked');
+      throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'session' }, 'Session not found or already revoked');
     }
 
     return {
@@ -459,12 +460,12 @@ export class AdminAuthController {
   async revokeOtherSessions(@Request() req: AdminRequest) {
     const currentRefreshToken = req.cookies?.admin_refresh_token;
     if (!currentRefreshToken) {
-      throw new UnauthorizedException('No refresh token found');
+      throw new AppException(ErrorCode.AUTH_REFRESH_TOKEN_MISSING, undefined, 'No refresh token found');
     }
 
     const tokenInfo = await this.refreshTokenService.verifyRefreshToken(currentRefreshToken);
     if (!tokenInfo) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'refresh' }, 'Invalid refresh token');
     }
 
     const count = await this.refreshTokenService.revokeOtherSessions(req.admin!.id, tokenInfo.tokenId);

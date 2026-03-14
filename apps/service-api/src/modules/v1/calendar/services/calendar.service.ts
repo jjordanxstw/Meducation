@@ -3,9 +3,11 @@
  * Handles calendar event business logic
  */
 
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { AppException } from '../../../../common/errors';
+import { ErrorCode } from '@medical-portal/shared';
 
 @Injectable()
 export class CalendarService {
@@ -44,8 +46,8 @@ export class CalendarService {
     const { data, error } = await query.order('start_time');
 
     if (error) {
-      this.logger.error('Failed to fetch calendar events', error);
-      throw new BadRequestException('Failed to fetch calendar events');
+      this.logger.warn(`Failed to fetch calendar events (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'calendar_event' }, 'Failed to fetch calendar events');
     }
 
     return data;
@@ -63,8 +65,8 @@ export class CalendarService {
       .order('start_time');
 
     if (error) {
-      this.logger.error('Failed to fetch calendar events', error);
-      throw new BadRequestException('Failed to fetch calendar events');
+      this.logger.warn(`Failed to fetch calendar events (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'calendar_event' }, 'Failed to fetch calendar events');
     }
 
     return data;
@@ -81,8 +83,8 @@ export class CalendarService {
       .limit(limit);
 
     if (error) {
-      this.logger.error('Failed to fetch upcoming events', error);
-      throw new BadRequestException('Failed to fetch upcoming events');
+      this.logger.warn(`Failed to fetch upcoming events (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'calendar_event' }, 'Failed to fetch upcoming events');
     }
 
     return data;
@@ -96,7 +98,7 @@ export class CalendarService {
       .single();
 
     if (error) {
-      throw new NotFoundException('Calendar event not found');
+      throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'calendar_event', id }, 'Calendar event not found');
     }
 
     return data;
@@ -128,8 +130,8 @@ export class CalendarService {
       .single();
 
     if (error) {
-      this.logger.error('Failed to create calendar event', error);
-      throw new BadRequestException('Failed to create calendar event');
+      this.logger.warn(`Failed to create calendar event (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'calendar_event' }, 'Failed to create calendar event');
     }
 
     return result;
@@ -150,8 +152,8 @@ export class CalendarService {
       .single();
 
     if (error) {
-      this.logger.error('Failed to update calendar event', error);
-      throw new BadRequestException('Failed to update calendar event');
+      this.logger.warn(`Failed to update calendar event (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'calendar_event', id }, 'Failed to update calendar event');
     }
 
     return { oldData, newData: result };
@@ -167,8 +169,8 @@ export class CalendarService {
     const { error } = await this.supabaseAdmin.from('calendar_events').delete().eq('id', id);
 
     if (error) {
-      this.logger.error('Failed to delete calendar event', error);
-      throw new BadRequestException('Failed to delete calendar event');
+      this.logger.warn(`Failed to delete calendar event (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'calendar_event', id }, 'Failed to delete calendar event');
     }
 
     return { oldData };

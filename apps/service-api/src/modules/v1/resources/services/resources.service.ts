@@ -3,9 +3,11 @@
  * Handles resource business logic
  */
 
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { AppException } from '../../../../common/errors';
+import { ErrorCode } from '@medical-portal/shared';
 
 @Injectable()
 export class ResourcesService {
@@ -39,8 +41,8 @@ export class ResourcesService {
     const { data, error } = await query.order('order_index');
 
     if (error) {
-      this.logger.error('Failed to fetch resources', error);
-      throw new BadRequestException('Failed to fetch resources');
+      this.logger.warn(`Failed to fetch resources (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'resource' }, 'Failed to fetch resources');
     }
 
     return data;
@@ -54,7 +56,7 @@ export class ResourcesService {
       .single();
 
     if (error) {
-      throw new NotFoundException('Resource not found');
+      throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'resource', id }, 'Resource not found');
     }
 
     return data;
@@ -68,8 +70,8 @@ export class ResourcesService {
       .single();
 
     if (error) {
-      this.logger.error('Failed to create resource', error);
-      throw new BadRequestException('Failed to create resource');
+      this.logger.warn(`Failed to create resource (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'resource' }, 'Failed to create resource');
     }
 
     return result;
@@ -82,8 +84,8 @@ export class ResourcesService {
       .select();
 
     if (error) {
-      this.logger.error('Failed to create resources', error);
-      throw new BadRequestException('Failed to create resources');
+      this.logger.warn(`Failed to create resources (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'resource_bulk' }, 'Failed to create resources');
     }
 
     return data;
@@ -104,8 +106,8 @@ export class ResourcesService {
       .single();
 
     if (error) {
-      this.logger.error('Failed to update resource', error);
-      throw new BadRequestException('Failed to update resource');
+      this.logger.warn(`Failed to update resource (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'resource', id }, 'Failed to update resource');
     }
 
     return { oldData, newData: result };
@@ -121,8 +123,8 @@ export class ResourcesService {
     const { error } = await this.supabaseAdmin.from('resources').delete().eq('id', id);
 
     if (error) {
-      this.logger.error('Failed to delete resource', error);
-      throw new BadRequestException('Failed to delete resource');
+      this.logger.warn(`Failed to delete resource (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'resource', id }, 'Failed to delete resource');
     }
 
     return { oldData };
@@ -136,8 +138,8 @@ export class ResourcesService {
         .eq('id', item.id);
 
       if (error) {
-        this.logger.error('Failed to reorder resources', error);
-        throw new BadRequestException('Failed to reorder resources');
+        this.logger.warn(`Failed to reorder resources (code=${error.code ?? 'unknown'})`);
+        throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'resource_order' }, 'Failed to reorder resources');
       }
     }
 

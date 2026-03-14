@@ -25,6 +25,9 @@ export interface ErrorResponse {
   method: string;
   message: string | string[] | object;
   error?: string;
+  errorCode?: string;
+  i18nKey?: string;
+  context?: Record<string, unknown>;
 }
 
 export interface ErrorEnvelope {
