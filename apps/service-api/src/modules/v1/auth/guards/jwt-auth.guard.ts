@@ -1,7 +1,9 @@
-import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ExecutionContext } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Observable } from 'rxjs';
 import { AuthService } from '../services/auth.service';
+import { AppException } from '../../../../common/errors';
+import { ErrorCode } from '@medical-portal/shared';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -37,31 +39,31 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
             request.user = user;
             return true;
           }
-          throw new UnauthorizedException('Invalid or expired session');
+          throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'session' }, 'Invalid or expired session');
         });
       }
     }
 
-    throw new UnauthorizedException('Missing or invalid authentication');
+    throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, undefined, 'Missing or invalid authentication');
   }
 
   private async validateToken(request: any, token: string): Promise<boolean> {
     try {
       const payload = await this.authService.verifySessionToken(token);
       if (!payload || !payload.sub) {
-        throw new UnauthorizedException('Invalid or expired token');
+        throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'access' }, 'Invalid or expired token');
       }
 
       // Get user from session
       const user = await this.authService.getSessionFromCookie(token);
       if (!user) {
-        throw new UnauthorizedException('Invalid or expired session');
+        throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'session' }, 'Invalid or expired session');
       }
 
       request.user = user;
       return true;
     } catch (error) {
-      throw new UnauthorizedException('Invalid or expired token');
+      throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'access' }, 'Invalid or expired token');
     }
   }
 }

@@ -1,5 +1,7 @@
-import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ExecutionContext } from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
+import { AppException } from '../../../../common/errors';
+import { ErrorCode } from '@medical-portal/shared';
 
 @Injectable()
 export class GoogleAuthGuard {
@@ -47,6 +49,6 @@ export class GoogleAuthGuard {
       }
     }
 
-    throw new UnauthorizedException('Missing or invalid authentication');
+    throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, undefined, 'Missing or invalid authentication');
   }
 }

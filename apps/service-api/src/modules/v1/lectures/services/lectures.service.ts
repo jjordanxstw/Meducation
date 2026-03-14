@@ -3,9 +3,11 @@
  * Handles lecture business logic
  */
 
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { AppException } from '../../../../common/errors';
+import { ErrorCode } from '@medical-portal/shared';
 
 @Injectable()
 export class LecturesService {
@@ -36,8 +38,8 @@ export class LecturesService {
     const { data, error } = await query.order('order_index');
 
     if (error) {
-      this.logger.error('Failed to fetch lectures', error);
-      throw new BadRequestException('Failed to fetch lectures');
+      this.logger.warn(`Failed to fetch lectures (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'lecture' }, 'Failed to fetch lectures');
     }
 
     return data;
@@ -51,7 +53,7 @@ export class LecturesService {
       .single();
 
     if (error) {
-      throw new NotFoundException('Lecture not found');
+      throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'lecture', id }, 'Lecture not found');
     }
 
     // Sort resources by order_index
@@ -70,8 +72,8 @@ export class LecturesService {
       .single();
 
     if (error) {
-      this.logger.error('Failed to create lecture', error);
-      throw new BadRequestException('Failed to create lecture');
+      this.logger.warn(`Failed to create lecture (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'lecture' }, 'Failed to create lecture');
     }
 
     return result;
@@ -92,8 +94,8 @@ export class LecturesService {
       .single();
 
     if (error) {
-      this.logger.error('Failed to update lecture', error);
-      throw new BadRequestException('Failed to update lecture');
+      this.logger.warn(`Failed to update lecture (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'lecture', id }, 'Failed to update lecture');
     }
 
     return { oldData, newData: result };
@@ -109,8 +111,8 @@ export class LecturesService {
     const { error } = await this.supabaseAdmin.from('lectures').delete().eq('id', id);
 
     if (error) {
-      this.logger.error('Failed to delete lecture', error);
-      throw new BadRequestException('Failed to delete lecture');
+      this.logger.warn(`Failed to delete lecture (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'lecture', id }, 'Failed to delete lecture');
     }
 
     return { oldData };
@@ -124,8 +126,8 @@ export class LecturesService {
         .eq('id', item.id);
 
       if (error) {
-        this.logger.error('Failed to reorder lectures', error);
-        throw new BadRequestException('Failed to reorder lectures');
+        this.logger.warn(`Failed to reorder lectures (code=${error.code ?? 'unknown'})`);
+        throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'lecture_order' }, 'Failed to reorder lectures');
       }
     }
 

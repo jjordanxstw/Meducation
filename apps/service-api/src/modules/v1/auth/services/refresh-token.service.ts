@@ -3,10 +3,12 @@
  * Handles refresh token generation, validation, rotation, and revocation
  */
 
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { randomBytes, createHash } from 'crypto';
+import { AppException } from '../../../../common/errors';
+import { ErrorCode } from '@medical-portal/shared';
 
 export interface RefreshTokenMetadata {
   userId: string;
@@ -85,8 +87,8 @@ export class RefreshTokenService {
       });
 
     if (error) {
-      this.logger.error('Failed to store refresh token:', error);
-      throw new Error('Failed to create refresh token');
+      this.logger.warn(`Failed to store refresh token (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'refresh_token' }, 'Failed to create refresh token');
     }
 
     this.logger.log(`Refresh token created for user ${metadata.userId}`);
@@ -117,16 +119,16 @@ export class RefreshTokenService {
       .single();
 
     if (error || !existingToken) {
-      throw new UnauthorizedException('Invalid or expired refresh token');
+      throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'refresh' }, 'Invalid or expired refresh token');
     }
 
     // Check if token is not revoked and not expired
     if (existingToken.revoked_at) {
-      throw new UnauthorizedException('Refresh token has been revoked');
+      throw new AppException(ErrorCode.AUTH_TOKEN_REVOKED, { tokenType: 'refresh' }, 'Refresh token has been revoked');
     }
 
     if (new Date(existingToken.expires_at) < new Date()) {
-      throw new UnauthorizedException('Refresh token has expired');
+      throw new AppException(ErrorCode.AUTH_TOKEN_EXPIRED, { tokenType: 'refresh' }, 'Refresh token has expired');
     }
 
     // Revoke the old token (mark as replaced by new token)
@@ -136,7 +138,7 @@ export class RefreshTokenService {
       .eq('id', existingToken.id);
 
     if (revokeError) {
-      this.logger.error('Failed to revoke old refresh token:', revokeError);
+      this.logger.warn(`Failed to revoke old refresh token (code=${revokeError.code ?? 'unknown'})`);
     }
 
     // Generate new refresh token
@@ -186,7 +188,7 @@ export class RefreshTokenService {
       .eq('user_type', 'student');
 
     if (error) {
-      this.logger.error('Failed to revoke refresh token:', error);
+      this.logger.warn(`Failed to revoke refresh token (code=${error.code ?? 'unknown'})`);
       return false;
     }
 
@@ -207,7 +209,7 @@ export class RefreshTokenService {
       .select('id');
 
     if (error) {
-      this.logger.error('Failed to revoke all tokens:', error);
+      this.logger.warn(`Failed to revoke all tokens (code=${error.code ?? 'unknown'})`);
       return 0;
     }
 
@@ -239,7 +241,7 @@ export class RefreshTokenService {
       .returns<SessionRow[]>();
 
     if (error) {
-      this.logger.error('Failed to fetch active sessions:', error);
+      this.logger.warn(`Failed to fetch active sessions (code=${error.code ?? 'unknown'})`);
       return [];
     }
 
@@ -264,7 +266,7 @@ export class RefreshTokenService {
     const { data, error } = await this.supabaseAdmin.rpc('cleanup_expired_tokens');
 
     if (error) {
-      this.logger.error('Failed to cleanup old tokens:', error);
+      this.logger.warn(`Failed to cleanup old tokens (code=${error.code ?? 'unknown'})`);
       return 0;
     }
 
@@ -308,7 +310,7 @@ export class RefreshTokenService {
       .select('id');
 
     if (error) {
-      this.logger.error('Failed to revoke other sessions:', error);
+      this.logger.warn(`Failed to revoke other sessions (code=${error.code ?? 'unknown'})`);
       return 0;
     }
 

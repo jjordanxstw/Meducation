@@ -3,15 +3,17 @@
  * Handles Google OAuth verification, session management, and profile operations
  */
 
-import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { OAuth2Client, TokenPayload } from 'google-auth-library';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { UserRole } from '@medical-portal/shared';
+import { ErrorCode } from '@medical-portal/shared';
 import type { StringValue } from 'ms';
 import { UserWithoutPassword, Profile } from '../entities/profile.entity';
 import { AuthTokenDto } from '../dto/auth-response.dto';
+import { AppException } from '../../../../common/errors';
 
 @Injectable()
 export class AuthService {
@@ -68,7 +70,8 @@ export class AuthService {
       });
       return ticket.getPayload() || null;
     } catch (error) {
-      this.logger.error('Google token verification failed:', error);
+      const e = error as { message?: string };
+      this.logger.warn(`Google token verification failed (${e?.message ?? 'unknown_error'})`);
       return null;
     }
   }
@@ -88,7 +91,8 @@ export class AuthService {
       const payload = await this.jwtService.verifyAsync(token, { secret: this.jwtSecret });
       return payload as Record<string, unknown>;
     } catch (err) {
-      this.logger.warn('Session token verify failed:', err);
+      const e = err as { message?: string };
+      this.logger.warn(`Session token verify failed (${e?.message ?? 'unknown_error'})`);
       return null;
     }
   }
@@ -182,21 +186,17 @@ export class AuthService {
         if (createError) {
           // Detailed error logging for constraint violations
           if (createError.code === '23514') {
-            this.logger.error(
+            this.logger.warn(
               `Database constraint violation: Email domain not allowed. ` +
               `Email: ${email}. ` +
               `Allowed domains: ${this.allowedEmailDomains.join(', ')}. ` +
               `To allow this domain, update ALLOWED_EMAIL_DOMAINS environment variable. ` +
-              `For testing, you can add temporary domains like @gmail.com`,
-              createError
+              `For testing, you can add temporary domains like @gmail.com`
             );
           } else if (createError.code === '23505') {
-            this.logger.error(
-              `Duplicate key violation: User ID ${userId} already exists in profiles table`,
-              createError
-            );
+            this.logger.warn(`Duplicate key violation while creating profile for user ${userId} (code=${createError.code})`);
           } else {
-            this.logger.error('Failed to create profile:', createError);
+            this.logger.warn(`Failed to create profile (code=${createError.code ?? 'unknown'})`);
           }
           return null;
         }
@@ -206,7 +206,8 @@ export class AuthService {
 
       return null;
     } catch (error) {
-      this.logger.error('Profile operation failed:', error);
+      const e = error as { message?: string };
+      this.logger.warn(`Profile operation failed (${e?.message ?? 'unknown_error'})`);
       return null;
     }
   }
@@ -219,7 +220,8 @@ export class AuthService {
       await this.googleClient.revokeToken(token);
       return true;
     } catch (error) {
-      this.logger.error('Google token revocation failed:', error);
+      const e = error as { message?: string };
+      this.logger.warn(`Google token revocation failed (${e?.message ?? 'unknown_error'})`);
       return false;
     }
   }
@@ -245,7 +247,7 @@ export class AuthService {
     // Verify Google ID token
     const payload = await this.verifyGoogleToken(credential);
     if (!payload || !payload.sub || !payload.email) {
-      throw new UnauthorizedException('Invalid Google token');
+      throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { provider: 'google' }, 'Invalid Google token');
     }
 
     // Get or create profile
@@ -256,12 +258,14 @@ export class AuthService {
     );
 
     if (!profile) {
-      throw new UnauthorizedException('Failed to create profile');
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'profile' }, 'Failed to create profile');
     }
 
     // Check email domain
     if (!this.isAllowedEmail(payload.email, profile?.role)) {
-      throw new UnauthorizedException(
+      throw new AppException(
+        ErrorCode.AUTHZ_FORBIDDEN,
+        { email: payload.email, allowedDomains: this.allowedEmailDomains },
         `Access restricted to ${this.allowedEmailDomains.join(', ')} emails only. Your email: ${payload.email}`
       );
     }
