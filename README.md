@@ -74,6 +74,7 @@ GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 # JWT
 JWT_SECRET=your-super-secret-jwt-key
 JWT_EXPIRES_IN=7d
+WATERMARK_SECRET=your-watermark-secret-key
 ```
 
 **apps/web-client/.env**

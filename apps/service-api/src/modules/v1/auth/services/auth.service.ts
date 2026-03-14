@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { OAuth2Client, TokenPayload } from 'google-auth-library';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { UserRole } from '@medical-portal/shared';
+import type { StringValue } from 'ms';
 import { UserWithoutPassword, Profile } from '../entities/profile.entity';
 import { AuthTokenDto } from '../dto/auth-response.dto';
 
@@ -19,7 +20,7 @@ export class AuthService {
   private readonly supabaseAdmin: SupabaseClient;
   private readonly allowedEmailDomains: string[];
   private readonly jwtSecret: string;
-  private readonly jwtExpiresIn: string;
+  private readonly jwtExpiresIn: StringValue;
 
   constructor(
     private jwtService: JwtService,
@@ -43,9 +44,16 @@ export class AuthService {
       },
     });
 
-    this.allowedEmailDomains = this.configService.get<string>('ALLOWED_EMAIL_DOMAINS', '@student.mahidol.edu,@student.mahidol.ac.th').split(',');
-    this.jwtSecret = this.configService.get<string>('JWT_SECRET', 'dev-secret');
-    this.jwtExpiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '1h');
+    this.allowedEmailDomains = this.configService
+      .get<string>('ALLOWED_EMAIL_DOMAINS', '@student.mahidol.edu,@student.mahidol.ac.th')
+      .split(',');
+
+    const jwtSecret = this.configService.get<string>('JWT_SECRET');
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET is required');
+    }
+    this.jwtSecret = jwtSecret;
+    this.jwtExpiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '1h') as StringValue;
   }
 
   /**

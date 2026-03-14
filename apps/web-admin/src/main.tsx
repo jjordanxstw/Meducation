@@ -1,3 +1,5 @@
+/* eslint-disable react-refresh/only-export-components */
+
 /**
  * Main Entry Point for Medical Portal Admin Panel
  * Vite + React + Refine.dev v4
@@ -14,6 +16,7 @@ import { authProvider } from './providers/auth-provider';
 import { i18nProvider } from './providers/i18n-provider';
 import { ConfigProvider, App as AntdApp } from 'antd';
 import { RefineThemes, useNotificationProvider } from '@refinedev/antd';
+import routerBindings from '@refinedev/react-router-v6';
 import thTH from 'antd/locale/th_TH';
 import './index.css';
 
@@ -21,9 +24,28 @@ import './index.css';
 import { router } from './routes';
 import { resources } from './resources';
 
+const resolvedApiUrl = import.meta.env.VITE_API_URL || '/api/v1';
+
+function assertValidApiUrl(apiUrl: string): void {
+  if (apiUrl.startsWith('/')) {
+    return;
+  }
+
+  try {
+    const parsedUrl = new URL(apiUrl);
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      throw new Error('Unsupported protocol');
+    }
+  } catch {
+    throw new Error('Invalid VITE_API_URL. Use a relative path (/api/v1) or absolute http(s) URL.');
+  }
+}
+
+assertValidApiUrl(resolvedApiUrl);
+
 const Root: React.FC = () => {
   const refineDataProvider = React.useMemo(
-    () => dataProvider(import.meta.env.VITE_API_URL || '/api/v1'),
+    () => dataProvider(resolvedApiUrl),
     []
   );
 
@@ -75,10 +97,7 @@ const Root: React.FC = () => {
           i18nProvider={i18nProvider}
           notificationProvider={useNotificationProvider}
           resources={resources}
-          routerProvider={{
-            type: 'react-router-v6',
-            router,
-          }}
+          routerProvider={routerBindings}
           options={{
             syncWithLocation: true,
             warnWhenUnsavedChanges: true,
