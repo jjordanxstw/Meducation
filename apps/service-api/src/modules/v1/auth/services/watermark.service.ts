@@ -3,7 +3,8 @@
  * Generates dynamic watermark configurations for video players
  */
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { WatermarkConfig } from '@medical-portal/shared';
 import crypto from 'crypto';
 
@@ -16,6 +17,24 @@ export interface WatermarkUser {
 
 @Injectable()
 export class WatermarkService {
+  private readonly logger = new Logger(WatermarkService.name);
+  private readonly watermarkSecret: string;
+
+  constructor(private readonly configService: ConfigService) {
+    const secret =
+      this.configService.get<string>('WATERMARK_SECRET') || this.configService.get<string>('JWT_SECRET');
+
+    if (!secret) {
+      throw new Error('Missing required environment variable: WATERMARK_SECRET or JWT_SECRET');
+    }
+
+    if (!this.configService.get<string>('WATERMARK_SECRET')) {
+      this.logger.warn('WATERMARK_SECRET is not set; falling back to JWT_SECRET');
+    }
+
+    this.watermarkSecret = secret;
+  }
+
   /**
    * Generate watermark configuration for a user
    */
@@ -146,7 +165,7 @@ export class WatermarkService {
    * Generate unique session hash for watermark verification
    */
   generateSessionHash(userId: string, timestamp: number): string {
-    const data = `${userId}-${timestamp}-${process.env.WATERMARK_SECRET || 'medical-portal'}`;
+    const data = `${userId}-${timestamp}-${this.watermarkSecret}`;
     return crypto.createHash('sha256').update(data).digest('hex').slice(0, 16);
   }
 

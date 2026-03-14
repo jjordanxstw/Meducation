@@ -1,3 +1,5 @@
+/* eslint-disable react-refresh/only-export-components */
+
 /**
  * Main Router Configuration for Medical Portal Admin Panel
  * Uses React Router v6 with Refine.dev v4
@@ -6,7 +8,6 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { Authenticated } from '@refinedev/core';
 import { ThemedLayout } from '@refinedev/antd';
-import React from 'react';
 
 import { LoginPage } from './auth';
 import DashboardPage from './dashboard';
@@ -59,7 +60,7 @@ const ProtectedLayout = () => (
   </Authenticated>
 );
 
-export const router = createBrowserRouter([
+export const router: ReturnType<typeof createBrowserRouter> = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
@@ -68,6 +69,7 @@ export const router = createBrowserRouter([
     path: '/',
     element: <ProtectedLayout />,
     children: [
+      { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <DashboardPage /> },
       { path: 'subjects', element: <SubjectsList /> },
       { path: 'subjects/create', element: <SubjectsCreate /> },

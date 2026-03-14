@@ -5,7 +5,7 @@ export class GlobalValidationPipe extends ValidationPipe {
   constructor() {
     super({
       whitelist: true, // Strip away properties that don't have decorators
-      forbidNonWhitelisted: false, // Allow extra fields (for compatibility)
+      forbidNonWhitelisted: true, // Reject unexpected fields for stricter request validation
       transform: false, // Disable automatic transformation
       transformOptions: {
         enableImplicitConversion: false, // Disable implicit type conversion

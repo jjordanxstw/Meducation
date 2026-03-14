@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { NestFactory, Reflector } from '@nestjs/core';
-import { VersioningType } from '@nestjs/common';
+import { Logger, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import compression from 'compression';
@@ -13,12 +13,34 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { requestIdMiddleware } from './common/middleware/request-id.middleware';
 import * as express from 'express';
 
+const logger = new Logger('Bootstrap');
+
+function parseCsvEnv(value: string): string[] {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function validateRequiredConfig(configService: ConfigService): void {
+  const requiredVariables = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'JWT_SECRET'];
+
+  for (const key of requiredVariables) {
+    const value = configService.get<string>(key);
+    if (!value) {
+      throw new Error(`Missing required environment variable: ${key}`);
+    }
+  }
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(ServiceApiModule, {
     bodyParser: false,
   });
   const configService = app.get(ConfigService);
   const reflector = app.get(Reflector);
+
+  validateRequiredConfig(configService);
 
   const port = Number(configService.get<number>('PORT')) || 3001;
 
@@ -56,28 +78,19 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   // Enable CORS for frontend integration and API testing tools
-  const corsOrigins = configService
-    .get<string>('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5173,http://localhost:5174')
-    .split(',');
+  const corsOrigins = parseCsvEnv(
+    configService.get<string>(
+      'CORS_ORIGINS',
+      'http://localhost:3000,http://localhost:5173,http://localhost:5174'
+    )
+  );
+  const extensionOrigins = parseCsvEnv(configService.get<string>('CORS_EXTENSION_ORIGINS', ''));
+  const allowedOrigins = new Set([...corsOrigins, ...extensionOrigins]);
 
   app.enableCors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow: boolean) => void) => {
-      const allowedOrigins = [
-        ...corsOrigins,
-        undefined, // Allow requests with no origin (API tools like Apidog, Postman, curl)
-      ];
-      // Allow Apidog and other common API testing origins
-      const apidogOrigins = [
-        'https://apidog.com',
-        'https://app.apidog.com',
-        'chrome-extension://*', // Apidog Chrome extension
-      ];
-
-      if (
-        !origin ||
-        allowedOrigins.includes(origin) ||
-        apidogOrigins.some((o) => origin.includes(o.replace('*', '')))
-      ) {
+      // Allow requests with no origin (CLI/API tools like curl or server-to-server calls)
+      if (!origin || allowedOrigins.has(origin)) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'), false);
@@ -87,7 +100,7 @@ async function bootstrap() {
   });
 
   await app.listen(port);
-  console.log(`Medical Learning Portal API running on port ${port}`);
-  console.log(`API: http://localhost:${port}/api`);
+  logger.log(`Medical Learning Portal API running on port ${port}`);
+  logger.log(`API: http://localhost:${port}/api`);
 }
 void bootstrap();

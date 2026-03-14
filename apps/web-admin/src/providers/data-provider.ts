@@ -11,8 +11,8 @@ const axiosInstance = authAxios;
 
 export const dataProvider = (apiUrl: string): DataProvider => ({
   getList: async ({ resource, pagination, filters, sorters }) => {
-    const page = (pagination as any)?.current ?? 1;
-    const pageSize = (pagination as any)?.pageSize ?? 15;
+    const page = pagination?.current ?? 1;
+    const pageSize = pagination?.pageSize ?? 15;
 
     const params: Record<string, unknown> = {
       page,

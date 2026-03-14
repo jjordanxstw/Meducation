@@ -59,6 +59,15 @@ type AdminMeResponse = {
   is_active: boolean;
 };
 
+type AdminIdentity = {
+  id: string;
+  name: string;
+  email: string;
+  username: string;
+  isSuperAdmin: boolean;
+  isActive: boolean;
+};
+
 type AdminLoginResponse = {
   accessToken?: string;
   admin?: {
@@ -71,7 +80,7 @@ type AdminLoginResponse = {
 let refreshPromise: Promise<boolean> | null = null;
 let authCheckPromise: Promise<{ authenticated: boolean; redirectTo?: string }> | null = null;
 let permissionsPromise: Promise<string | null> | null = null;
-let identityPromise: Promise<ReturnType<typeof fetchCurrentAdmin> | null> | null = null;
+let identityPromise: Promise<AdminIdentity | null> | null = null;
 
 // Short-term cache for identity and permissions (30 seconds)
 let cachedIdentity: AdminMeResponse | null = null;
@@ -246,11 +255,9 @@ function isValidTokenStructure(token: unknown): token is string {
  * Log security events (for audit purposes)
  */
 function logSecurityEvent(event: string, details?: Record<string, unknown>): void {
-  if (import.meta.env.DEV) {
-    console.log(`[Security Audit] ${event}`, details);
-  }
-  // In production, send to audit logging service
-  // await auditService.logSecurityEvent(event, details);
+  // Logging disabled by request.
+  void event;
+  void details;
 }
 
 export const authProvider: AuthProvider = {

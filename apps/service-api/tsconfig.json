@@ -13,5 +13,5 @@
     "esModuleInterop": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/routes", "src/middleware", "src/index.ts", "src/services"]
+  "exclude": ["node_modules", "dist"]
 }

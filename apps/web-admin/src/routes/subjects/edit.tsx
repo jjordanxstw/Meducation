@@ -12,7 +12,7 @@ const { TextArea } = Input;
 
 const SubjectsEdit = () => {
   const { id } = useParams<{ id: string }>();
-  const { formProps, saveButtonProps, queryResult } = useForm<Subject>({
+  const { formProps, saveButtonProps } = useForm<Subject>({
     id,
   });
 

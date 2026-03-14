@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { StringValue } from 'ms';
 import {
   AdminResponse,
   sanitizeAdmin,
@@ -20,7 +21,7 @@ export class AdminAuthService {
   private readonly logger = new Logger(AdminAuthService.name);
   private readonly supabaseAdmin: SupabaseClient;
   private readonly jwtSecret: string;
-  private readonly jwtExpiresIn: string;
+  private readonly jwtExpiresIn: StringValue;
 
   constructor(
     private jwtService: JwtService,
@@ -38,8 +39,13 @@ export class AdminAuthService {
       },
     });
 
-    this.jwtSecret = this.configService.get<string>('JWT_SECRET', 'dev-secret');
-    this.jwtExpiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '1h');
+    const jwtSecret = this.configService.get<string>('JWT_SECRET');
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET is required');
+    }
+
+    this.jwtSecret = jwtSecret;
+    this.jwtExpiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '1h') as StringValue;
   }
 
   /**
