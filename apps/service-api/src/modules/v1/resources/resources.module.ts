@@ -4,13 +4,15 @@
  */
 
 import { Module } from '@nestjs/common';
-import { ResourcesController } from './controllers/resources.controller';
+import { ResourcesPublicController } from './controllers/resources.controller';
+import { ResourcesAdminController } from './controllers/resources.admin.controller';
 import { ResourcesService } from './services/resources.service';
 import { AuthModule } from '../auth/auth.module';
+import { AdminAuthModule } from '../admin-auth/admin-auth.module';
 
 @Module({
-  imports: [AuthModule],
-  controllers: [ResourcesController],
+  imports: [AuthModule, AdminAuthModule],
+  controllers: [ResourcesPublicController, ResourcesAdminController],
   providers: [ResourcesService],
   exports: [ResourcesService],
 })
