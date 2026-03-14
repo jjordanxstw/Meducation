@@ -46,7 +46,7 @@ const SubjectsCreate = () => {
         </Form.Item>
 
         <Form.Item label={t('pages.subjects.fields.thumbnailUrl', {}, 'Cover Image URL')} name="thumbnail_url">
-          <Input placeholder="https://..." />
+          <Input placeholder={t('pages.subjects.placeholders.thumbnailUrl', {}, 'https://...')} />
         </Form.Item>
 
         <Form.Item label={t('pages.subjects.fields.orderIndex', {}, 'Display Order')} name="order_index" initialValue={0}>
