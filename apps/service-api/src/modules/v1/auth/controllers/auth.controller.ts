@@ -70,6 +70,32 @@ function extractRequestInfo(req: Request) {
   };
 }
 
+type CookieSameSite = 'strict' | 'lax' | 'none';
+
+function resolveCookieSameSite(configService: ConfigService, isDevelopment: boolean): CookieSameSite {
+  const rawValue = configService.get<string>('STUDENT_COOKIE_SAMESITE')?.toLowerCase();
+
+  if (rawValue === 'strict' || rawValue === 'lax' || rawValue === 'none') {
+    return rawValue;
+  }
+
+  return isDevelopment ? 'lax' : 'strict';
+}
+
+function resolveCookieSecure(configService: ConfigService, isDevelopment: boolean): boolean {
+  const rawValue = configService.get<string>('STUDENT_COOKIE_SECURE')?.toLowerCase();
+
+  if (rawValue === 'true') {
+    return true;
+  }
+
+  if (rawValue === 'false') {
+    return false;
+  }
+
+  return !isDevelopment;
+}
+
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
   constructor(
@@ -78,6 +104,22 @@ export class AuthController {
     private readonly refreshTokenService: RefreshTokenService,
     private readonly configService: ConfigService,
   ) {}
+
+  private getBaseCookieOptions(expiresAt?: Date) {
+    const isDevelopment = this.configService.get<string>('NODE_ENV') !== 'production';
+    const sameSite = resolveCookieSameSite(this.configService, isDevelopment);
+    const secure = resolveCookieSecure(this.configService, isDevelopment) || sameSite === 'none';
+    const domain = this.configService.get<string>('STUDENT_COOKIE_DOMAIN')?.trim();
+
+    return {
+      httpOnly: true,
+      secure,
+      sameSite,
+      ...(expiresAt ? { maxAge: expiresAt.getTime() - Date.now() } : {}),
+      path: '/',
+      ...(domain ? { domain } : {}),
+    };
+  }
 
   /**
    * POST /api/v1/auth/verify
@@ -113,14 +155,7 @@ export class AuthController {
     const tokenResult = await this.authService.issueToken(user);
 
     // Set httpOnly cookies
-    const isDev = this.configService.get<string>('NODE_ENV') !== 'production';
-    const cookieOptions = {
-      httpOnly: true,
-      secure: !isDev,
-      sameSite: isDev ? ('lax' as const) : ('strict' as const),
-      maxAge: refreshTokenResult.expiresAt.getTime() - Date.now(),
-      path: '/',
-    };
+    const cookieOptions = this.getBaseCookieOptions(refreshTokenResult.expiresAt);
 
     // Set access token cookie (short-lived, 15min)
     res.cookie('student_access_token', tokenResult.accessToken, {
@@ -228,29 +263,14 @@ export class AuthController {
     }
 
     // Clear cookies
-    const isDev = this.configService.get<string>('NODE_ENV') !== 'production';
-    const cookieOptions: {
-      path: string;
-      httpOnly: boolean;
-      secure: boolean;
-      sameSite: 'lax' | 'strict';
-    } = {
-      path: '/',
-      httpOnly: true,
-      secure: !isDev,
-      sameSite: isDev ? 'lax' : 'strict',
-    };
+    const cookieOptions = this.getBaseCookieOptions();
 
     res.clearCookie('student_access_token', cookieOptions);
     res.clearCookie('student_refresh_token', cookieOptions);
 
     // Also clear old session cookie for backwards compatibility
     const sessionCookieName = this.configService.get<string>('SESSION_COOKIE_NAME', 'session');
-    res.clearCookie(sessionCookieName, {
-      httpOnly: true,
-      secure: !isDev,
-      sameSite: 'lax',
-    });
+    res.clearCookie(sessionCookieName, cookieOptions);
 
     return {
       success: true,
@@ -314,14 +334,7 @@ export class AuthController {
     const tokenResult = await this.authService.issueToken(user);
 
     // Set new cookies
-    const isDev = this.configService.get<string>('NODE_ENV') !== 'production';
-    const cookieOptions = {
-      httpOnly: true,
-      secure: !isDev,
-      sameSite: isDev ? ('lax' as const) : ('strict' as const),
-      maxAge: rotationResult.expiresAt.getTime() - Date.now(),
-      path: '/',
-    };
+    const cookieOptions = this.getBaseCookieOptions(rotationResult.expiresAt);
 
     res.cookie('student_access_token', tokenResult.accessToken, {
       ...cookieOptions,
