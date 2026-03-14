@@ -14,13 +14,13 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Authenticated,
   Refine,
+  useIsAuthenticated,
   useIsExistAuthentication,
   useLink,
   useLogout,
   useMenu,
   useTranslate,
   useWarnAboutChange,
-  useIsAuthenticated,
 } from '@refinedev/core';
 import { RefineKbar, RefineKbarProvider } from '@refinedev/kbar';
 import {
@@ -58,6 +58,86 @@ interface ProvidersProps {
   children: React.ReactNode;
 }
 
+const REFINE_RESOURCES = [
+  {
+    name: 'dashboard',
+    list: '/dashboard',
+    meta: {
+      label: 'แดชบอร์ด',
+      icon: <DashboardOutlined />,
+    },
+  },
+  {
+    name: 'subjects',
+    list: '/subjects',
+    create: '/subjects/create',
+    edit: '/subjects/edit/:id',
+    show: '/subjects/:id',
+    meta: {
+      label: 'รายวิชา',
+      icon: <BookOutlined />,
+    },
+  },
+  {
+    name: 'sections',
+    list: '/sections',
+    create: '/sections/create',
+    edit: '/sections/edit/:id',
+    meta: {
+      label: 'หมวดหมู่',
+      icon: <AppstoreOutlined />,
+    },
+  },
+  {
+    name: 'lectures',
+    list: '/lectures',
+    create: '/lectures/create',
+    edit: '/lectures/edit/:id',
+    meta: {
+      label: 'บทเรียน',
+      icon: <ReadOutlined />,
+    },
+  },
+  {
+    name: 'resources',
+    list: '/resources',
+    create: '/resources/create',
+    edit: '/resources/edit/:id',
+    meta: {
+      label: 'ไฟล์/สื่อ',
+      icon: <FileOutlined />,
+    },
+  },
+  {
+    name: 'calendar',
+    list: '/calendar',
+    create: '/calendar/create',
+    edit: '/calendar/edit/:id',
+    meta: {
+      label: 'ปฏิทิน',
+      icon: <CalendarOutlined />,
+    },
+  },
+  {
+    name: 'profiles',
+    list: '/profiles',
+    edit: '/profiles/edit/:id',
+    show: '/profiles/:id',
+    meta: {
+      label: 'ผู้ใช้งาน',
+      icon: <UserOutlined />,
+    },
+  },
+  {
+    name: 'audit-logs',
+    list: '/audit-logs',
+    meta: {
+      label: 'ประวัติการแก้ไข',
+      icon: <AuditOutlined />,
+    },
+  },
+];
+
 // Loading component for auth state
 const AuthLoadingFallback: React.FC = () => (
   <div
@@ -69,22 +149,24 @@ const AuthLoadingFallback: React.FC = () => (
       background: '#f8fafc',
     }}
   >
-    <Spin size="large" tip="กำลังโหลด..." />
+    <Spin size="large" />
   </div>
 );
 
-// Wrapper component to handle authenticated users on root path
-const RootPathAuthHandler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { data: isAuthenticated, isLoading } = useIsAuthenticated();
+const PublicRouteAuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const router = useRouter();
+  const { data, isLoading, isFetching } = useIsAuthenticated();
+  const isAuthenticated = data?.authenticated === true;
 
   React.useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.push('/dashboard');
+    if (!isLoading && !isFetching && isAuthenticated) {
+      // replace prevents the root/login URL from staying in browser history
+      // when user is already authenticated.
+      router.replace('/dashboard');
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isAuthenticated, isFetching, isLoading, router]);
 
-  if (isLoading) {
+  if (isLoading || isFetching || isAuthenticated) {
     return <AuthLoadingFallback />;
   }
 
@@ -227,6 +309,10 @@ const AdminSider: React.FC<{
 
 export const Providers: React.FC<ProvidersProps> = ({ children }) => {
   const pathname = usePathname();
+  const refineDataProvider = React.useMemo(
+    () => dataProvider(process.env.NEXT_PUBLIC_API_URL || '/api/v1'),
+    []
+  );
 
   return (
     <RefineKbarProvider>
@@ -272,90 +358,12 @@ export const Providers: React.FC<ProvidersProps> = ({ children }) => {
         >
           <AntdApp>
             <Refine
-              dataProvider={dataProvider(process.env.NEXT_PUBLIC_API_URL || '/api/v1')}
+              dataProvider={refineDataProvider}
               authProvider={authProvider}
               i18nProvider={i18nProvider}
               routerProvider={routerBindings}
               notificationProvider={useNotificationProvider}
-              resources={[
-                {
-                  name: 'dashboard',
-                  list: '/dashboard',
-                  meta: {
-                    label: 'แดชบอร์ด',
-                    icon: <DashboardOutlined />,
-                  },
-                },
-                {
-                  name: 'subjects',
-                  list: '/subjects',
-                  create: '/subjects/create',
-                  edit: '/subjects/edit/:id',
-                  show: '/subjects/:id',
-                  meta: {
-                    label: 'รายวิชา',
-                    icon: <BookOutlined />,
-                  },
-                },
-                {
-                  name: 'sections',
-                  list: '/sections',
-                  create: '/sections/create',
-                  edit: '/sections/edit/:id',
-                  meta: {
-                    label: 'หมวดหมู่',
-                    icon: <AppstoreOutlined />,
-                  },
-                },
-                {
-                  name: 'lectures',
-                  list: '/lectures',
-                  create: '/lectures/create',
-                  edit: '/lectures/edit/:id',
-                  meta: {
-                    label: 'บทเรียน',
-                    icon: <ReadOutlined />,
-                  },
-                },
-                {
-                  name: 'resources',
-                  list: '/resources',
-                  create: '/resources/create',
-                  edit: '/resources/edit/:id',
-                  meta: {
-                    label: 'ไฟล์/สื่อ',
-                    icon: <FileOutlined />,
-                  },
-                },
-                {
-                  name: 'calendar',
-                  list: '/calendar',
-                  create: '/calendar/create',
-                  edit: '/calendar/edit/:id',
-                  meta: {
-                    label: 'ปฏิทิน',
-                    icon: <CalendarOutlined />,
-                  },
-                },
-                {
-                  name: 'profiles',
-                  list: '/profiles',
-                  edit: '/profiles/edit/:id',
-                  show: '/profiles/:id',
-                  meta: {
-                    label: 'ผู้ใช้งาน',
-                    icon: <UserOutlined />,
-                  },
-                },
-                {
-                  name: 'audit-logs',
-                  list: '/audit-logs',
-                  meta: {
-                    label: 'ประวัติการแก้ไข',
-                    icon: <AuditOutlined />,
-                  },
-                },
-              ]}
+              resources={REFINE_RESOURCES}
               options={{
                 syncWithLocation: true,
                 warnWhenUnsavedChanges: true,
@@ -365,15 +373,13 @@ export const Providers: React.FC<ProvidersProps> = ({ children }) => {
                 },
               }}
             >
-              {pathname === '/' ? (
-                <RootPathAuthHandler>{children}</RootPathAuthHandler>
-              ) : pathname === '/login' ? (
-                children
+              {pathname === '/' || pathname.startsWith('/login') ? (
+                <PublicRouteAuthGate>{children}</PublicRouteAuthGate>
               ) : (
                 <Authenticated
-                  key={`protected:${pathname}`}
+                  key="protected-auth"
                   redirectOnFail="/"
-                  fallback={<AuthLoadingFallback />}
+                  loading={<AuthLoadingFallback />}
                 >
                   <ThemedLayout Sider={AdminSider}>{children}</ThemedLayout>
                 </Authenticated>

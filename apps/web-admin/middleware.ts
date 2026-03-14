@@ -77,26 +77,6 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 }
 
 /**
- * Check if token is expired (JWT validation)
- */
-function isTokenExpired(token: string): boolean {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return true;
-
-    const payload = JSON.parse(
-      Buffer.from(parts[1], 'base64url').toString()
-    );
-
-    if (!payload.exp) return true;
-
-    return payload.exp < Math.floor(Date.now() / 1000);
-  } catch {
-    return true;
-  }
-}
-
-/**
  * Middleware main function
  */
 export function middleware(request: NextRequest) {
@@ -123,8 +103,9 @@ export function middleware(request: NextRequest) {
 
   // Root path handling
   if (pathname === '/') {
-    // If already authenticated with valid token, redirect to dashboard
-    if (adminToken && !isTokenExpired(adminToken)) {
+    // If access token cookie exists, move to protected entrypoint.
+    // Runtime auth check is done by authProvider via /admin/auth/me.
+    if (adminToken) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
     // Otherwise show login page
@@ -138,7 +119,7 @@ export function middleware(request: NextRequest) {
 
   if (isPublicRoute) {
     // If authenticated user tries to access login, redirect to dashboard
-    if (adminToken && !isTokenExpired(adminToken) && pathname.startsWith('/login')) {
+    if (adminToken && pathname.startsWith('/login')) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
     return response;
@@ -158,20 +139,8 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // Check if token is expired
-    if (isTokenExpired(adminToken)) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/';
-      // Clear expired cookie by setting it with max-age=0
-      response.cookies.set(TOKEN_COOKIE_NAME, '', {
-        maxAge: 0,
-        path: '/',
-      });
-      return NextResponse.redirect(url);
-    }
-
-    // Token is valid - allow access
-    // Additional server-side validation will happen via API calls
+    // Token exists - allow access.
+    // Backend and authProvider are the source of truth for validity/expiry.
     return response;
   }
 

@@ -1,57 +1,19 @@
 /**
- * Cookie Management Utilities
- * Secure cookie operations for authentication tokens
+ * Cookie Utilities
+ *
+ * Important:
+ * - Admin auth cookies are httpOnly and controlled by the backend.
+ * - Client-side code cannot reliably set/clear/read those cookies.
+ * - Keep these helpers read-only and diagnostic only.
  */
 
 const TOKEN_COOKIE_NAME = 'admin_access_token';
 
-// Reserved for future refresh token implementation
-// const REFRESH_TOKEN_COOKIE_NAME = 'admin_refresh_token';
-
-export interface CookieOptions {
-  maxAge?: number;
-  expires?: Date;
-  path?: string;
-  domain?: string;
-  secure?: boolean;
-  httpOnly?: boolean;
-  sameSite?: 'strict' | 'lax' | 'none';
-}
-
 /**
- * Default secure cookie options for production
- */
-export const DEFAULT_COOKIE_OPTIONS: CookieOptions = {
-  path: '/',
-  secure: process.env.NODE_ENV === 'production',
-  httpOnly: true,
-  sameSite: 'lax',
-  maxAge: 60 * 60, // 1 hour
-};
-
-/**
- * Set authentication cookie with security options
- */
-export function setAuthCookie(token: string, options?: Partial<CookieOptions>): void {
-  if (typeof document === 'undefined') return;
-
-  const opts = { ...DEFAULT_COOKIE_OPTIONS, ...options };
-  const cookieParts = [
-    `${TOKEN_COOKIE_NAME}=${token}`,
-    `path=${opts.path}`,
-    opts.maxAge !== undefined ? `max-age=${opts.maxAge}` : '',
-    opts.secure ? 'secure' : '',
-    opts.httpOnly ? 'httponly' : '',
-    opts.sameSite ? `samesite=${opts.sameSite}` : '',
-  ].filter(Boolean).join('; ');
-
-  document.cookie = cookieParts;
-}
-
-/**
- * Get authentication token from cookies (for non-httpOnly access)
- * Note: This only works for non-httpOnly cookies
- * For httpOnly cookies, the browser handles them automatically
+ * Get auth cookie value when available to JS.
+ *
+ * For backend-issued httpOnly cookies this will return undefined,
+ * which is expected and should not be used for auth decisions.
  */
 export function getAuthCookie(): string | undefined {
   if (typeof document === 'undefined') return undefined;
@@ -63,22 +25,6 @@ export function getAuthCookie(): string | undefined {
   });
 
   return tokenCookie?.split('=')[1];
-}
-
-/**
- * Remove authentication cookie
- */
-export function removeAuthCookie(): void {
-  if (typeof document === 'undefined') return;
-
-  document.cookie = `${TOKEN_COOKIE_NAME}=; path=/; max-age=0; SameSite=lax${process.env.NODE_ENV === 'production' ? '; secure' : ''}`;
-}
-
-/**
- * Check if auth cookie exists
- */
-export function hasAuthCookie(): boolean {
-  return getAuthCookie() !== undefined;
 }
 
 /**

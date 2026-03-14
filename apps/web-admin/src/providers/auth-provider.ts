@@ -1,25 +1,28 @@
 /**
  * Auth Provider for Refine
- * Handles secure cookie-based authentication for admin users
  *
- * Security improvements:
- * - Uses httpOnly cookies (set by backend) as primary auth method
- * - Proper token validation and cleanup
- * - Secure error handling
- *
- * Note: Cookies are set by the backend as httpOnly for security.
+ * Refactor goals:
+ * - Keep login UX/UI unchanged
+ * - Align with service-api auth contracts
+ * - Prevent redirect/spinner loops
+ * - Add refresh-first behavior for expired access tokens
  */
 
 import type { AuthProvider } from '@refinedev/core';
-import axios, { AxiosError } from 'axios';
-import { removeAuthCookie, sanitizeErrorMessage } from '@/lib/security';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { sanitizeErrorMessage } from '@/lib/security';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
-const AUTH_REQUEST_TIMEOUT_MS = 5000;
+const AUTH_REQUEST_TIMEOUT_MS = process.env.NODE_ENV === 'production' ? 8000 : 15000;
+const CLEAR_AUTH_ROUTE = '/api/auth/clear';
+
+type RetryableRequestConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean;
+};
 
 // Create axios instance with credentials enabled
 const authAxios = axios.create({
-  withCredentials: true, // Send httpOnly cookies
+  withCredentials: true,
   timeout: AUTH_REQUEST_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
@@ -43,31 +46,86 @@ type AdminMeResponse = {
   is_active: boolean;
 };
 
+type AdminLoginResponse = {
+  accessToken?: string;
+  admin?: {
+    id: string;
+    is_active: boolean;
+    is_super_admin: boolean;
+  };
+};
+
+let refreshPromise: Promise<boolean> | null = null;
+let authCheckPromise: Promise<{ authenticated: boolean; redirectTo?: string }> | null = null;
+
+function isAuthEndpoint(url?: string): boolean {
+  if (!url) return false;
+  return (
+    url.includes('/admin/auth/login') ||
+    url.includes('/admin/auth/me') ||
+    url.includes('/admin/auth/refresh') ||
+    url.includes('/admin/auth/logout')
+  );
+}
+
+function isAuthFailureStatus(status?: number): boolean {
+  return status === 401 || status === 403;
+}
+
+async function refreshAccessToken(): Promise<boolean> {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    try {
+      await authAxios.post(`${API_URL}/admin/auth/refresh`, {}, {
+        ...authRequestConfig,
+        headers: {
+          ...authRequestConfig.headers,
+          'X-Auth-Refresh': '1',
+        },
+      });
+      return true;
+    } catch {
+      return false;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
 async function fetchCurrentAdmin(): Promise<AdminMeResponse> {
-  const response = await axios.get<AdminMeResponse>(`${API_URL}/admin/auth/me`, authRequestConfig);
+  const response = await authAxios.get<AdminMeResponse>(`${API_URL}/admin/auth/me`, authRequestConfig);
   return response.data;
 }
 
-// Response interceptor - handle authentication failures
+// Response interceptor - refresh-first strategy for expired access token
 authAxios.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as any & { _retry?: boolean };
+    const originalRequest = error.config as RetryableRequestConfig | undefined;
+    const status = error.response?.status;
+    const url = originalRequest?.url;
 
-    // Handle 401 Unauthorized
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      // Clear invalid cookie
-      removeAuthCookie();
-
-      // Don't retry - force logout
-      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-        window.location.href = '/';
-      }
+    if (!originalRequest || !status || !isAuthFailureStatus(status)) {
+      return Promise.reject(error);
     }
 
-    // Handle 403 Forbidden
-    if (error.response?.status === 403) {
-      console.error('[Security] Access forbidden:', error.config?.url);
+    const isRefreshRequest = url?.includes('/admin/auth/refresh') || originalRequest.headers?.['X-Auth-Refresh'] === '1';
+    if (isRefreshRequest) {
+      return Promise.reject(error);
+    }
+
+    // Retry once for non-auth API calls after attempting refresh
+    if (!originalRequest._retry && !isAuthEndpoint(url)) {
+      originalRequest._retry = true;
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        return authAxios(originalRequest);
+      }
     }
 
     return Promise.reject(error);
@@ -124,7 +182,7 @@ export const authProvider: AuthProvider = {
 
     try {
       // Username/password login for admin
-      const response = await axios.post(`${API_URL}/admin/auth/login`, {
+      const response = await authAxios.post<AdminLoginResponse>(`${API_URL}/admin/auth/login`, {
         username: sanitizedUsername,
         password,
       }, {
@@ -214,54 +272,76 @@ export const authProvider: AuthProvider = {
   },
 
   logout: async () => {
-    // Call logout endpoint (backend clears httpOnly cookie)
+    // Attempt backend logout (token revocation); if token is already invalid,
+    // we still clear cookie server-side via local clear route.
     try {
-      await axios.post(`${API_URL}/admin/auth/logout`, {}, {
+      await authAxios.post(`${API_URL}/admin/auth/logout`, {}, {
         ...authRequestConfig,
       });
       logSecurityEvent('logout_success');
     } catch (error) {
-      // Log but don't fail logout on API error
       logSecurityEvent('logout_api_failed', { error: sanitizeErrorMessage(error) });
-      console.warn('[Auth] Logout API call failed:', error);
-    }
-
-    // Also clear client-side cookie for middleware compatibility
-    removeAuthCookie();
-
-    // Clear any session storage
-    if (typeof window !== 'undefined') {
-      try {
-        window.sessionStorage.clear();
-      } catch {
-        // Ignore sessionStorage errors
-      }
     }
 
     return {
       success: true,
-      redirectTo: '/',
+      redirectTo: CLEAR_AUTH_ROUTE,
     };
   },
 
   check: async () => {
-    // Verify authentication with server because access token cookie is httpOnly
-    // and cannot be read via document.cookie in the browser.
-    try {
-      const me = await fetchCurrentAdmin();
-
-      if (me.is_active === false) {
-        removeAuthCookie();
-        return { authenticated: false, redirectTo: '/' };
-      }
-
-      return { authenticated: true };
-    } catch (error) {
-      // Auth check failed - clear invalid token
-      removeAuthCookie();
-      logSecurityEvent('auth_check_failed', { error: sanitizeErrorMessage(error) });
-      return { authenticated: false, redirectTo: '/' };
+    // Deduplicate concurrent checks from route transitions and Refine hooks.
+    if (authCheckPromise) {
+      return authCheckPromise;
     }
+
+    authCheckPromise = (async () => {
+      try {
+        const me = await fetchCurrentAdmin();
+
+        if (!me.is_active) {
+          return { authenticated: false, redirectTo: CLEAR_AUTH_ROUTE };
+        }
+
+        return { authenticated: true };
+      } catch (error) {
+        const err = error as AxiosError;
+        const status = err.response?.status;
+
+        if (isAuthFailureStatus(status)) {
+          // Try refresh once before forcing logout.
+          const refreshed = await refreshAccessToken();
+          if (refreshed) {
+            try {
+              const me = await fetchCurrentAdmin();
+              if (me.is_active) {
+                return { authenticated: true };
+              }
+            } catch {
+              // Fall through to clear auth.
+            }
+          }
+
+          logSecurityEvent('auth_check_failed', {
+            status,
+            error: sanitizeErrorMessage(error),
+          });
+
+          return { authenticated: false, redirectTo: CLEAR_AUTH_ROUTE };
+        }
+
+        // Keep session on transient network/server errors to avoid forced loops.
+        logSecurityEvent('auth_check_transient_error', {
+          error: sanitizeErrorMessage(error),
+        });
+
+        return { authenticated: true };
+      } finally {
+        authCheckPromise = null;
+      }
+    })();
+
+    return authCheckPromise;
   },
 
   getPermissions: async () => {
@@ -300,7 +380,7 @@ export const authProvider: AuthProvider = {
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {
         logSecurityEvent('unauthorized_access', { url: error.config?.url });
-        return { logout: true, redirectTo: '/' };
+        return { logout: true, redirectTo: CLEAR_AUTH_ROUTE };
       }
       if (error.response?.status === 403) {
         logSecurityEvent('forbidden_access', { url: error.config?.url });
