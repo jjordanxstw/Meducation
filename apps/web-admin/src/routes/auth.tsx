@@ -4,13 +4,14 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useLogin, useIsAuthenticated } from '@refinedev/core';
+import { useLogin, useIsAuthenticated, useTranslate } from '@refinedev/core';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Form, Input, Typography, Alert, Spin } from 'antd';
 
 const { Title, Text } = Typography;
 
 export function LoginPage() {
+  const t = useTranslate();
   const { mutateAsync: login, isPending } = useLogin();
   const { data: authData, isLoading: isCheckingAuth } = useIsAuthenticated();
   const navigate = useNavigate();
@@ -52,7 +53,7 @@ export function LoginPage() {
       const message =
         typeof err === 'object' && err !== null && 'message' in err
           ? String((err as { message?: string }).message)
-          : 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+          : t('pages.login.errors.invalidCredentials', {}, 'Invalid username or password');
       setError(message);
     }
   };
@@ -71,33 +72,33 @@ export function LoginPage() {
       <Card style={{ width: '100%', maxWidth: 420 }}>
         <div style={{ marginBottom: 20, textAlign: 'center' }}>
           <Title level={4} style={{ marginBottom: 8 }}>
-            Medical Admin
+            {t('pages.login.brand', {}, 'Medical Admin')}
           </Title>
-          <Text type="secondary">เข้าสู่ระบบด้วยรหัสผู้ใช้ของผู้ดูแล</Text>
+          <Text type="secondary">{t('pages.login.subtitle', {}, 'Sign in with admin account')}</Text>
         </div>
 
         {error ? <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} /> : null}
 
         <Form layout="vertical" onFinish={onFinish} requiredMark={false}>
           <Form.Item
-            label="Username"
+            label={t('pages.login.fields.email', {}, 'Username')}
             name="username"
-            rules={[{ required: true, message: 'กรุณากรอกรหัสผู้ใช้' }]}
+            rules={[{ required: true, message: t('pages.login.fields.usernameRequired', {}, 'Please enter username') }]}
           >
-            <Input size="large" autoComplete="username" placeholder="เช่น admin01" />
+            <Input size="large" autoComplete="username" placeholder={t('pages.login.fields.usernamePlaceholder', {}, 'e.g. admin01')} />
           </Form.Item>
 
           <Form.Item
-            label="Password"
+            label={t('pages.login.fields.password', {}, 'Password')}
             name="password"
-            rules={[{ required: true, message: 'กรุณากรอกรหัสผ่าน' }]}
+            rules={[{ required: true, message: t('pages.login.fields.passwordRequired', {}, 'Please enter password') }]}
           >
-            <Input.Password size="large" autoComplete="current-password" placeholder="กรอกรหัสผ่าน" />
+            <Input.Password size="large" autoComplete="current-password" placeholder={t('pages.login.fields.passwordPlaceholder', {}, 'Enter password')} />
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0 }}>
             <Button type="primary" htmlType="submit" size="large" block loading={isPending}>
-              เข้าสู่ระบบ
+              {t('pages.login.signin', {}, 'Sign In')}
             </Button>
           </Form.Item>
         </Form>

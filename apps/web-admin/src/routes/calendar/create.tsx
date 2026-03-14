@@ -3,7 +3,7 @@
  * Migrated from src/app/calendar/create/page.tsx
  */
 
-import { useList } from '@refinedev/core';
+import { useList, useTranslate } from '@refinedev/core';
 import { Create, useForm } from '@refinedev/antd';
 import { Form, Input, Switch, Select, DatePicker } from 'antd';
 import dayjs from 'dayjs';
@@ -13,15 +13,16 @@ import type { CalendarEvent, Subject } from '@medical-portal/shared';
 const { TextArea } = Input;
 const { RangePicker } = DatePicker;
 
-const eventTypeOptions = [
-  { label: '🎯 Exam', value: EventType.EXAM },
-  { label: '📚 Lecture', value: EventType.LECTURE },
-  { label: '🎉 Holiday', value: EventType.HOLIDAY },
-  { label: '📅 Event', value: EventType.EVENT },
-];
-
 const CalendarCreate = () => {
+  const t = useTranslate();
   const { formProps, saveButtonProps } = useForm<CalendarEvent>();
+
+  const eventTypeOptions = [
+    { label: `🎯 ${t('pages.calendar.types.exam', {}, 'Exam')}`, value: EventType.EXAM },
+    { label: `📚 ${t('pages.calendar.types.lecture', {}, 'Lecture')}`, value: EventType.LECTURE },
+    { label: `🎉 ${t('pages.calendar.types.holiday', {}, 'Holiday')}`, value: EventType.HOLIDAY },
+    { label: `📅 ${t('pages.calendar.types.event', {}, 'Event')}`, value: EventType.EVENT },
+  ];
 
   const { data: subjectsData } = useList<Subject>({
     resource: 'subjects',
@@ -43,25 +44,25 @@ const CalendarCreate = () => {
     <Create saveButtonProps={saveButtonProps}>
       <Form {...formProps} layout="vertical" style={{ maxWidth: 600 }} onFinish={(values) => formProps.onFinish?.(handleFinish(values))}>
         <Form.Item
-          label="ชื่อกิจกรรม"
+          label={t('pages.calendar.fields.title', {}, 'Title')}
           name="title"
-          rules={[{ required: true, message: 'กรุณากรอกชื่อกิจกรรม' }]}
+          rules={[{ required: true, message: t('pages.calendar.validation.titleRequired', {}, 'Please enter title') }]}
         >
-          <Input placeholder="เช่น Anatomy I - Midterm Examination" />
+          <Input placeholder={t('pages.calendar.placeholders.title', {}, 'e.g. Anatomy I - Midterm Examination')} />
         </Form.Item>
 
         <Form.Item
-          label="ประเภท"
+          label={t('pages.calendar.fields.type', {}, 'Type')}
           name="type"
-          rules={[{ required: true, message: 'กรุณาเลือกประเภท' }]}
+          rules={[{ required: true, message: t('pages.calendar.validation.typeRequired', {}, 'Please select type') }]}
         >
           <Select options={eventTypeOptions} />
         </Form.Item>
 
         <Form.Item
-          label="ช่วงเวลา"
+          label={t('pages.calendar.fields.timeRange', {}, 'Time Range')}
           name="dateRange"
-          rules={[{ required: true, message: 'กรุณาเลือกช่วงเวลา' }]}
+          rules={[{ required: true, message: t('pages.calendar.validation.timeRangeRequired', {}, 'Please select time range') }]}
         >
           <RangePicker
             showTime={{ format: 'HH:mm' }}
@@ -70,14 +71,14 @@ const CalendarCreate = () => {
           />
         </Form.Item>
 
-        <Form.Item label="ทั้งวัน" name="is_all_day" valuePropName="checked">
+        <Form.Item label={t('pages.calendar.fields.allDay', {}, 'All Day')} name="is_all_day" valuePropName="checked">
           <Switch />
         </Form.Item>
 
-        <Form.Item label="รายวิชาที่เกี่ยวข้อง" name="subject_id">
+        <Form.Item label={t('pages.calendar.fields.subject', {}, 'Related Subject')} name="subject_id">
           <Select
             allowClear
-            placeholder="เลือกรายวิชา (ถ้ามี)"
+            placeholder={t('pages.calendar.placeholders.subject', {}, 'Select subject (optional)')}
             options={subjects.map((s) => ({
               label: `${s.code} - ${s.name}`,
               value: s.id,
@@ -85,11 +86,11 @@ const CalendarCreate = () => {
           />
         </Form.Item>
 
-        <Form.Item label="สถานที่" name="location">
-          <Input placeholder="เช่น ห้องสอบ 1-2" />
+        <Form.Item label={t('pages.calendar.fields.location', {}, 'Location')} name="location">
+          <Input placeholder={t('pages.calendar.placeholders.location', {}, 'e.g. Room 1-2')} />
         </Form.Item>
 
-        <Form.Item label="รายละเอียด" name="description">
+        <Form.Item label={t('pages.calendar.fields.description', {}, 'Description')} name="description">
           <TextArea rows={3} />
         </Form.Item>
       </Form>

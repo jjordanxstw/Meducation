@@ -3,7 +3,7 @@
  * Migrated from src/app/calendar/edit/[id]/page.tsx
  */
 
-import { useList, useShow } from '@refinedev/core';
+import { useList, useShow, useTranslate } from '@refinedev/core';
 import { Edit, useForm } from '@refinedev/antd';
 import { useParams } from 'react-router-dom';
 import { Form, Input, Switch, Select, DatePicker } from 'antd';
@@ -14,14 +14,8 @@ import type { CalendarEvent, Subject } from '@medical-portal/shared';
 const { TextArea } = Input;
 const { RangePicker } = DatePicker;
 
-const eventTypeOptions = [
-  { label: '🎯 Exam', value: EventType.EXAM },
-  { label: '📚 Lecture', value: EventType.LECTURE },
-  { label: '🎉 Holiday', value: EventType.HOLIDAY },
-  { label: '📅 Event', value: EventType.EVENT },
-];
-
 const CalendarEdit = () => {
+  const t = useTranslate();
   const { id } = useParams<{ id: string }>();
   const { queryResult } = useShow<CalendarEvent>({ id });
   const { formProps, saveButtonProps } = useForm<CalendarEvent>({ id });
@@ -32,6 +26,13 @@ const CalendarEdit = () => {
 
   const record = queryResult?.data?.data;
   const subjects = subjectsData?.data || [];
+
+  const eventTypeOptions = [
+    { label: `🎯 ${t('pages.calendar.types.exam', {}, 'Exam')}`, value: EventType.EXAM },
+    { label: `📚 ${t('pages.calendar.types.lecture', {}, 'Lecture')}`, value: EventType.LECTURE },
+    { label: `🎉 ${t('pages.calendar.types.holiday', {}, 'Holiday')}`, value: EventType.HOLIDAY },
+    { label: `📅 ${t('pages.calendar.types.event', {}, 'Event')}`, value: EventType.EVENT },
+  ];
 
   const handleFinish = (values: Record<string, unknown>) => {
     const dateRange = values.dateRange as [dayjs.Dayjs, dayjs.Dayjs];
@@ -56,7 +57,7 @@ const CalendarEdit = () => {
         onFinish={(values) => formProps.onFinish?.(handleFinish(values))}
       >
         <Form.Item
-          label="ชื่อกิจกรรม"
+          label={t('pages.calendar.fields.title', {}, 'Title')}
           name="title"
           rules={[{ required: true }]}
         >
@@ -64,7 +65,7 @@ const CalendarEdit = () => {
         </Form.Item>
 
         <Form.Item
-          label="ประเภท"
+          label={t('pages.calendar.fields.type', {}, 'Type')}
           name="type"
           rules={[{ required: true }]}
         >
@@ -72,7 +73,7 @@ const CalendarEdit = () => {
         </Form.Item>
 
         <Form.Item
-          label="ช่วงเวลา"
+          label={t('pages.calendar.fields.timeRange', {}, 'Time Range')}
           name="dateRange"
           rules={[{ required: true }]}
         >
@@ -83,11 +84,11 @@ const CalendarEdit = () => {
           />
         </Form.Item>
 
-        <Form.Item label="ทั้งวัน" name="is_all_day" valuePropName="checked">
+        <Form.Item label={t('pages.calendar.fields.allDay', {}, 'All Day')} name="is_all_day" valuePropName="checked">
           <Switch />
         </Form.Item>
 
-        <Form.Item label="รายวิชาที่เกี่ยวข้อง" name="subject_id">
+        <Form.Item label={t('pages.calendar.fields.subject', {}, 'Related Subject')} name="subject_id">
           <Select
             allowClear
             options={subjects.map((s) => ({
@@ -97,11 +98,11 @@ const CalendarEdit = () => {
           />
         </Form.Item>
 
-        <Form.Item label="สถานที่" name="location">
+        <Form.Item label={t('pages.calendar.fields.location', {}, 'Location')} name="location">
           <Input />
         </Form.Item>
 
-        <Form.Item label="รายละเอียด" name="description">
+        <Form.Item label={t('pages.calendar.fields.description', {}, 'Description')} name="description">
           <TextArea rows={3} />
         </Form.Item>
       </Form>

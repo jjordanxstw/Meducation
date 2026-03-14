@@ -14,6 +14,8 @@
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
+    "@fontsource/kanit": "^5.2.8",
+    "@fontsource/prompt": "^5.2.8",
     "@medical-portal/shared": "workspace:*",
     "@refinedev/antd": "^5.47.0",
     "@refinedev/core": "^4.51.0",

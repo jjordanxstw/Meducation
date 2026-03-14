@@ -176,6 +176,12 @@ importers:
       '@ant-design/icons':
         specifier: ^5.2.6
         version: 5.6.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@fontsource/kanit':
+        specifier: ^5.2.8
+        version: 5.2.8
+      '@fontsource/prompt':
+        specifier: ^5.2.8
+        version: 5.2.8
       '@medical-portal/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -763,6 +769,12 @@ packages:
   '@eslint/plugin-kit@0.4.1':
     resolution: {integrity: sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@fontsource/kanit@5.2.8':
+    resolution: {integrity: sha512-vISPW1kRoy+BTqplYCymdYRJcNFGmlPxWXqo178eGPe7P+lMX24JiQOxWdI4HLWR+0ROUzaFneXy/v1I9u99yg==}
+
+  '@fontsource/prompt@5.2.8':
+    resolution: {integrity: sha512-/ocBE0NMMgfzKXcwTsKDJOppc3UA7dBGl127b9uhNzqUlP0720FCSuUXEp2iJb7uC/jnfHW1da7oZtAHDv3whg==}
 
   '@formatjs/ecma402-abstract@2.3.6':
     resolution: {integrity: sha512-HJnTFeRM2kVFVr5gr5kH1XP6K0JcJtE7Lzvtr3FS/so5f1kpsqqqxy5JF+FRaO6H2qmcMfAUIox7AJteieRtVw==}
@@ -7157,6 +7169,10 @@ snapshots:
     dependencies:
       '@eslint/core': 0.17.0
       levn: 0.4.1
+
+  '@fontsource/kanit@5.2.8': {}
+
+  '@fontsource/prompt@5.2.8': {}
 
   '@formatjs/ecma402-abstract@2.3.6':
     dependencies:

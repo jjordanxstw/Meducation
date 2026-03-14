@@ -4,17 +4,11 @@
  */
 
 import { List, useTable, EditButton, DeleteButton } from '@refinedev/antd';
+import { useTranslate } from '@refinedev/core';
 import { Table, Space, Tag } from 'antd';
 import dayjs from 'dayjs';
 import { EventType } from '@medical-portal/shared';
 import type { CalendarEvent } from '@medical-portal/shared';
-
-const eventTypeOptions = [
-  { label: '🎯 Exam', value: EventType.EXAM },
-  { label: '📚 Lecture', value: EventType.LECTURE },
-  { label: '🎉 Holiday', value: EventType.HOLIDAY },
-  { label: '📅 Event', value: EventType.EVENT },
-];
 
 const eventTypeColors: Record<string, string> = {
   [EventType.EXAM]: 'red',
@@ -24,22 +18,30 @@ const eventTypeColors: Record<string, string> = {
 };
 
 const CalendarList = () => {
+  const t = useTranslate();
   const { tableProps } = useTable<CalendarEvent>({
     syncWithLocation: true,
   });
 
+  const eventTypeOptions = [
+    { label: `🎯 ${t('pages.calendar.types.exam', {}, 'Exam')}`, value: EventType.EXAM },
+    { label: `📚 ${t('pages.calendar.types.lecture', {}, 'Lecture')}`, value: EventType.LECTURE },
+    { label: `🎉 ${t('pages.calendar.types.holiday', {}, 'Holiday')}`, value: EventType.HOLIDAY },
+    { label: `📅 ${t('pages.calendar.types.event', {}, 'Event')}`, value: EventType.EVENT },
+  ];
+
   return (
-    <List>
+    <List createButtonProps={{ children: t('buttons.create', {}, 'Create') }}>
       <Table
         {...tableProps}
         rowKey="id"
         size="small"
         scroll={{ x: 'max-content' }}
       >
-        <Table.Column dataIndex="title" title="Title" ellipsis />
+        <Table.Column dataIndex="title" title={t('pages.calendar.fields.title', {}, 'Title')} ellipsis />
         <Table.Column
           dataIndex="type"
-          title="Type"
+          title={t('pages.calendar.fields.type', {}, 'Type')}
           width={130}
           render={(value) => (
             <Tag color={eventTypeColors[value] || 'default'}>
@@ -49,24 +51,24 @@ const CalendarList = () => {
         />
         <Table.Column
           dataIndex="start_time"
-          title="Start"
+          title={t('pages.calendar.fields.start', {}, 'Start')}
           width={160}
           render={(value) => dayjs(value).format('DD/MM/YYYY HH:mm')}
         />
         <Table.Column
           dataIndex="end_time"
-          title="End"
+          title={t('pages.calendar.fields.end', {}, 'End')}
           width={160}
           render={(value) => dayjs(value).format('DD/MM/YYYY HH:mm')}
         />
         <Table.Column
           dataIndex="is_all_day"
-          title="All Day"
+          title={t('pages.calendar.fields.allDay', {}, 'All Day')}
           width={80}
-          render={(value) => (value ? '✓' : '-')}
+          render={(value) => (value ? '✓' : t('common.notAvailable', {}, '-'))}
         />
         <Table.Column
-          title="Actions"
+          title={t('pages.calendar.fields.actions', {}, 'Actions')}
           fixed="right"
           width={120}
           render={(_, record: CalendarEvent) => (

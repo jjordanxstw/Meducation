@@ -3,13 +3,14 @@
  * Migrated from src/app/lectures/page.tsx
  */
 
-import { useList } from '@refinedev/core';
+import { useList, useTranslate } from '@refinedev/core';
 import { List, useTable, EditButton, DeleteButton } from '@refinedev/antd';
 import { Table, Space, Tag } from 'antd';
 import dayjs from 'dayjs';
 import type { Lecture, Section } from '@medical-portal/shared';
 
 const LecturesList = () => {
+  const t = useTranslate();
   const { tableProps } = useTable<Lecture>({
     syncWithLocation: true,
   });
@@ -22,7 +23,7 @@ const LecturesList = () => {
   const sectionMap = new Map(sections.map((s) => [s.id, s]));
 
   return (
-    <List>
+    <List createButtonProps={{ children: t('buttons.create', {}, 'Create') }}>
       <Table
         {...tableProps}
         rowKey="id"
@@ -31,36 +32,36 @@ const LecturesList = () => {
       >
         <Table.Column
           dataIndex="section_id"
-          title="หมวดหมู่"
+          title={t('pages.lectures.fields.section', {}, 'Section')}
           ellipsis
           render={(value) => sectionMap.get(value)?.name || value}
         />
-        <Table.Column dataIndex="title" title="หัวข้อ" ellipsis />
+        <Table.Column dataIndex="title" title={t('pages.lectures.fields.title', {}, 'Lecture Title')} ellipsis />
         <Table.Column
           dataIndex="lecture_date"
-          title="วันที่"
+          title={t('pages.lectures.fields.lectureDate', {}, 'Lecture Date')}
           width={120}
-          render={(value) => value ? dayjs(value).format('DD/MM/YYYY') : '-'}
+          render={(value) => value ? dayjs(value).format('DD/MM/YYYY') : t('common.notAvailable', {}, '-')}
         />
-        <Table.Column dataIndex="lecturer_name" title="ผู้บรรยาย" ellipsis />
+        <Table.Column dataIndex="lecturer_name" title={t('pages.lectures.fields.lecturerName', {}, 'Lecturer')} ellipsis />
         <Table.Column
           dataIndex="order_index"
-          title="ลำดับ"
+          title={t('common.order', {}, 'Order')}
           width={80}
           sorter
         />
         <Table.Column
           dataIndex="is_active"
-          title="สถานะ"
+          title={t('common.status', {}, 'Status')}
           width={100}
           render={(value) => (
             <Tag color={value ? 'green' : 'red'}>
-              {value ? 'เปิด' : 'ปิด'}
+              {value ? t('common.active', {}, 'Active') : t('common.inactive', {}, 'Inactive')}
             </Tag>
           )}
         />
         <Table.Column
-          title="การจัดการ"
+          title={t('common.actions', {}, 'Actions')}
           fixed="right"
           width={120}
           render={(_, record: Lecture) => (

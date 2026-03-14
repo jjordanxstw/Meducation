@@ -3,21 +3,22 @@
  * Migrated from src/app/resources/create/page.tsx
  */
 
-import { useList } from '@refinedev/core';
+import { useList, useTranslate } from '@refinedev/core';
 import { Create, useForm } from '@refinedev/antd';
 import { Form, Input, InputNumber, Switch, Select } from 'antd';
 import { ResourceType } from '@medical-portal/shared';
 import type { Resource, Lecture } from '@medical-portal/shared';
 
-const resourceTypeOptions = [
-  { label: '🎬 YouTube', value: ResourceType.YOUTUBE },
-  { label: '📹 Google Drive Video', value: ResourceType.GDRIVE_VIDEO },
-  { label: '📄 Google Drive PDF', value: ResourceType.GDRIVE_PDF },
-  { label: '🔗 External Link', value: ResourceType.EXTERNAL },
-];
-
 const ResourcesCreate = () => {
+  const t = useTranslate();
   const { formProps, saveButtonProps } = useForm<Resource>();
+
+  const resourceTypeOptions = [
+    { label: `🎬 ${t('pages.resources.types.youtube', {}, 'YouTube')}`, value: ResourceType.YOUTUBE },
+    { label: `📹 ${t('pages.resources.types.gdriveVideo', {}, 'Google Drive Video')}`, value: ResourceType.GDRIVE_VIDEO },
+    { label: `📄 ${t('pages.resources.types.gdrivePdf', {}, 'Google Drive PDF')}`, value: ResourceType.GDRIVE_PDF },
+    { label: `🔗 ${t('pages.resources.types.external', {}, 'External Link')}`, value: ResourceType.EXTERNAL },
+  ];
 
   const { data: lecturesData } = useList<Lecture>({
     resource: 'lectures',
@@ -29,12 +30,12 @@ const ResourcesCreate = () => {
     <Create saveButtonProps={saveButtonProps}>
       <Form {...formProps} layout="vertical" style={{ maxWidth: 600 }}>
         <Form.Item
-          label="บทเรียน"
+          label={t('pages.resources.fields.lecture', {}, 'Lecture')}
           name="lecture_id"
-          rules={[{ required: true, message: 'กรุณาเลือกบทเรียน' }]}
+          rules={[{ required: true, message: t('pages.resources.validation.lectureRequired', {}, 'Please select lecture') }]}
         >
           <Select
-            placeholder="เลือกบทเรียน"
+            placeholder={t('pages.resources.placeholders.lecture', {}, 'Select lecture')}
             options={lectures.map((l) => ({
               label: l.title,
               value: l.id,
@@ -45,36 +46,36 @@ const ResourcesCreate = () => {
         </Form.Item>
 
         <Form.Item
-          label="ชื่อปุ่ม (Label)"
+          label={t('pages.resources.fields.label', {}, 'Button Label')}
           name="label"
-          rules={[{ required: true, message: 'กรุณากรอกชื่อปุ่ม' }]}
-          extra="ชื่อที่จะแสดงบนปุ่ม เช่น Slide, Video, Summary, Exercise"
+          rules={[{ required: true, message: t('pages.resources.validation.labelRequired', {}, 'Please enter label') }]}
+          extra={t('pages.resources.help.label', {}, 'Displayed text on button, e.g. Slide, Video, Summary, Exercise')}
         >
-          <Input placeholder="เช่น Slide, Video, Summary" />
+          <Input placeholder={t('pages.resources.placeholders.label', {}, 'e.g. Slide, Video, Summary')} />
         </Form.Item>
 
         <Form.Item
-          label="ประเภทไฟล์"
+          label={t('pages.resources.fields.type', {}, 'Resource Type')}
           name="type"
-          rules={[{ required: true, message: 'กรุณาเลือกประเภท' }]}
+          rules={[{ required: true, message: t('pages.resources.validation.typeRequired', {}, 'Please select type') }]}
         >
           <Select options={resourceTypeOptions} />
         </Form.Item>
 
         <Form.Item
-          label="URL / Video ID"
+          label={t('pages.resources.fields.url', {}, 'URL / Video ID')}
           name="url"
-          rules={[{ required: true, message: 'กรุณากรอก URL' }]}
-          extra="สำหรับ YouTube ใส่ Video ID เช่น dQw4w9WgXcQ, สำหรับ Google Drive ใส่ URL เต็ม"
+          rules={[{ required: true, message: t('pages.resources.validation.urlRequired', {}, 'Please enter URL') }]}
+          extra={t('pages.resources.help.url', {}, 'For YouTube use video ID, for Google Drive use full URL')}
         >
-          <Input placeholder="URL หรือ Video ID" />
+          <Input placeholder={t('pages.resources.placeholders.url', {}, 'URL or Video ID')} />
         </Form.Item>
 
-        <Form.Item label="ลำดับการแสดงผล (ซ้ายไปขวา)" name="order_index" initialValue={0}>
+        <Form.Item label={t('pages.resources.fields.orderIndex', {}, 'Display Order (left to right)')} name="order_index" initialValue={0}>
           <InputNumber min={0} style={{ width: '100%' }} />
         </Form.Item>
 
-        <Form.Item label="เปิดใช้งาน" name="is_active" valuePropName="checked" initialValue={true}>
+        <Form.Item label={t('pages.resources.fields.isActive', {}, 'Active')} name="is_active" valuePropName="checked" initialValue={true}>
           <Switch />
         </Form.Item>
       </Form>
