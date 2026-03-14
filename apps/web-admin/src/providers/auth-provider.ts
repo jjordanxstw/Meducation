@@ -94,6 +94,15 @@ let hasTokenFailed = false;
 let tokenFailureTime = 0;
 const TOKEN_FAILURE_BLOCK_MS = 5000; // Block auth checks for 5 seconds after token failure
 
+function resetAuthFailureState(): void {
+  hasTokenFailed = false;
+  tokenFailureTime = 0;
+  isRedirecting = false;
+  authCheckPromise = null;
+  permissionsPromise = null;
+  identityPromise = null;
+}
+
 function isCacheValid(): boolean {
   return Date.now() - cacheTimestamp < CACHE_TTL_MS;
 }
@@ -357,6 +366,11 @@ export const authProvider: AuthProvider = {
         adminId: admin.id,
         isSuperAdmin: admin.is_super_admin,
       });
+
+      // Clear stale unauthenticated state from pre-login checks.
+      // Without this, check() can immediately return unauthenticated and bounce back to /login?to=/dashboard.
+      resetAuthFailureState();
+      clearCache();
 
       return {
         success: true,
