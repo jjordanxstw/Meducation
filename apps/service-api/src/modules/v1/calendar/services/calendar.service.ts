@@ -178,22 +178,11 @@ export class CalendarService {
   }
 
   async create(data: any, createdBy: string) {
-    const { created_by: _ignoredCreatedBy, ...baseEventData } = data || {};
-
-    // created_by FK points to profiles.id, but admin auth uses admins.id.
-    // Only set created_by when the requester exists in profiles.
-    let eventData: Record<string, unknown> = { ...baseEventData };
+    const eventData: Record<string, unknown> = { ...(data || {}) };
+    delete eventData.created_by;
 
     if (createdBy) {
-      const { data: profile } = await this.supabaseAdmin
-        .from('profiles')
-        .select('id')
-        .eq('id', createdBy)
-        .maybeSingle();
-
-      if (profile?.id) {
-        eventData = { ...eventData, created_by: createdBy };
-      }
+      eventData.created_by_admin = createdBy;
     }
 
     await this.ensureValidEventTimeWindow(eventData);

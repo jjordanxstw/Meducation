@@ -53,3 +53,12 @@ jobs:
 
       - name: Build web-admin
         run: pnpm --filter web-admin build
+
+      - name: Lint service-api
+        run: pnpm --filter service-api lint
+
+      - name: Lint web-admin
+        run: pnpm --filter web-admin lint
+
+      - name: Typecheck all
+        run: pnpm -r typecheck
