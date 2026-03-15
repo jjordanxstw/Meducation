@@ -15,7 +15,9 @@
     "jsx": "react-jsx",
     "incremental": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@medical-portal/shared": ["../../packages/shared/src/index.ts"],
+      "@medical-portal/shared/*": ["../../packages/shared/src/*"]
     },
     "types": ["vite/client", "node"]
   },
