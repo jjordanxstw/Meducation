@@ -8,3 +8,6 @@ export * from './types';
 
 // Export all utilities
 export * from './utils';
+
+// Export error catalog
+export * from './errors';

@@ -7,7 +7,7 @@ A production-ready monorepo for a Medical Learning Portal built with modern web 
 ```
 webpi/
 ├── apps/
-│   ├── web-client/       # Student-facing Vite + React + Hero UI app
+│   ├── web-client/       # Student-facing Next.js app
 │   ├── web-admin/        # Admin panel with Refine.dev + Ant Design
 │   └── service-api/      # Express + TypeScript REST API
 ├── packages/
@@ -25,7 +25,7 @@ webpi/
 | **Database** | PostgreSQL (Supabase) with Row Level Security |
 | **Auth** | Google OAuth 2.0 (restricted to @student.mahidol.ac.th) |
 | **API** | Node.js + Express + TypeScript |
-| **Web Client** | Vite + React 18 + TypeScript + Hero UI + Tailwind CSS |
+| **Web Client** | Next.js + React 18 + TypeScript + Hero UI + Tailwind CSS |
 | **Web Admin** | Refine.dev + Ant Design + @dnd-kit |
 | **State** | Zustand + TanStack Query |
 | **Calendar** | FullCalendar |
@@ -74,18 +74,18 @@ GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 # JWT
 JWT_SECRET=your-super-secret-jwt-key
 JWT_EXPIRES_IN=7d
+WATERMARK_SECRET=your-watermark-secret-key
 ```
 
 **apps/web-client/.env**
 ```env
-VITE_API_URL=http://localhost:3000/api
-VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 ```
 
 **apps/web-admin/.env**
 ```env
-VITE_API_URL=/api
-VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+VITE_API_URL=http://localhost:3000/api/v1
 ```
 
 ### 4. Google OAuth Setup
@@ -114,68 +114,67 @@ pnpm --filter web-admin dev      # Admin: http://localhost:5174
 
 ## 📚 API Endpoints
 
-### Authentication
+### Health
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/auth/google` | Google OAuth login |
-| GET | `/api/auth/me` | Get current user |
+| GET | `/api/v1/health` | API liveness check |
 
-### Subjects
+### Public Authentication (Student)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/subjects` | List all subjects |
-| GET | `/api/subjects/:id` | Get subject with sections |
-| POST | `/api/subjects` | Create subject (admin) |
-| PATCH | `/api/subjects/:id` | Update subject (admin) |
-| DELETE | `/api/subjects/:id` | Delete subject (admin) |
-| PATCH | `/api/subjects/reorder` | Reorder subjects (admin) |
+| POST | `/api/v1/auth/verify` | Verify Google token and sign in |
+| GET | `/api/v1/auth/me` | Get current student profile |
+| POST | `/api/v1/auth/refresh` | Refresh student access token |
+| POST | `/api/v1/auth/logout` | Logout student |
 
-### Sections
+### Admin Authentication
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/sections` | List all sections |
-| POST | `/api/sections` | Create section (admin) |
-| PATCH | `/api/sections/:id` | Update section (admin) |
-| DELETE | `/api/sections/:id` | Delete section (admin) |
-| PATCH | `/api/sections/reorder` | Reorder sections (admin) |
+| POST | `/api/v1/admin/auth/login` | Admin username/password login |
+| GET | `/api/v1/admin/auth/me` | Get current admin profile |
+| POST | `/api/v1/admin/auth/refresh` | Refresh admin access token |
+| POST | `/api/v1/admin/auth/logout` | Logout admin |
 
-### Lectures
+### Public Read Resources (Student)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/lectures` | List all lectures |
-| POST | `/api/lectures` | Create lecture (admin) |
-| PATCH | `/api/lectures/:id` | Update lecture (admin) |
-| DELETE | `/api/lectures/:id` | Delete lecture (admin) |
-| PATCH | `/api/lectures/reorder` | Reorder lectures (admin) |
+| GET | `/api/v1/subjects` | List subjects |
+| GET | `/api/v1/subjects/:id` | Subject detail with hierarchy |
+| GET | `/api/v1/sections` | List sections |
+| GET | `/api/v1/lectures` | List lectures |
+| GET | `/api/v1/resources` | List resources |
+| GET | `/api/v1/calendar` | List events |
+| GET | `/api/v1/profiles/:id` | Student self profile |
 
-### Resources (Dynamic Buttons)
+### Admin Management Resources
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/resources` | List all resources |
-| GET | `/api/resources/lecture/:id` | Get resources by lecture |
-| POST | `/api/resources` | Create resource (admin) |
-| PATCH | `/api/resources/:id` | Update resource (admin) |
-| DELETE | `/api/resources/:id` | Delete resource (admin) |
-
-### Calendar Events
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/calendar` | List all events |
-| POST | `/api/calendar` | Create event (admin) |
-| PATCH | `/api/calendar/:id` | Update event (admin) |
-| DELETE | `/api/calendar/:id` | Delete event (admin) |
-
-### Profiles
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/profiles` | List all profiles (admin) |
-| GET | `/api/profiles/:id` | Get profile |
-| PATCH | `/api/profiles/:id` | Update profile |
-
-### Audit Logs
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/audit-logs` | List audit logs (admin) |
+| GET | `/api/v1/admin/subjects` | List subjects |
+| POST | `/api/v1/admin/subjects` | Create subject |
+| PUT | `/api/v1/admin/subjects/:id` | Update subject |
+| DELETE | `/api/v1/admin/subjects/:id` | Delete subject |
+| PATCH | `/api/v1/admin/subjects/reorder` | Reorder subjects |
+| GET | `/api/v1/admin/sections` | List sections |
+| POST | `/api/v1/admin/sections` | Create section |
+| PUT | `/api/v1/admin/sections/:id` | Update section |
+| DELETE | `/api/v1/admin/sections/:id` | Delete section |
+| GET | `/api/v1/admin/lectures` | List lectures |
+| POST | `/api/v1/admin/lectures` | Create lecture |
+| PUT | `/api/v1/admin/lectures/:id` | Update lecture |
+| DELETE | `/api/v1/admin/lectures/:id` | Delete lecture |
+| PATCH | `/api/v1/admin/lectures/reorder` | Reorder lectures |
+| GET | `/api/v1/admin/resources` | List resources |
+| POST | `/api/v1/admin/resources` | Create resource |
+| PUT | `/api/v1/admin/resources/:id` | Update resource |
+| DELETE | `/api/v1/admin/resources/:id` | Delete resource |
+| PATCH | `/api/v1/admin/resources/reorder` | Reorder resources |
+| GET | `/api/v1/admin/calendar` | List calendar events |
+| POST | `/api/v1/admin/calendar` | Create calendar event |
+| PUT | `/api/v1/admin/calendar/:id` | Update calendar event |
+| DELETE | `/api/v1/admin/calendar/:id` | Delete calendar event |
+| GET | `/api/v1/admin/profiles` | List profiles |
+| PATCH | `/api/v1/admin/profiles/:id` | Update profile |
+| GET | `/api/v1/admin/audit-logs` | List audit logs |
 
 ## 🎨 Design System
 
