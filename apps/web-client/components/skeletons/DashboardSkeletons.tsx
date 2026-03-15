@@ -4,7 +4,7 @@ export function SubjectGridSkeleton({ count = 4 }: { count?: number }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {Array.from({ length: count }).map((_, index) => (
-        <Card key={index}>
+        <Card key={index} className="glass-surface">
           <CardBody className="gap-3">
             <div className="flex items-start gap-3">
               <Skeleton className="h-12 w-12 rounded-xl" />
@@ -23,7 +23,7 @@ export function SubjectGridSkeleton({ count = 4 }: { count?: number }) {
 
 export function EventListSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <Card className="border divider-y-0">
+    <Card className="glass-surface border divider-y-0">
       <CardBody className="gap-3 p-4">
         {Array.from({ length: count }).map((_, index) => (
           <div key={index} className="flex items-start gap-3">
@@ -42,7 +42,7 @@ export function EventListSkeleton({ count = 4 }: { count?: number }) {
 
 export function CalendarCardSkeleton() {
   return (
-    <Card className="shadow-lg">
+    <Card className="glass-surface">
       <CardBody className="p-4 sm:p-6">
         <div className="space-y-4">
           <Skeleton className="h-8 w-48 rounded-lg" />
@@ -61,7 +61,7 @@ export function ProfileSkeleton() {
         <Skeleton className="h-5 w-64 rounded-lg" />
       </div>
 
-      <Card className="shadow-lg">
+      <Card className="glass-surface">
         <CardBody className="gap-6 p-6">
           <div className="flex items-center gap-4">
             <Skeleton className="h-16 w-16 rounded-full" />

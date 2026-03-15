@@ -80,10 +80,11 @@ function ResourceButton({
       size="sm"
       variant="flat"
       color={getColor()}
-      startContent={getIcon()}
+      startContent={<span className="icon-with-text">{getIcon()}</span>}
       onPress={onClick}
+      className="btn-precise max-w-full"
     >
-      {resource.label}
+      <span className="max-w-[10rem] truncate">{resource.label}</span>
     </Button>
   );
 }
@@ -103,33 +104,33 @@ function LectureCard({ lecture }: { lecture: LectureWithResources }) {
 
   return (
     <>
-      <Card isBlurred className="hover:scale-[1.01] transition-transform">
+      <Card isBlurred className="glass-surface hover:scale-[1.01] transition-transform">
         <CardBody className="gap-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex-1 min-w-0 space-y-2">
-              <h4 className="font-semibold text-foreground line-clamp-1">
+              <h4 className="font-semibold text-[var(--ink-1)] line-clamp-1">
                 {lecture.title}
               </h4>
               {lecture.description && (
-                <p className="text-sm text-default-600 line-clamp-2">
+                <p className="text-sm text-[var(--ink-2)] line-clamp-2">
                   {lecture.description}
                 </p>
               )}
               <div className="flex flex-wrap gap-2 text-sm">
                 {lecture.lecture_date && (
-                  <Chip size="sm" variant="flat" startContent={<FiCalendar className="h-3 w-3" />}>
+                  <Chip size="sm" variant="flat" startContent={<span className="icon-with-text"><FiCalendar className="h-3 w-3" /></span>}>
                     {formatDateThai(lecture.lecture_date)}
                   </Chip>
                 )}
                 {lecture.lecturer_name && (
-                  <Chip size="sm" variant="flat" startContent={<FiUser className="h-3 w-3" />}>
+                  <Chip size="sm" variant="flat" startContent={<span className="icon-with-text"><FiUser className="h-3 w-3" /></span>}>
                     {lecture.lecturer_name}
                   </Chip>
                 )}
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
               {lecture.resources?.map((resource) => (
                 <ResourceButton
                   key={resource.id}
@@ -206,11 +207,15 @@ export default function SubjectDetailPage({
 
   if (error || !subject) {
     return (
-      <Card>
+      <Card className="glass-surface">
         <CardBody className="text-center py-16">
           <p className="text-danger mb-4">Subject not found</p>
           <Link href="/subjects">
-            <Button variant="flat">
+            <Button
+              variant="flat"
+              className="btn-precise"
+              startContent={<span className="icon-with-text"><FiArrowLeft className="h-4 w-4" /></span>}
+            >
               Back to Subjects
             </Button>
           </Link>
@@ -222,36 +227,38 @@ export default function SubjectDetailPage({
   return (
     <div className="space-y-6">
       {/* Back button */}
-      <Link href="/subjects">
+      <Link href="/subjects" className="inline-block w-full sm:w-auto">
         <Button
           variant="flat"
           size="sm"
-          startContent={<FiArrowLeft className="h-4 w-4" />}
+          className="glass-soft w-full sm:w-auto"
+          startContent={<span className="icon-with-text"><FiArrowLeft className="h-4 w-4" /></span>}
         >
           Back to Subjects
         </Button>
       </Link>
 
       {/* Subject Header */}
-      <Card className="bg-gradient-to-br from-primary-500 to-primary-600 text-white">
+      <Card className="glass-card relative overflow-hidden text-[var(--ink-1)]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_15%,rgba(59,130,246,0.2),transparent_36%),radial-gradient(circle_at_82%_20%,rgba(14,165,233,0.16),transparent_42%)]" />
         <CardBody className="gap-4 p-6 sm:p-8 lg:p-12">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm shadow-lg sm:h-20 sm:w-20">
+          <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+            <div className="glass-soft flex h-16 w-16 shrink-0 items-center justify-center rounded-xl shadow-lg sm:h-20 sm:w-20">
               <FiVideo className="h-8 w-8 sm:h-10 sm:w-10" />
             </div>
             <div className="flex-1 min-w-0 space-y-2">
-              <Chip size="sm" variant="flat" className="bg-white/20 text-white border-white/30 w-fit">
+              <Chip size="sm" variant="flat" className="glass-soft w-fit text-[var(--ink-1)] border-white/20">
                 {subject.code}
               </Chip>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold line-clamp-2">
+              <h1 className="text-[clamp(1.5rem,4.8vw,2.6rem)] font-bold leading-tight line-clamp-2">
                 {subject.name}
               </h1>
-              <p className="text-blue-50 line-clamp-2">{subject.description}</p>
+              <p className="line-clamp-3 text-sm text-[var(--ink-2)] sm:text-base">{subject.description}</p>
               <div className="flex flex-wrap gap-2">
-                <Chip size="sm" variant="flat" className="bg-white/20 text-white">
+                <Chip size="sm" variant="flat" className="glass-soft text-[var(--ink-1)]">
                   Year {subject.year_level}
                 </Chip>
-                <Chip size="sm" variant="flat" className="bg-white/20 text-white">
+                <Chip size="sm" variant="flat" className="glass-soft text-[var(--ink-1)]">
                   {subject.sections?.length || 0} Sections
                 </Chip>
               </div>
@@ -293,7 +300,7 @@ export default function SubjectDetailPage({
                   <LectureCard key={lecture.id} lecture={lecture} />
                 ))}
                 {(!section.lectures || section.lectures.length === 0) && (
-                  <Card>
+                  <Card className="glass-surface">
                     <CardBody className="text-center py-16">
                       <FiVideo className="mx-auto mb-4 h-12 w-12 text-default-300" />
                       <p className="font-medium">No lectures in this section yet</p>
@@ -305,7 +312,7 @@ export default function SubjectDetailPage({
           ))}
         </Accordion>
       ) : (
-        <Card>
+        <Card className="glass-surface">
           <CardBody className="text-center py-16">
             <FiVideo className="mx-auto mb-4 h-16 w-16 text-default-300" />
             <h3 className="font-semibold text-lg mb-2">No Content Available</h3>

@@ -59,7 +59,7 @@ export function VideoPlayer({ resource, lectureTitle }: VideoPlayerProps) {
   return (
     <div
       ref={containerRef}
-      className="watermark-container relative w-full aspect-video bg-black rounded-lg overflow-hidden"
+      className="watermark-container glass-surface-strong relative w-full aspect-video overflow-hidden rounded-2xl bg-black"
     >
       {/* Video iframe */}
       <iframe

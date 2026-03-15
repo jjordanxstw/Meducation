@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Kanit, Prompt } from 'next/font/google';
+import Script from 'next/script';
 import './globals.css';
 import { Providers } from './providers';
 
@@ -34,8 +35,28 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="light">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${kanit.variable} ${prompt.variable} font-sans antialiased`}>
+        <Script id="theme-bootstrap" strategy="beforeInteractive">
+          {`
+            (function () {
+              try {
+                var storageTheme = localStorage.getItem('med:theme');
+                var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var theme = storageTheme === 'dark' || storageTheme === 'light'
+                  ? storageTheme
+                  : (systemDark ? 'dark' : 'light');
+                var root = document.documentElement;
+                root.classList.remove('light', 'dark');
+                root.classList.add(theme);
+                root.dataset.theme = theme;
+              } catch (error) {
+                document.documentElement.classList.add('light');
+                document.documentElement.dataset.theme = 'light';
+              }
+            })();
+          `}
+        </Script>
         <Providers>
           {children}
         </Providers>

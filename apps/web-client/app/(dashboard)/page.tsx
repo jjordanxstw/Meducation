@@ -10,10 +10,11 @@ import { Card, CardBody, Button, Chip } from '@nextui-org/react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth.store';
 import { api } from '@/lib/api';
-import { FiBook, FiCalendar, FiClock, FiArrowRight } from 'react-icons/fi';
+import { FiBook, FiCalendar, FiClock, FiArrowRight, FiRefreshCw } from 'react-icons/fi';
 import { getYearLevelLabel, formatDateThai, getEventTypeColor, getEventTypeLabel } from '@medical-portal/shared';
 import type { Subject, CalendarEvent } from '@medical-portal/shared';
 import { EventListSkeleton, SubjectGridSkeleton } from '@/components/skeletons/DashboardSkeletons';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 
 export default function HomePage() {
   const { profile } = useAuthStore();
@@ -45,37 +46,38 @@ export default function HomePage() {
   const upcomingEvents = eventsData?.data?.data || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Welcome Section */}
-      <Card className="bg-gradient-to-br from-primary-500 to-primary-600 text-white">
-        <CardBody className="gap-4 p-6 sm:p-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">
+      <Card className="glass-card relative overflow-hidden text-[var(--ink-1)]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_20%,rgba(59,130,246,0.2),transparent_40%),radial-gradient(circle_at_80%_18%,rgba(14,165,233,0.15),transparent_45%)]" />
+        <CardBody className="gap-4 p-4 sm:p-6">
+          <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold sm:text-2xl">
                 Hello, {profile?.full_name || 'Student'} 👋
               </h1>
-              <p className="text-blue-50 text-sm sm:text-base">
+              <p className="text-sm text-[var(--ink-2)] sm:text-base">
                 {profile?.year_level ? getYearLevelLabel(profile.year_level) : 'Welcome to Medical Learning Portal'}
               </p>
             </div>
-            <div className="flex flex-row gap-2 sm:flex-col sm:w-auto">
-              <Link href="/subjects">
+            <div className="flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row sm:gap-3">
+              <Link href="/subjects" className="flex-1 sm:flex-none">
                 <Button
                   color="primary"
                   variant="solid"
-                  className="bg-white text-primary shadow-md w-full sm:w-auto font-semibold"
-                  startContent={<FiBook />}
+                  className="btn-precise w-full justify-center font-semibold sm:w-auto"
+                  startContent={<span className="icon-with-text"><FiBook className="h-4 w-4" /></span>}
                 >
                   Start Learning
                 </Button>
               </Link>
-              <Link href="/calendar">
+              <Link href="/calendar" className="flex-1 sm:flex-none">
                 <Button
                   variant="bordered"
-                  className="border-white text-white w-full sm:w-auto font-semibold"
-                  startContent={<FiCalendar />}
+                  className="btn-precise card-flat w-full justify-center text-[var(--ink-1)] font-semibold sm:w-auto"
+                  startContent={<span className="icon-with-text"><FiCalendar className="h-4 w-4" /></span>}
                 >
-                  View Calendar
+                  Calendar
                 </Button>
               </Link>
             </div>
@@ -83,29 +85,35 @@ export default function HomePage() {
         </CardBody>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         {/* Subjects Section */}
-        <section className="lg:col-span-2 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold">Your Subjects</h2>
-              <p className="text-default-500 text-sm">Select subjects you want to study</p>
-            </div>
-            <Link
-              href="/subjects"
-              className="text-primary font-semibold text-sm flex items-center gap-1 group"
-            >
-              View All
-              <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </div>
+        <section className="space-y-3 lg:col-span-2">
+          <SectionHeader
+            title="Your Subjects"
+            description="Select subjects you want to study"
+            actions={
+              <Link
+                href="/subjects"
+                className="group inline-flex items-center gap-1 text-sm font-semibold text-primary"
+              >
+                View All
+                <FiArrowRight className="group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            }
+          />
 
           {isSubjectsError ? (
-            <Card>
+            <Card className="glass-surface">
               <CardBody className="gap-3 p-6">
                 <h3 className="text-base font-semibold text-danger-600">Unable to load subjects</h3>
                 <p className="text-sm text-default-600">Please retry to fetch your subject list.</p>
-                <Button color="primary" variant="flat" onPress={() => void refetchSubjects()}>
+                <Button
+                  color="primary"
+                  variant="flat"
+                  className="btn-precise"
+                  startContent={<span className="icon-with-text"><FiRefreshCw className="h-4 w-4" /></span>}
+                  onPress={() => void refetchSubjects()}
+                >
                   Retry
                 </Button>
               </CardBody>
@@ -113,13 +121,13 @@ export default function HomePage() {
           ) : isSubjectsLoading ? (
             <SubjectGridSkeleton count={4} />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {subjects.slice(0, 4).map((subject: Subject) => (
                 <Link key={subject.id} href={`/subjects/${subject.id}`}>
                   <Card
                     isPressable
                     isBlurred
-                    className="h-full hover:scale-[1.02] transition-transform"
+                    className="glass-surface h-full hover:scale-[1.02] transition-transform"
                   >
                     <CardBody className="gap-3">
                       <div className="flex items-start gap-3">
@@ -146,7 +154,7 @@ export default function HomePage() {
           )}
 
           {!isSubjectsLoading && subjects.length === 0 && (
-            <Card>
+            <Card className="glass-surface">
               <CardBody className="text-center py-12">
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-default-100">
                   <FiBook className="text-default-400 text-2xl" />
@@ -159,18 +167,24 @@ export default function HomePage() {
         </section>
 
         {/* Upcoming Events Section */}
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold">Upcoming Events</h2>
-            <p className="text-default-500 text-sm">Important schedules</p>
-          </div>
+        <section className="space-y-3">
+          <SectionHeader
+            title="Upcoming Events"
+            description="Important schedules"
+          />
 
           {isEventsError ? (
-            <Card>
+            <Card className="glass-surface">
               <CardBody className="gap-3 p-6">
                 <h3 className="text-base font-semibold text-danger-600">Unable to load upcoming events</h3>
                 <p className="text-sm text-default-600">Please retry to fetch your schedule.</p>
-                <Button color="primary" variant="flat" onPress={() => void refetchEvents()}>
+                <Button
+                  color="primary"
+                  variant="flat"
+                  className="btn-precise"
+                  startContent={<span className="icon-with-text"><FiRefreshCw className="h-4 w-4" /></span>}
+                  onPress={() => void refetchEvents()}
+                >
                   Retry
                 </Button>
               </CardBody>
@@ -178,22 +192,22 @@ export default function HomePage() {
           ) : isEventsLoading ? (
             <EventListSkeleton count={4} />
           ) : (
-            <Card className="border divider-y-0">
+            <Card className="card-flat border divider-y-0">
               {upcomingEvents.map((event: CalendarEvent & { subjects?: { name: string } }) => (
                 <div
                   key={event.id}
-                  className="flex items-start gap-3 p-4 hover:bg-default-50 transition-colors last:rounded-b-xl last:[&:not(:first-child)]:rounded-b-xl"
+                  className="flex items-start gap-3 p-4 transition-colors hover:bg-default-100/50 last:rounded-b-[var(--radius-md)] last:[&:not(:first-child)]:rounded-b-[var(--radius-md)]"
                 >
                   <div
                     className="h-full w-1 rounded-full shrink-0"
                     style={{ backgroundColor: getEventTypeColor(event.type) }}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground mb-1 line-clamp-2">
+                    <p className="font-medium text-foreground mb-1 line-clamp-2">
                       {event.title}
                     </p>
                     <div className="flex items-center gap-2 text-sm text-default-500 mb-2">
-                      <FiClock className="h-4 w-4 shrink-0" />
+                      <FiClock className="h-3.5 w-3.5 shrink-0" />
                       <span className="truncate">{formatDateThai(event.start_time)}</span>
                     </div>
                     <Chip
@@ -226,8 +240,9 @@ export default function HomePage() {
             <Button
               variant="flat"
               color="primary"
-              className="w-full font-semibold"
-              endContent={<FiArrowRight />}
+              className="btn-precise w-full justify-center font-semibold"
+              startContent={<span className="icon-with-text"><FiCalendar className="h-4 w-4" /></span>}
+              endContent={<span className="icon-with-text"><FiArrowRight className="h-4 w-4" /></span>}
             >
               View Full Calendar
             </Button>

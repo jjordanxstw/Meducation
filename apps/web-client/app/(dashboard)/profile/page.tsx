@@ -60,17 +60,17 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">Profile</h1>
-        <p className="text-default-500 text-base">Manage your personal information</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--ink-1)]">Profile</h1>
+        <p className="text-base text-[var(--ink-2)]">Manage your personal information</p>
       </div>
 
       {/* Profile Card */}
-      <Card className="shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-primary-50 to-blue-50 gap-4">
-          <div className="flex items-center gap-4">
+      <Card className="glass-surface">
+        <CardHeader className="flex flex-col gap-4 bg-gradient-to-r from-white/30 to-sky-100/20 dark:from-slate-800/35 dark:to-sky-900/20 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
             <Avatar
               isBordered
               color="primary"
@@ -80,16 +80,16 @@ export default function ProfilePage() {
               className="ring-4 ring-white shadow-md"
             />
             <div className="flex-1 min-w-0">
-              <h2 className="text-xl sm:text-2xl font-bold line-clamp-1">
+              <h2 className="text-xl sm:text-2xl font-bold text-[var(--ink-1)] line-clamp-1">
                 {profile?.full_name || user?.name}
               </h2>
-              <p className="text-sm text-default-600 truncate">{user?.email}</p>
+              <p className="truncate text-sm text-[var(--ink-2)]">{user?.email}</p>
             </div>
           </div>
           <Chip
             variant="flat"
             color={profile?.role === 'admin' ? 'warning' : 'primary'}
-            startContent={<FiShield className="text-xs" />}
+            startContent={<span className="icon-with-text"><FiShield className="h-3 w-3" /></span>}
           >
             {profile?.role ? getRoleLabel(profile.role) : 'Student'}
           </Chip>
@@ -107,7 +107,7 @@ export default function ProfilePage() {
             isReadOnly
             isDisabled
             variant="flat"
-            startContent={<FiMail />}
+            startContent={<span className="icon-with-text"><FiMail className="h-4 w-4" /></span>}
             description="Email cannot be changed"
           />
 
@@ -121,7 +121,7 @@ export default function ProfilePage() {
               onValueChange={(value) =>
                 setFormData((prev) => ({ ...prev, full_name: value }))
               }
-              startContent={<FiUser />}
+              startContent={<span className="icon-with-text"><FiUser className="h-4 w-4" /></span>}
             />
           ) : (
             <Input
@@ -131,7 +131,7 @@ export default function ProfilePage() {
               value={profile?.full_name || ''}
               isReadOnly
               variant="flat"
-              startContent={<FiUser />}
+              startContent={<span className="icon-with-text"><FiUser className="h-4 w-4" /></span>}
             />
           )}
 
@@ -145,7 +145,7 @@ export default function ProfilePage() {
               onSelectionChange={(keys) =>
                 setFormData((prev) => ({ ...prev, year_level: Array.from(keys)[0] as string }))
               }
-              startContent={<FiBook />}
+              startContent={<span className="icon-with-text"><FiBook className="h-4 w-4" /></span>}
             >
               {YEAR_LEVELS.map((year) => (
                 <SelectItem key={year.toString()}>
@@ -161,7 +161,7 @@ export default function ProfilePage() {
               value={profile?.year_level ? getYearLevelLabel(profile.year_level) : '-'}
               isReadOnly
               variant="flat"
-              startContent={<FiBook />}
+              startContent={<span className="icon-with-text"><FiBook className="h-4 w-4" /></span>}
             />
           )}
 
@@ -180,11 +180,12 @@ export default function ProfilePage() {
           <Divider />
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             {isEditing ? (
               <>
                 <Button
                   variant="flat"
+                  className="btn-precise w-full justify-center sm:w-auto"
                   onPress={() => {
                     setIsEditing(false);
                     setFormData({
@@ -197,7 +198,8 @@ export default function ProfilePage() {
                 </Button>
                 <Button
                   color="primary"
-                  startContent={<FiSave />}
+                  startContent={<span className="icon-with-text"><FiSave className="h-4 w-4" /></span>}
+                  className="btn-precise w-full justify-center sm:w-auto"
                   onPress={handleSave}
                   isLoading={isSaving}
                 >
@@ -208,6 +210,7 @@ export default function ProfilePage() {
               <Button
                 color="primary"
                 variant="flat"
+                className="btn-precise w-full justify-center sm:w-auto"
                 onPress={() => setIsEditing(true)}
               >
                 Edit Profile
@@ -218,13 +221,13 @@ export default function ProfilePage() {
       </Card>
 
       {/* Account Info Card */}
-      <Card>
+      <Card className="glass-surface">
         <CardHeader>
-          <h3 className="text-lg font-bold">Account Information</h3>
+          <h3 className="text-lg font-bold text-[var(--ink-1)]">Account Information</h3>
         </CardHeader>
         <CardBody>
-          <div className="flex justify-between py-2">
-            <span className="text-sm text-default-500">Account Created</span>
+          <div className="flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-sm text-[var(--ink-2)]">Account Created</span>
             <span className="text-sm font-medium">
               {profile?.created_at
                 ? new Date(profile.created_at).toLocaleDateString('en-US', {
@@ -236,8 +239,8 @@ export default function ProfilePage() {
             </span>
           </div>
           <Divider />
-          <div className="flex justify-between py-2">
-            <span className="text-sm text-default-500">Account Type</span>
+          <div className="flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-sm text-[var(--ink-2)]">Account Type</span>
             <span className="text-sm font-medium">
               {profile?.role ? getRoleLabel(profile.role) : 'Student'}
             </span>
