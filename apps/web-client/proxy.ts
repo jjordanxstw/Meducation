@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 
-const publicRoutes = ['/login', '/register', '/forgot-password'];
+const publicRoutes = new Set(['/login', '/auth/sync']);
+
+function isPublicRoute(pathname: string): boolean {
+  return publicRoutes.has(pathname);
+}
 
 /**
  * Proxy function for Next.js 16+
@@ -9,7 +14,7 @@ const publicRoutes = ['/login', '/register', '/forgot-password'];
  * This is the recommended pattern for authentication in Next.js 15+
  */
 export async function proxy(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+  const { pathname, search } = req.nextUrl;
 
   // Skip proxy for API routes, static files, and Next.js internals
   if (
@@ -21,50 +26,18 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check if the route is public
-  if (publicRoutes.some(route => pathname.startsWith(route))) {
-    // For public routes, check if user has a valid session
-    const sessionToken = req.cookies.get('session_token')?.value;
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const isPublic = isPublicRoute(pathname);
 
-    // If authenticated and trying to access login page, redirect to dashboard
-    if (sessionToken && pathname === '/login') {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
-    }
-
-    return NextResponse.next();
-  }
-
-  // For protected routes, check for session token
-  const sessionToken = req.cookies.get('session_token')?.value;
-
-  if (!sessionToken) {
+  if (!token && !isPublic) {
     const loginUrl = new URL('/login', req.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
+    const target = pathname === '/' ? '/' : `${pathname}${search}`;
+    loginUrl.searchParams.set('to', target);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Basic token validation (check format)
-  const parts = sessionToken.split('.');
-  if (parts.length !== 3) {
-    const loginUrl = new URL('/login', req.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // Decode JWT payload to check expiration
-  try {
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-
-    // Check if token is expired
-    if (payload.exp && payload.exp < Date.now() / 1000) {
-      const loginUrl = new URL('/login', req.url);
-      loginUrl.searchParams.set('callbackUrl', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-  } catch {
-    const loginUrl = new URL('/login', req.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(loginUrl);
+  if (token && pathname === '/login') {
+    return NextResponse.redirect(new URL('/', req.url));
   }
 
   return NextResponse.next();

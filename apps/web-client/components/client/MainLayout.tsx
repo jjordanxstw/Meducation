@@ -1,8 +1,7 @@
 'use client';
 
 /**
- * MainLayout - Main application layout with Navbar
- * Next.js adapted version
+ * MainLayout - Protected app shell with liquid glass navbar
  */
 
 import Link from 'next/link';
@@ -22,44 +21,36 @@ import {
   DropdownItem,
 } from '@nextui-org/react';
 import { useState } from 'react';
-import { useAuthStore } from '@/stores/auth.store';
-import { FiHome, FiBook, FiCalendar, FiUser, FiLogOut } from 'react-icons/fi';
+import { signOut, useSession } from 'next-auth/react';
+import { FiHome, FiLayers, FiBookOpen, FiUser, FiLogOut } from 'react-icons/fi';
+import { api } from '@/lib/api';
 
 const menuItems = [
   { name: 'Home', href: '/', icon: FiHome },
-  { name: 'Subjects', href: '/subjects', icon: FiBook },
-  { name: 'Calendar', href: '/calendar', icon: FiCalendar },
+  { name: 'ACDM', href: '/acdm', icon: FiLayers },
+  { name: 'Learning Hub', href: '/learning-hub', icon: FiBookOpen },
+  { name: 'About Me', href: '/about-me', icon: FiUser },
 ];
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { user, profile, clearAuth } = useAuthStore();
+  const { data: session } = useSession();
 
   const handleLogout = async () => {
-    try {
-      // Call backend logout endpoint to revoke refresh token
-      await fetch('/api/v1/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      // Clear local auth state
-      clearAuth();
-      window.location.href = '/login';
-    }
+    await api.auth.logout();
+    await signOut({ callbackUrl: '/login' });
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-glass-canvas">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(56,189,248,0.18),transparent_36%),radial-gradient(circle_at_85%_20%,rgba(14,165,233,0.22),transparent_42%),radial-gradient(circle_at_70%_80%,rgba(59,130,246,0.14),transparent_38%)]" />
       <Navbar
         isMenuOpen={isMenuOpen}
         onMenuOpenChange={setIsMenuOpen}
         maxWidth="xl"
         height="auto"
-        className="bg-background/70 backdrop-blur-md border-b border-divider"
+        className="glass-nav border-b border-white/25"
       >
         <NavbarContent>
           <NavbarMenuToggle
@@ -68,11 +59,12 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           />
           <NavbarBrand>
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 font-bold text-white shadow-md">
-                M
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/65 text-sm font-bold text-sky-700 shadow-sm backdrop-blur">
+                {/* TODO: Replace with brand logo image provided by user */}
+                L
               </div>
-              <span className="font-bold text-xl hidden sm:inline">
-                Medical Portal
+              <span className="hidden text-lg font-semibold tracking-tight text-slate-800 sm:inline">
+                Learning Portal
               </span>
             </Link>
           </NavbarBrand>
@@ -83,10 +75,10 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             <NavbarItem key={item.href} isActive={pathname === item.href}>
               <Link
                 href={item.href}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm transition ${
                   pathname === item.href
-                    ? 'text-primary font-semibold'
-                    : 'text-default-600 hover:text-primary hover:bg-default-100'
+                    ? 'bg-white/70 font-semibold text-slate-900 shadow-sm'
+                    : 'text-slate-700 hover:bg-white/40 hover:text-slate-900'
                 }`}
               >
                 <item.icon className="h-4 w-4" />
@@ -102,23 +94,23 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               <Avatar
                 as="button"
                 color="primary"
-                name={profile?.full_name || user?.name}
-                src={user?.picture}
+                name={session?.user?.name || 'User'}
+                src={session?.user?.image ?? undefined}
                 size="sm"
                 className="cursor-pointer"
               />
             </DropdownTrigger>
             <DropdownMenu aria-label="Profile Actions" variant="flat">
               <DropdownItem key="profile" className="gap-2">
-                <p className="font-semibold">{profile?.full_name || user?.name}</p>
-                <p className="text-sm text-default-500">{user?.email}</p>
+                <p className="font-semibold">{session?.user?.name || 'Learner'}</p>
+                <p className="text-sm text-default-500">{session?.user?.email || '-'}</p>
               </DropdownItem>
               <DropdownItem
                 key="settings"
                 startContent={<FiUser className="h-4 w-4" />}
-                href="/profile"
+                href="/about-me"
               >
-                Profile
+                About Me
               </DropdownItem>
               <DropdownItem
                 key="logout"
@@ -126,7 +118,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 startContent={<FiLogOut className="h-4 w-4" />}
                 onPress={handleLogout}
               >
-                Sign Out
+                Log out
               </DropdownItem>
             </DropdownMenu>
           </Dropdown>
@@ -140,8 +132,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 onClick={() => setIsMenuOpen(false)}
                 className={`flex items-center gap-3 px-4 py-3 ${
                   pathname === item.href
-                    ? 'text-primary font-semibold'
-                    : 'text-default-600 hover:bg-default-100'
+                    ? 'font-semibold text-slate-900'
+                    : 'text-slate-700 hover:bg-white/40'
                 }`}
               >
                 <item.icon />
@@ -152,23 +144,14 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         </NavbarMenu>
       </Navbar>
 
-      <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8">
+      <main className="relative z-10 flex-1 px-4 py-6 sm:px-6 sm:py-8">
         {children}
       </main>
 
-      <footer className="border-t border-divider py-6">
+      <footer className="relative z-10 border-t border-white/25 py-6">
         <div className="text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded bg-gradient-to-br from-primary-500 to-primary-600 font-bold text-white text-xs">
-              M
-            </div>
-            <span className="font-semibold text-sm">Medical Learning Portal</span>
-          </div>
-          <p className="text-xs text-default-400">
-            © 2026 Medical Learning Portal. All rights reserved.
-          </p>
-          <p className="text-xs text-default-300 mt-1">
-            Faculty of Medicine, Mahidol University
+          <p className="text-xs text-slate-600">
+            © 2026 Learning Portal. Liquid glass shell prototype.
           </p>
         </div>
       </footer>

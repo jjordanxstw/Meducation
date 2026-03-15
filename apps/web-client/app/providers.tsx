@@ -2,24 +2,33 @@
 
 import { QueryClientProvider } from '@tanstack/react-query';
 import { NextUIProvider } from '@nextui-org/react';
-import { ReactNode, useState, useEffect } from 'react';
+import { SessionProvider } from 'next-auth/react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { createQueryClient } from '../lib/queryClient';
 import { useAuthStore } from '@/stores/auth.store';
 
-/**
- * AuthProvider - Initializes authentication state on mount
- * Uses httpOnly cookies for secure authentication
- */
-function AuthProvider({ children }: { children: ReactNode }) {
+function AuthStoreBridge({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const initializedForCurrentSession = useRef(false);
+  const { status } = useSession();
   const initializeFromServer = useAuthStore((state) => state.initializeFromServer);
-  const isInitialized = useAuthStore((state) => state.isInitialized);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
 
   useEffect(() => {
-    // Only initialize once on mount
-    if (!isInitialized) {
-      initializeFromServer();
+    const isAuthPath = pathname === '/login' || pathname.startsWith('/auth/');
+
+    if (status === 'authenticated' && !isAuthPath && !initializedForCurrentSession.current) {
+      initializedForCurrentSession.current = true;
+      void initializeFromServer();
     }
-  }, [isInitialized, initializeFromServer]);
+
+    if (status === 'unauthenticated') {
+      initializedForCurrentSession.current = false;
+      clearAuth();
+    }
+  }, [status, pathname, initializeFromServer, clearAuth]);
 
   return <>{children}</>;
 }
@@ -29,12 +38,12 @@ export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => createQueryClient());
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <NextUIProvider>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
-      </NextUIProvider>
-    </QueryClientProvider>
+    <SessionProvider>
+      <QueryClientProvider client={queryClient}>
+        <NextUIProvider>
+          <AuthStoreBridge>{children}</AuthStoreBridge>
+        </NextUIProvider>
+      </QueryClientProvider>
+    </SessionProvider>
   );
 }
