@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "vite",
     "dev:uat": "vite --mode uat",
-    "build": "tsc && vite build",
-    "build:uat": "tsc && vite build --mode uat",
-    "build:prod": "tsc && vite build --mode prod",
+    "build": "pnpm --filter @medical-portal/shared build && tsc && vite build",
+    "build:uat": "pnpm --filter @medical-portal/shared build && tsc && vite build --mode uat",
+    "build:prod": "pnpm --filter @medical-portal/shared build && tsc && vite build --mode prod",
     "start": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
