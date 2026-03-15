@@ -22,9 +22,10 @@ import { useAuthStore } from '@/stores/auth.store';
 import { api } from '@/lib/api';
 import { FiUser, FiMail, FiBook, FiSave, FiShield } from 'react-icons/fi';
 import { getYearLevelLabel, getRoleLabel, YEAR_LEVELS } from '@medical-portal/shared';
+import { ProfileSkeleton } from '@/components/skeletons/DashboardSkeletons';
 
 export default function ProfilePage() {
-  const { user, profile, updateProfile } = useAuthStore();
+  const { user, profile, updateProfile, isLoading, isInitialized } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -53,6 +54,10 @@ export default function ProfilePage() {
       setIsSaving(false);
     }
   };
+
+  if (!isInitialized || isLoading) {
+    return <ProfileSkeleton />;
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">

@@ -21,12 +21,23 @@ function LoginContent() {
   const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const authError = searchParams.get('error');
+
+  const authErrorMessageMap: Record<string, string> = {
+    missing_token: 'Google sign-in completed but no id token was returned. Please sign in again.',
+    sync_failed: 'Unable to establish backend session. Please try signing in again.',
+    OAuthCallback: 'Google OAuth callback failed. Please retry sign-in.',
+    AccessDenied: 'Access denied by Google or application policy.',
+  };
+
+  const authErrorMessage = authError ? authErrorMessageMap[authError] || 'Authentication failed. Please try again.' : null;
 
   useEffect(() => {
     if (status === 'authenticated') {
-      router.replace('/auth/sync');
+      const to = searchParams.get('to') || '/';
+      router.replace(`/auth/sync?to=${encodeURIComponent(to)}`);
     }
-  }, [status, router]);
+  }, [status, router, searchParams]);
 
   const handleSignInClick = async () => {
     const to = searchParams.get('to') || '/';
@@ -69,6 +80,12 @@ function LoginContent() {
               </div>
             </div>
           </Chip>
+
+          {authErrorMessage && (
+            <div className="rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-700">
+              {authErrorMessage}
+            </div>
+          )}
 
           <Button
             color="primary"

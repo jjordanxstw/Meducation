@@ -13,19 +13,30 @@ import { api } from '@/lib/api';
 import { FiBook, FiCalendar, FiClock, FiArrowRight } from 'react-icons/fi';
 import { getYearLevelLabel, formatDateThai, getEventTypeColor, getEventTypeLabel } from '@medical-portal/shared';
 import type { Subject, CalendarEvent } from '@medical-portal/shared';
+import { EventListSkeleton, SubjectGridSkeleton } from '@/components/skeletons/DashboardSkeletons';
 
 export default function HomePage() {
   const { profile } = useAuthStore();
 
   // Fetch subjects for user's year level
-  const { data: subjectsData } = useQuery({
+  const {
+    data: subjectsData,
+    isLoading: isSubjectsLoading,
+    isError: isSubjectsError,
+    refetch: refetchSubjects,
+  } = useQuery({
     queryKey: ['subjects', profile?.year_level],
     queryFn: () => api.subjects.list(profile?.year_level || undefined),
     enabled: !!profile,
   });
 
   // Fetch upcoming events
-  const { data: eventsData } = useQuery({
+  const {
+    data: eventsData,
+    isLoading: isEventsLoading,
+    isError: isEventsError,
+    refetch: refetchEvents,
+  } = useQuery({
     queryKey: ['upcoming-events'],
     queryFn: () => api.calendar.upcoming(5),
   });
@@ -89,38 +100,52 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {subjects.slice(0, 4).map((subject: Subject) => (
-              <Link key={subject.id} href={`/subjects/${subject.id}`}>
-                <Card
-                  isPressable
-                  isBlurred
-                  className="h-full hover:scale-[1.02] transition-transform"
-                >
-                  <CardBody className="gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50">
-                        <FiBook className="text-primary text-lg" />
+          {isSubjectsError ? (
+            <Card>
+              <CardBody className="gap-3 p-6">
+                <h3 className="text-base font-semibold text-danger-600">Unable to load subjects</h3>
+                <p className="text-sm text-default-600">Please retry to fetch your subject list.</p>
+                <Button color="primary" variant="flat" onPress={() => void refetchSubjects()}>
+                  Retry
+                </Button>
+              </CardBody>
+            </Card>
+          ) : isSubjectsLoading ? (
+            <SubjectGridSkeleton count={4} />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {subjects.slice(0, 4).map((subject: Subject) => (
+                <Link key={subject.id} href={`/subjects/${subject.id}`}>
+                  <Card
+                    isPressable
+                    isBlurred
+                    className="h-full hover:scale-[1.02] transition-transform"
+                  >
+                    <CardBody className="gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50">
+                          <FiBook className="text-primary text-lg" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <Chip size="sm" color="primary" variant="flat">
+                            {subject.code}
+                          </Chip>
+                          <h3 className="font-semibold text-foreground line-clamp-2">
+                            {subject.name}
+                          </h3>
+                          <p className="text-sm text-default-500 line-clamp-2">
+                            {subject.description || 'No description'}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <Chip size="sm" color="primary" variant="flat">
-                          {subject.code}
-                        </Chip>
-                        <h3 className="font-semibold text-foreground line-clamp-2">
-                          {subject.name}
-                        </h3>
-                        <p className="text-sm text-default-500 line-clamp-2">
-                          {subject.description || 'No description'}
-                        </p>
-                      </div>
-                    </div>
-                  </CardBody>
-                </Card>
-              </Link>
-            ))}
-          </div>
+                    </CardBody>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
 
-          {subjects.length === 0 && (
+          {!isSubjectsLoading && subjects.length === 0 && (
             <Card>
               <CardBody className="text-center py-12">
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-default-100">
@@ -140,48 +165,62 @@ export default function HomePage() {
             <p className="text-default-500 text-sm">Important schedules</p>
           </div>
 
-          <Card className="border divider-y-0">
-            {upcomingEvents.map((event: CalendarEvent & { subjects?: { name: string } }) => (
-              <div
-                key={event.id}
-                className="flex items-start gap-3 p-4 hover:bg-default-50 transition-colors last:rounded-b-xl last:[&:not(:first-child)]:rounded-b-xl"
-              >
+          {isEventsError ? (
+            <Card>
+              <CardBody className="gap-3 p-6">
+                <h3 className="text-base font-semibold text-danger-600">Unable to load upcoming events</h3>
+                <p className="text-sm text-default-600">Please retry to fetch your schedule.</p>
+                <Button color="primary" variant="flat" onPress={() => void refetchEvents()}>
+                  Retry
+                </Button>
+              </CardBody>
+            </Card>
+          ) : isEventsLoading ? (
+            <EventListSkeleton count={4} />
+          ) : (
+            <Card className="border divider-y-0">
+              {upcomingEvents.map((event: CalendarEvent & { subjects?: { name: string } }) => (
                 <div
-                  className="h-full w-1 rounded-full shrink-0"
-                  style={{ backgroundColor: getEventTypeColor(event.type) }}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground mb-1 line-clamp-2">
-                    {event.title}
-                  </p>
-                  <div className="flex items-center gap-2 text-sm text-default-500 mb-2">
-                    <FiClock className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{formatDateThai(event.start_time)}</span>
+                  key={event.id}
+                  className="flex items-start gap-3 p-4 hover:bg-default-50 transition-colors last:rounded-b-xl last:[&:not(:first-child)]:rounded-b-xl"
+                >
+                  <div
+                    className="h-full w-1 rounded-full shrink-0"
+                    style={{ backgroundColor: getEventTypeColor(event.type) }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-foreground mb-1 line-clamp-2">
+                      {event.title}
+                    </p>
+                    <div className="flex items-center gap-2 text-sm text-default-500 mb-2">
+                      <FiClock className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{formatDateThai(event.start_time)}</span>
+                    </div>
+                    <Chip
+                      size="sm"
+                      variant="flat"
+                      style={{
+                        backgroundColor: `${getEventTypeColor(event.type)}15`,
+                        color: getEventTypeColor(event.type),
+                      }}
+                    >
+                      {getEventTypeLabel(event.type)}
+                    </Chip>
                   </div>
-                  <Chip
-                    size="sm"
-                    variant="flat"
-                    style={{
-                      backgroundColor: `${getEventTypeColor(event.type)}15`,
-                      color: getEventTypeColor(event.type),
-                    }}
-                  >
-                    {getEventTypeLabel(event.type)}
-                  </Chip>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            {upcomingEvents.length === 0 && (
-              <div className="p-12 text-center">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-default-100">
-                  <FiCalendar className="text-default-400 text-2xl" />
+              {upcomingEvents.length === 0 && (
+                <div className="p-12 text-center">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-default-100">
+                    <FiCalendar className="text-default-400 text-2xl" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-1">No Events</h3>
+                  <p className="text-default-500 text-sm">No upcoming events</p>
                 </div>
-                <h3 className="font-semibold text-lg mb-1">No Events</h3>
-                <p className="text-default-500 text-sm">No upcoming events</p>
-              </div>
-            )}
-          </Card>
+              )}
+            </Card>
+          )}
 
           <Link href="/calendar">
             <Button
