@@ -8,6 +8,7 @@ import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { createQueryClient } from '../lib/queryClient';
 import { useAuthStore } from '@/stores/auth.store';
+import { TopLoadingBar } from '@/components/global/TopLoadingBar';
 
 function AuthStoreBridge({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -41,6 +42,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <SessionProvider>
       <QueryClientProvider client={queryClient}>
         <NextUIProvider>
+          <TopLoadingBar />
           <AuthStoreBridge>{children}</AuthStoreBridge>
         </NextUIProvider>
       </QueryClientProvider>

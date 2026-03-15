@@ -145,6 +145,39 @@ h1, h2, h3, h4, h5, h6 {
   animation: watermark-float 30s ease-in-out infinite;
 }
 
+.top-loading-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 160ms ease;
+  pointer-events: none;
+}
+
+.top-loading-bar--active {
+  opacity: 1;
+}
+
+.top-loading-bar__indeterminate {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(2, 132, 199, 0) 0%, rgba(2, 132, 199, 0.95) 45%, rgba(14, 165, 233, 1) 60%, rgba(2, 132, 199, 0) 100%);
+  transform-origin: left;
+  animation: top-loading-indeterminate 1s linear infinite;
+}
+
+@keyframes top-loading-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 /* Calendar custom styles */
 .fc-custom .fc-scrollgrid {
   border-radius: 8px;

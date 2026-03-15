@@ -34,6 +34,7 @@ import {
 import type { CalendarEvent } from '@medical-portal/shared';
 import { FiClock, FiMapPin, FiBook, FiInfo } from 'react-icons/fi';
 import { FullCalendarWrapper } from '@/components/client/FullCalendarWrapper';
+import { CalendarCardSkeleton } from '@/components/skeletons/DashboardSkeletons';
 
 export default function CalendarPage() {
   const router = useRouter();
@@ -53,7 +54,7 @@ export default function CalendarPage() {
   }, []);
 
   // Fetch calendar events
-  const { data } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['calendar', dateRange],
     queryFn: () => api.calendar.list(dateRange),
   });
@@ -140,11 +141,25 @@ export default function CalendarPage() {
       </div>
 
       {/* Calendar */}
-      <Card className="shadow-lg">
-        <CardBody className="p-4 sm:p-6">
-          <FullCalendarWrapper events={calendarEvents} onEventClick={handleEventClick} />
-        </CardBody>
-      </Card>
+      {isError ? (
+        <Card className="shadow-lg">
+          <CardBody className="gap-3 p-6">
+            <h3 className="text-base font-semibold text-danger-600">Unable to load calendar events</h3>
+            <p className="text-sm text-default-600">Please retry to load your calendar.</p>
+            <Button color="primary" variant="flat" onPress={() => void refetch()}>
+              Retry
+            </Button>
+          </CardBody>
+        </Card>
+      ) : isLoading ? (
+        <CalendarCardSkeleton />
+      ) : (
+        <Card className="shadow-lg">
+          <CardBody className="p-4 sm:p-6">
+            <FullCalendarWrapper events={calendarEvents} onEventClick={handleEventClick} />
+          </CardBody>
+        </Card>
+      )}
 
       {/* Event Detail Modal */}
       <Modal
