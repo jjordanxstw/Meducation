@@ -13,14 +13,16 @@ import {
   CardBody,
   Button,
   Divider,
-  Chip,
 } from '@nextui-org/react';
 import { FcGoogle } from 'react-icons/fc';
+import { FiMoon, FiSun } from 'react-icons/fi';
+import { useAppTheme } from '@/app/providers';
 
 function LoginContent() {
   const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { theme, toggleTheme, isReady } = useAppTheme();
   const authError = searchParams.get('error');
 
   const authErrorMessageMap: Record<string, string> = {
@@ -45,44 +47,52 @@ function LoginContent() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-glass-canvas p-4">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(59,130,246,0.28),transparent_35%),radial-gradient(circle_at_80%_20%,rgba(14,165,233,0.24),transparent_42%),radial-gradient(circle_at_70%_80%,rgba(6,182,212,0.2),transparent_38%)]" />
-      <Card className="glass-card w-full max-w-md shadow-2xl">
-        <CardBody className="gap-6 p-8">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-glass-canvas p-3 sm:p-4">
+      <div className="glass-orb-a pointer-events-none left-[-8%] top-[-10%]" />
+      <div className="glass-orb-b pointer-events-none bottom-[-15%] right-[-6%]" />
+
+      <Button
+        isIconOnly
+        radius="full"
+        variant="light"
+        aria-label="Toggle theme"
+        className="icon-circle-btn glass-soft absolute right-3 top-3 z-20 text-[var(--ink-1)] sm:right-5 sm:top-5"
+        onPress={toggleTheme}
+      >
+        {isReady && theme === 'dark' ? <FiSun className="h-4 w-4" /> : <FiMoon className="h-4 w-4" />}
+      </Button>
+
+      <Card className="glass-card w-full max-w-[30rem] rounded-[var(--radius-xl)]">
+        <CardBody className="gap-4 p-5 sm:gap-5 sm:p-8">
           {/* Logo and Title */}
-          <div className="flex flex-col items-center text-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/70 text-xl font-bold text-sky-700 shadow-lg backdrop-blur">
+          <div className="flex flex-col items-center gap-3 text-center sm:gap-4">
+            <div className="card-flat flex h-14 w-14 items-center justify-center rounded-[var(--radius-md)] text-lg font-bold text-primary bg-primary/10">
               {/* TODO: Replace with brand logo image provided by user */}
               L
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">Learning Portal</h1>
-              <p className="text-slate-600">Secure sign-in for medical students</p>
+              <h1 className="text-[clamp(1.75rem,5.4vw,2.25rem)] font-bold leading-tight text-[var(--ink-1)]">Learning Portal</h1>
+              <p className="text-sm text-[var(--ink-2)] sm:text-base">Secure sign-in for medical students</p>
             </div>
           </div>
 
           <Divider />
 
           {/* Notice */}
-          <Chip
-            color="primary"
-            variant="flat"
-            size="lg"
-            className="w-full justify-start py-6"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-xl">📌</span>
-              <div className="text-left">
+          <div className="card-flat rounded-xl p-4">
+            <div className="flex items-start gap-3 sm:items-center">
+              <span className="shrink-0 text-2xl leading-none">📌</span>
+              <div className="min-w-0 text-left">
                 <p className="font-semibold text-primary">For Medical Students Only</p>
-                <p className="text-sm text-default-600">
+                <p className="text-sm text-default-500">
                   Sign in with your Google account
                 </p>
               </div>
             </div>
-          </Chip>
+          </div>
 
           {authErrorMessage && (
-            <div className="rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-700">
+            <div className="rounded-xl border border-danger-200/70 bg-danger-100/60 px-4 py-3 text-sm text-danger-700 dark:border-danger-400/40 dark:bg-danger-900/20 dark:text-danger-200">
               {authErrorMessage}
             </div>
           )}
@@ -91,16 +101,16 @@ function LoginContent() {
             color="primary"
             variant="shadow"
             size="lg"
-            startContent={<FcGoogle className="h-5 w-5" />}
+            startContent={<span className="icon-with-text"><FcGoogle className="h-5 w-5" /></span>}
             onPress={handleSignInClick}
-            className="w-full font-semibold"
+            className="btn-precise w-full justify-center font-semibold"
             isLoading={status === 'loading'}
           >
             Continue with Google
           </Button>
 
           {/* Terms */}
-          <p className="text-center text-xs text-slate-500">
+          <p className="mx-auto max-w-[34ch] text-center text-xs text-[var(--ink-2)] sm:text-sm">
             Sign-in is protected by NextAuth and backend session verification.
           </p>
         </CardBody>
@@ -113,9 +123,9 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-glass-canvas p-4">
-          <div className="glass-card w-full max-w-md rounded-2xl p-8 text-center shadow-2xl">
-            <p className="text-sm font-medium text-slate-700">Loading sign-in screen...</p>
+        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-glass-canvas p-3 sm:p-4">
+          <div className="glass-card w-full max-w-[30rem] rounded-2xl p-6 text-center sm:p-8">
+            <p className="text-sm font-medium text-[var(--ink-2)]">Loading sign-in screen...</p>
           </div>
         </div>
       }
