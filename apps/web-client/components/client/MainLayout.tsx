@@ -20,7 +20,7 @@ import {
   DropdownMenu,
   DropdownItem,
 } from '@nextui-org/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { signOut, useSession } from 'next-auth/react';
 import { FiHome, FiLayers, FiBookOpen, FiUser, FiLogOut } from 'react-icons/fi';
 import { api } from '@/lib/api';
@@ -34,13 +34,26 @@ const menuItems = [
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const { data: session } = useSession();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = async () => {
     await api.auth.logout();
     await signOut({ callbackUrl: '/login' });
   };
+
+  if (!mounted) {
+    return (
+      <div className="relative flex min-h-screen flex-col overflow-hidden bg-glass-canvas">
+        <main className="relative z-10 flex-1 px-4 py-6 sm:px-6 sm:py-8">{children}</main>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-glass-canvas">
