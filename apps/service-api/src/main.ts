@@ -22,6 +22,48 @@ function parseCsvEnv(value: string): string[] {
     .filter((item) => item.length > 0);
 }
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function isOriginAllowed(origin: string, allowedOrigins: string[]): boolean {
+  if (allowedOrigins.includes(origin)) {
+    return true;
+  }
+
+  let originUrl: URL;
+  try {
+    originUrl = new URL(origin);
+  } catch {
+    return false;
+  }
+
+  for (const allowed of allowedOrigins) {
+    if (!allowed.includes('*')) {
+      continue;
+    }
+
+    // Support wildcard patterns such as https://*.vercel.app
+    if (allowed.includes('://')) {
+      const pattern = `^${escapeRegex(allowed).replace(/\\\*/g, '.*')}$`;
+      if (new RegExp(pattern).test(origin)) {
+        return true;
+      }
+      continue;
+    }
+
+    // Support bare host wildcards such as *.vercel.app
+    if (allowed.startsWith('*.')) {
+      const suffix = allowed.slice(1); // keep leading dot
+      if (originUrl.hostname.endsWith(suffix)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 function validateRequiredConfig(configService: ConfigService): void {
   const requiredVariables = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'JWT_SECRET'];
 
@@ -85,12 +127,12 @@ async function bootstrap() {
     )
   );
   const extensionOrigins = parseCsvEnv(configService.get<string>('CORS_EXTENSION_ORIGINS', ''));
-  const allowedOrigins = new Set([...corsOrigins, ...extensionOrigins]);
+  const allowedOrigins = [...corsOrigins, ...extensionOrigins];
 
   app.enableCors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow: boolean) => void) => {
       // Allow requests with no origin (CLI/API tools like curl or server-to-server calls)
-      if (!origin || allowedOrigins.has(origin)) {
+      if (!origin || isOriginAllowed(origin, allowedOrigins)) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'), false);

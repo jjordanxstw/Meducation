@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { Button } from '@nextui-org/react';
 import { FiArrowLeft, FiRefreshCw, FiRotateCcw } from 'react-icons/fi';
+import { api } from '@/lib/api';
 
 const SAFE_EXACT_PATHS = new Set([
   '/',
@@ -77,18 +78,7 @@ function AuthSyncContent() {
       setIsSyncing(true);
 
       try {
-        const response = await fetch('/api/v1/auth/verify', {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ idToken }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to sync backend session');
-        }
+        await api.auth.verify(idToken);
 
         const to = sanitizeTargetPath(searchParams.get('to'));
         router.replace(to);

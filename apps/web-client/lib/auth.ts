@@ -24,7 +24,7 @@ export interface ServerSession {
 export async function getServerSession(): Promise<ServerSession | null> {
   try {
     const cookieStore = cookies();
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
     // Get all cookies and forward them
     const cookieHeader = cookieStore.toString();
@@ -55,7 +55,7 @@ export async function getServerSession(): Promise<ServerSession | null> {
 
 export async function logoutServer() {
   const cookieStore = cookies();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
   try {
     await fetch(`${apiUrl}/api/v1/auth/logout`, {
