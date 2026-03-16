@@ -75,6 +75,45 @@ function validateRequiredConfig(configService: ConfigService): void {
   }
 }
 
+function isPlaceholderValue(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+
+  const placeholderTokens = [
+    'change-this',
+    'replace-with',
+    'your-',
+    'example.com',
+    'your-project',
+  ];
+
+  return placeholderTokens.some((token) => normalized.includes(token));
+}
+
+function validateProductionSecrets(configService: ConfigService): void {
+  const nodeEnv = configService.get<string>('NODE_ENV')?.toLowerCase();
+  if (nodeEnv !== 'production') {
+    return;
+  }
+
+  const criticalKeys = [
+    'SUPABASE_URL',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'JWT_SECRET',
+    'WATERMARK_SECRET',
+  ];
+
+  for (const key of criticalKeys) {
+    const value = configService.get<string>(key);
+    if (!value) {
+      continue;
+    }
+
+    if (isPlaceholderValue(value)) {
+      throw new Error(`Invalid placeholder-like value detected for environment variable: ${key}`);
+    }
+  }
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(ServiceApiModule, {
     bodyParser: false,
@@ -83,6 +122,7 @@ async function bootstrap() {
   const reflector = app.get(Reflector);
 
   validateRequiredConfig(configService);
+  validateProductionSecrets(configService);
 
   const port = Number(configService.get<number>('PORT')) || 3001;
 

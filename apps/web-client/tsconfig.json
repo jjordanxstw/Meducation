@@ -21,6 +21,5 @@
     "noEmit": true
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", ".next", "src.vite-backup"],
-  "references": [{ "path": "../../packages/shared" }]
+  "exclude": ["node_modules", ".next", "src.vite-backup"]
 }
