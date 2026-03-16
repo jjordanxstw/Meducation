@@ -5,9 +5,11 @@
  */
 
 import { useEffect } from 'react';
+import { useRef } from 'react';
+import { useState } from 'react';
 import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn, useSession } from 'next-auth/react';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import {
   Card,
   CardBody,
@@ -24,22 +26,61 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const { theme, toggleTheme, isReady } = useAppTheme();
   const authError = searchParams.get('error');
+  const handledAuthErrorRef = useRef(false);
+  const [storedAuthError, setStoredAuthError] = useState<string | null>(null);
 
   const authErrorMessageMap: Record<string, string> = {
     missing_token: 'Google sign-in completed but no id token was returned. Please sign in again.',
     sync_failed: 'Unable to establish backend session. Please try signing in again.',
+    session_expired: 'Your session has expired. Please login again.',
+    domain_restricted: 'Please sign in with an email ending in @mahidol.student.edu.',
     OAuthCallback: 'Google OAuth callback failed. Please retry sign-in.',
     AccessDenied: 'Access denied by Google or application policy.',
   };
 
-  const authErrorMessage = authError ? authErrorMessageMap[authError] || 'Authentication failed. Please try again.' : null;
+  const effectiveAuthError = authError || storedAuthError;
+  const authErrorMessage = effectiveAuthError
+    ? authErrorMessageMap[effectiveAuthError] || 'Authentication failed. Please try again.'
+    : null;
 
   useEffect(() => {
+    if (authError) {
+      setStoredAuthError(authError);
+      try {
+        sessionStorage.removeItem('auth_error');
+      } catch {
+        // Ignore storage failures.
+      }
+      return;
+    }
+
+    try {
+      const fallbackError = sessionStorage.getItem('auth_error');
+      if (fallbackError) {
+        setStoredAuthError(fallbackError);
+        sessionStorage.removeItem('auth_error');
+      }
+    } catch {
+      // Ignore storage failures.
+    }
+  }, [authError]);
+
+  useEffect(() => {
+    // Keep users on the login page when an auth error is present,
+    // so they can actually see the error message instead of being redirected.
+    if (effectiveAuthError) {
+      if (status === 'authenticated' && !handledAuthErrorRef.current) {
+        handledAuthErrorRef.current = true;
+        void signOut({ redirect: false });
+      }
+      return;
+    }
+
     if (status === 'authenticated') {
       const to = searchParams.get('to') || '/';
       router.replace(`/auth/sync?to=${encodeURIComponent(to)}`);
     }
-  }, [status, router, searchParams]);
+  }, [status, router, searchParams, effectiveAuthError]);
 
   const handleSignInClick = async () => {
     const to = searchParams.get('to') || '/';
