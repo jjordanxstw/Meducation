@@ -28,7 +28,6 @@ function sanitizeErrorMessage(error: unknown): string {
 const API_URL = '/api/v1';
 const AUTH_REQUEST_TIMEOUT_MS = import.meta.env.MODE === 'production' ? 8000 : 15000;
 const AUTH_CHECK_TIMEOUT_MS = 5000; // Shorter timeout for initial auth check
-const CLEAR_AUTH_ROUTE = '/api/auth/clear';
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
@@ -206,12 +205,6 @@ authAxios.interceptors.response.use(
     if (isMeRequest && status === 401 && !isRedirecting && !isOnLoginPage) {
       isRedirecting = true;
       clearCache();
-      // Clear cookies immediately
-      try {
-        await authAxios.post(CLEAR_AUTH_ROUTE, {}, { withCredentials: true });
-      } catch {
-        // Ignore clear errors
-      }
       window.location.href = '/login';
       return Promise.reject(error);
     }
@@ -220,12 +213,6 @@ authAxios.interceptors.response.use(
     if (isRefreshRequest && status === 401 && !isRedirecting && !isOnLoginPage) {
       isRedirecting = true;
       clearCache();
-      // Clear cookies immediately
-      try {
-        await authAxios.post(CLEAR_AUTH_ROUTE, {}, { withCredentials: true });
-      } catch {
-        // Ignore clear errors
-      }
       window.location.href = '/login';
       return Promise.reject(error);
     }
@@ -407,15 +394,6 @@ export const authProvider: AuthProvider = {
       logSecurityEvent('logout_success');
     } catch (error) {
       logSecurityEvent('logout_api_failed', { error: sanitizeErrorMessage(error) });
-    }
-
-    // Also call clear auth endpoint to ensure cookies are cleared
-    try {
-      await authAxios.post(CLEAR_AUTH_ROUTE, {}, {
-        withCredentials: true,
-      });
-    } catch (error) {
-      // Ignore errors from clear endpoint
     }
 
     return {

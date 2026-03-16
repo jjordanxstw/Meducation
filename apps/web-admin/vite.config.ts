@@ -2,6 +2,20 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+function resolveApiProxyTarget(): string {
+  const rawValue = process.env.VITE_API_URL?.trim();
+  if (!rawValue) {
+    return 'http://localhost:3000';
+  }
+
+  try {
+    const parsed = new URL(rawValue);
+    return parsed.origin;
+  } catch {
+    return rawValue.replace(/\/api\/v1\/?$/, '') || 'http://localhost:3000';
+  }
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
@@ -15,7 +29,7 @@ export default defineConfig({
     port: 3002,
     proxy: {
       '/api/v1': {
-        target: process.env.VITE_API_URL || 'http://localhost:3001',
+        target: resolveApiProxyTarget(),
         changeOrigin: true,
       },
     },
