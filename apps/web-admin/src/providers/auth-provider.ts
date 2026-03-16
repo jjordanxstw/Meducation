@@ -25,7 +25,7 @@ function sanitizeErrorMessage(error: unknown): string {
   return 'เกิดข้อผิดพลาด';
 }
 
-const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
+const API_URL = '/api/v1';
 const AUTH_REQUEST_TIMEOUT_MS = import.meta.env.MODE === 'production' ? 8000 : 15000;
 const AUTH_CHECK_TIMEOUT_MS = 5000; // Shorter timeout for initial auth check
 const CLEAR_AUTH_ROUTE = '/api/auth/clear';
