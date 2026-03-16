@@ -33,7 +33,7 @@ import './index.css';
 import { router } from './routes';
 import { buildResources } from './resources';
 
-const resolvedApiUrl = import.meta.env.VITE_API_URL || '/api/v1';
+const resolvedApiUrl = '/api/v1';
 
 function assertValidApiUrl(apiUrl: string): void {
   if (apiUrl.startsWith('/')) {
