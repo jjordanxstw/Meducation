@@ -6,6 +6,7 @@
 
 import { create } from 'zustand';
 import type { Profile, AuthUser } from '@medical-portal/shared';
+import { api } from '@/lib/api';
 
 interface AuthState {
   user: AuthUser | null;
@@ -67,33 +68,23 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   /**
    * Initialize auth state from server
    * This should be called on client-side after hydration
-   * Uses relative URLs to leverage Next.js API rewrites in development
+   * Uses the shared API client for consistent auth/session handling
    */
   initializeFromServer: async () => {
     // Only run on client
     if (typeof window === 'undefined') return;
 
     try {
-      // Use relative URL for Next.js rewrites (development)
-      // In production, NEXT_PUBLIC_API_URL will be set and api.ts handles it
-      const resp = await fetch('/api/v1/auth/me', {
-        credentials: 'include',
-      });
-
-      if (!resp.ok) {
-        get().clearAuth();
-        return;
-      }
-
-      const body = await resp.json();
+      const response = await api.auth.me();
+      const body = response.data;
       if (body?.success) {
         const { user } = body.data;
-        const profile = body.data.user?.profile || null;
+        const profile = user?.profile || null;
         get().setAuth(user, profile, '');
       } else {
         get().clearAuth();
       }
-    } catch (error) {
+    } catch {
       get().clearAuth();
     } finally {
       get().setLoading(false);

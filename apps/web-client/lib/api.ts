@@ -12,22 +12,21 @@ type RequestConfig = AxiosRequestConfig & {
 
 /**
  * Get the API base URL based on the environment
- * - If NEXT_PUBLIC_API_URL is set (production), use it
- * - Otherwise, use relative path to leverage Next.js rewrites (development)
+ * - Browser: always use same-origin /api/v1 to keep cookie auth first-party
+ * - Server: use NEXT_PUBLIC_API_URL when available (fallback to local API)
  */
 function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    return '/api/v1';
+  }
+
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-  // Production: Use the specified API URL directly
   if (apiUrl) {
-    // Remove trailing slash if present and append /api/v1
     return apiUrl.replace(/\/$/, '') + '/api/v1';
   }
 
-  // Development: Use relative path for Next.js rewrites
-  // Next.js rewrites /api/* to http://localhost:3001/api/*
-  // So we just need to specify /api/v1
-  return '/api/v1';
+  return 'http://localhost:3000/api/v1';
 }
 
 const API_BASE_URL = getApiBaseUrl();
