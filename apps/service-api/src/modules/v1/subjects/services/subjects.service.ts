@@ -45,7 +45,18 @@ export class SubjectsService {
     throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'subject' });
   }
 
-  async findAll(yearLevel?: number, isActive: boolean = true, search?: string) {
+  private resolveSort(
+    sortBy?: string,
+    sortOrder?: string,
+  ): { field: string; ascending: boolean } {
+    const allowed = new Set(['code', 'name', 'year_level', 'order_index', 'is_active', 'created_at', 'updated_at']);
+    const field = sortBy && allowed.has(sortBy) ? sortBy : 'order_index';
+    const normalizedOrder = (sortOrder || '').toLowerCase();
+    const ascending = normalizedOrder === 'asc' || normalizedOrder === 'ascend';
+    return { field, ascending };
+  }
+
+  async findAll(yearLevel?: number, isActive: boolean = true, search?: string, sortBy?: string, sortOrder?: string) {
     let query = this.supabaseAdmin
       .from('subjects')
       .select('*');
@@ -63,7 +74,8 @@ export class SubjectsService {
       query = query.or(`code.ilike.${term},name.ilike.${term},description.ilike.${term}`);
     }
 
-    const { data, error } = await query.order('order_index');
+    const sort = this.resolveSort(sortBy, sortOrder);
+    const { data, error } = await query.order(sort.field, { ascending: sort.ascending });
 
     if (error) {
       this.logger.warn(`Failed to fetch subjects (code=${error.code ?? 'unknown'})`);

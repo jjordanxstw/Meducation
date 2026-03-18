@@ -138,6 +138,7 @@ const SectionsList = () => {
           dataIndex="is_active"
           title={t('common.status', {}, 'Status')}
           width={10}
+          sorter
           render={(value) => (
             <Tag color={value ? 'green' : 'red'}>
               {value ? t('common.active', {}, 'Active') : t('common.inactive', {}, 'Inactive')}

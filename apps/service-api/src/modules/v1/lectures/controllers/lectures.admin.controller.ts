@@ -31,12 +31,16 @@ export class LecturesAdminController {
     @Query('section_id') sectionId?: string,
     @Query('is_active') isActive?: string,
     @Query('search') search?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
   ) {
     const data = await this.lecturesService.findAll(
       subjectId,
       sectionId,
       isActive === 'false' ? false : true,
       search,
+      sortBy,
+      sortOrder,
     );
     return { success: true, data };
   }

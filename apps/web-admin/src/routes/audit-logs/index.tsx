@@ -16,8 +16,8 @@ interface AuditLog {
   action: string;
   table_name: string;
   record_id: string;
-  old_values: Record<string, unknown> | null;
-  new_values: Record<string, unknown> | null;
+  old_data: Record<string, unknown> | null;
+  new_data: Record<string, unknown> | null;
   ip_address: string | null;
   user_agent: string | null;
   created_at: string;
@@ -143,6 +143,10 @@ const AuditLogsList = () => {
         />
         <RangePicker
           className="resource-filter-control"
+          placeholder={[
+            t('pages.auditLogs.placeholders.dateRangeStart', {}, 'Start date'),
+            t('pages.auditLogs.placeholders.dateRangeEnd', {}, 'End date'),
+          ]}
           value={
             dateRange
               ? [dayjs(dateRange[0]), dayjs(dateRange[1])]
@@ -169,12 +173,14 @@ const AuditLogsList = () => {
           dataIndex="table_name"
           title={t('pages.auditLogs.fields.table', {}, 'Table')}
           width={150}
+          sorter
           render={(value) => <Tag>{value}</Tag>}
         />
         <Table.Column
           dataIndex="action"
           title={t('common.actions', {}, 'Actions')}
           width={120}
+          sorter
           render={(value) => (
             <Tag color={actionColors[value] || 'default'}>
               {value}
@@ -185,11 +191,13 @@ const AuditLogsList = () => {
           dataIndex="record_id"
           title={t('pages.auditLogs.fields.recordId', {}, 'Record ID')}
           width={100}
+          sorter
         />
         <Table.Column
-          dataIndex="old_values"
+          dataIndex="old_data"
           title={t('pages.auditLogs.fields.oldValues', {}, 'Old Values')}
           ellipsis
+          sorter
           render={(value) => {
             if (!value || typeof value !== 'object') return t('common.notAvailable', {}, '-');
             try {
@@ -200,9 +208,10 @@ const AuditLogsList = () => {
           }}
         />
         <Table.Column
-          dataIndex="new_values"
+          dataIndex="new_data"
           title={t('pages.auditLogs.fields.newValues', {}, 'New Values')}
           ellipsis
+          sorter
           render={(value) => {
             if (!value || typeof value !== 'object') return t('common.notAvailable', {}, '-');
             try {
@@ -216,6 +225,7 @@ const AuditLogsList = () => {
           dataIndex="created_at"
           title={t('pages.auditLogs.fields.createdAt', {}, 'Created At')}
           width={180}
+          sorter
           render={(value) =>
             new Date(value).toLocaleString(locale === 'th' ? 'th-TH' : 'en-US', {
               dateStyle: 'short',

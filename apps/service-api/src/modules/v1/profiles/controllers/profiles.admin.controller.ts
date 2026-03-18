@@ -30,6 +30,8 @@ export class ProfilesAdminController {
     @Query('role') role?: string,
     @Query('year_level') yearLevel?: string,
     @Query('search') search?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
   ) {
     const result = await this.profilesService.findAll(
       page ? parseInt(page, 10) : 1,
@@ -37,6 +39,8 @@ export class ProfilesAdminController {
       role,
       yearLevel ? parseInt(yearLevel, 10) : undefined,
       search,
+      sortBy,
+      sortOrder,
     );
     return { success: true, ...result };
   }

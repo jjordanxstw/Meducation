@@ -13,19 +13,7 @@ import { AppLayoutTitle } from './layout-title';
 
 import { LoginPage } from './auth';
 import DashboardPage from './dashboard';
-import SubjectsList from './subjects';
-import SubjectsCreate from './subjects/create';
-import SubjectsEdit from './subjects/edit';
-import SubjectsShow from './subjects/show';
-import SectionsList from './sections';
-import SectionsCreate from './sections/create';
-import SectionsEdit from './sections/edit';
-import LecturesList from './lectures';
-import LecturesCreate from './lectures/create';
-import LecturesEdit from './lectures/edit';
 import ResourcesList from './resources';
-import ResourcesCreate from './resources/create';
-import ResourcesEdit from './resources/edit';
 import CalendarList from './calendar';
 import CalendarCreate from './calendar/create';
 import CalendarEdit from './calendar/edit';
@@ -73,19 +61,19 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <DashboardPage /> },
-      { path: 'subjects', element: <SubjectsList /> },
-      { path: 'subjects/create', element: <SubjectsCreate /> },
-      { path: 'subjects/edit/:id', element: <SubjectsEdit /> },
-      { path: 'subjects/show/:id', element: <SubjectsShow /> },
-      { path: 'sections', element: <SectionsList /> },
-      { path: 'sections/create', element: <SectionsCreate /> },
-      { path: 'sections/edit/:id', element: <SectionsEdit /> },
-      { path: 'lectures', element: <LecturesList /> },
-      { path: 'lectures/create', element: <LecturesCreate /> },
-      { path: 'lectures/edit/:id', element: <LecturesEdit /> },
+      { path: 'subjects', element: <Navigate to="/resources" replace /> },
+      { path: 'subjects/create', element: <Navigate to="/resources" replace /> },
+      { path: 'subjects/edit/:id', element: <Navigate to="/resources" replace /> },
+      { path: 'subjects/show/:id', element: <Navigate to="/resources" replace /> },
+      { path: 'sections', element: <Navigate to="/resources" replace /> },
+      { path: 'sections/create', element: <Navigate to="/resources" replace /> },
+      { path: 'sections/edit/:id', element: <Navigate to="/resources" replace /> },
+      { path: 'lectures', element: <Navigate to="/resources" replace /> },
+      { path: 'lectures/create', element: <Navigate to="/resources" replace /> },
+      { path: 'lectures/edit/:id', element: <Navigate to="/resources" replace /> },
       { path: 'resources', element: <ResourcesList /> },
-      { path: 'resources/create', element: <ResourcesCreate /> },
-      { path: 'resources/edit/:id', element: <ResourcesEdit /> },
+      { path: 'resources/create', element: <Navigate to="/resources" replace /> },
+      { path: 'resources/edit/:id', element: <Navigate to="/resources" replace /> },
       { path: 'calendar', element: <CalendarList /> },
       { path: 'calendar/create', element: <CalendarCreate /> },
       { path: 'calendar/edit/:id', element: <CalendarEdit /> },

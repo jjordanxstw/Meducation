@@ -33,8 +33,8 @@ const ResourcesCreate = () => {
     resource: 'subjects',
   });
 
-  const lectures = lecturesData?.data || [];
-  const sections = sectionsData?.data || [];
+  const lectures = useMemo(() => lecturesData?.data || [], [lecturesData?.data]);
+  const sections = useMemo(() => sectionsData?.data || [], [sectionsData?.data]);
   const subjects = subjectsData?.data || [];
   const sectionOptions = useMemo(() => {
     if (!selectedSubjectId) {

@@ -33,6 +33,8 @@ export class ResourcesAdminController {
     @Query('type') type?: string,
     @Query('is_active') isActive?: string,
     @Query('search') search?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
   ) {
     const data = await this.resourcesService.findAll(
       subjectId,
@@ -41,6 +43,8 @@ export class ResourcesAdminController {
       type,
       isActive === 'false' ? false : true,
       search,
+      sortBy,
+      sortOrder,
     );
     return { success: true, data };
   }
@@ -56,6 +60,13 @@ export class ResourcesAdminController {
   @SkipEnvelope()
   async create(@Body() createDto: any) {
     const data = await this.resourcesService.create(createDto);
+    return { success: true, data };
+  }
+
+  @Post('full-create')
+  @SkipEnvelope()
+  async fullCreate(@Body() payload: any) {
+    const data = await this.resourcesService.fullCreate(payload);
     return { success: true, data };
   }
 

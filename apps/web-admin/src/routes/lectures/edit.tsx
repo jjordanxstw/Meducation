@@ -27,7 +27,7 @@ const LecturesEdit = () => {
     resource: 'subjects',
   });
 
-  const sections = sectionsData?.data || [];
+  const sections = useMemo(() => sectionsData?.data || [], [sectionsData?.data]);
   const subjects = subjectsData?.data || [];
   const sectionMap = useMemo(() => new Map(sections.map((section) => [section.id, section])), [sections]);
   const sectionOptions = useMemo(() => {

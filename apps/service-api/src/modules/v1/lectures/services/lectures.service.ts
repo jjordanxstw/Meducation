@@ -94,7 +94,27 @@ export class LecturesService {
     throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'lecture' });
   }
 
-  async findAll(subjectId?: string, sectionId?: string, isActive: boolean = true, search?: string) {
+  private resolveSort(
+    sortBy?: string,
+    sortOrder?: string,
+  ): { field: string; ascending: boolean } {
+    const allowed = new Set([
+      'section_id',
+      'title',
+      'lecture_date',
+      'lecturer_name',
+      'order_index',
+      'is_active',
+      'created_at',
+      'updated_at',
+    ]);
+    const field = sortBy && allowed.has(sortBy) ? sortBy : 'order_index';
+    const normalizedOrder = (sortOrder || '').toLowerCase();
+    const ascending = normalizedOrder === 'asc' || normalizedOrder === 'ascend';
+    return { field, ascending };
+  }
+
+  async findAll(subjectId?: string, sectionId?: string, isActive: boolean = true, search?: string, sortBy?: string, sortOrder?: string) {
     let subjectSectionIds: string[] | undefined;
 
     if (subjectId) {
@@ -134,7 +154,8 @@ export class LecturesService {
       query = query.or(`title.ilike.${term},description.ilike.${term},lecturer_name.ilike.${term}`);
     }
 
-    const { data, error } = await query.order('order_index');
+    const sort = this.resolveSort(sortBy, sortOrder);
+    const { data, error } = await query.order(sort.field, { ascending: sort.ascending });
 
     if (error) {
       this.logger.warn(`Failed to fetch lectures (code=${error.code ?? 'unknown'})`);
@@ -168,7 +189,8 @@ export class LecturesService {
     const sectionId = this.requireStringField(data, 'section_id');
     await this.assertLectureHierarchy(subjectId, sectionId);
 
-    const { subject_id: _subjectId, ...payload } = data;
+    const payload = { ...(data || {}) };
+    delete payload.subject_id;
 
     const { data: result, error } = await this.supabaseAdmin
       .from('lectures')
@@ -189,7 +211,8 @@ export class LecturesService {
     const sectionId = this.requireStringField(data, 'section_id');
     await this.assertLectureHierarchy(subjectId, sectionId);
 
-    const { subject_id: _subjectId, ...payload } = data;
+    const payload = { ...(data || {}) };
+    delete payload.subject_id;
 
     const { data: oldData } = await this.supabaseAdmin
       .from('lectures')

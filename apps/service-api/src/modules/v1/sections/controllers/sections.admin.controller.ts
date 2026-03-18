@@ -30,11 +30,15 @@ export class SectionsAdminController {
     @Query('subject_id') subjectId?: string,
     @Query('is_active') isActive?: string,
     @Query('search') search?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
   ) {
     const data = await this.sectionsService.findAll(
       subjectId,
       isActive === 'false' ? false : true,
       search,
+      sortBy,
+      sortOrder,
     );
     return { success: true, data };
   }

@@ -81,7 +81,18 @@ export class SectionsService {
     throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'section' });
   }
 
-  async findAll(subjectId?: string, isActive: boolean = true, search?: string) {
+  private resolveSort(
+    sortBy?: string,
+    sortOrder?: string,
+  ): { field: string; ascending: boolean } {
+    const allowed = new Set(['subject_id', 'name', 'order_index', 'is_active', 'created_at', 'updated_at']);
+    const field = sortBy && allowed.has(sortBy) ? sortBy : 'order_index';
+    const normalizedOrder = (sortOrder || '').toLowerCase();
+    const ascending = normalizedOrder === 'asc' || normalizedOrder === 'ascend';
+    return { field, ascending };
+  }
+
+  async findAll(subjectId?: string, isActive: boolean = true, search?: string, sortBy?: string, sortOrder?: string) {
     let query = this.supabaseAdmin.from('sections').select('*');
 
     if (subjectId) {
@@ -95,7 +106,8 @@ export class SectionsService {
       query = query.or(`name.ilike.${term},description.ilike.${term}`);
     }
 
-    const { data, error } = await query.order('order_index');
+    const sort = this.resolveSort(sortBy, sortOrder);
+    const { data, error } = await query.order(sort.field, { ascending: sort.ascending });
 
     if (error) {
       this.logger.warn(`Failed to fetch sections (code=${error.code ?? 'unknown'})`);

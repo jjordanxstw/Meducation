@@ -48,7 +48,13 @@ export class AuthService {
 
     this.allowedEmailDomains = this.configService
       .get<string>('ALLOWED_EMAIL_DOMAINS', '@student.mahidol.edu,@student.mahidol.ac.th')
-      .split(',');
+      .split(',')
+      .map((domain) => domain.trim().toLowerCase())
+      .filter((domain) => domain.length > 0);
+
+    if (this.allowedEmailDomains.length === 0) {
+      throw new Error('ALLOWED_EMAIL_DOMAINS must include at least one domain');
+    }
 
     const jwtSecret = this.configService.get<string>('JWT_SECRET');
     if (!jwtSecret) {
@@ -107,48 +113,31 @@ export class AuthService {
     }
 
     // Students must have Mahidol email
-    return this.allowedEmailDomains.some(domain => email.endsWith(domain));
+    const normalizedEmail = email.trim().toLowerCase();
+    return this.allowedEmailDomains.some(domain => normalizedEmail.endsWith(domain));
+  }
+
+  private async getOrCreateProfileWithValidation(
+    userId: string,
+    email: string,
+    name: string,
+    role?: UserRole,
+  ): Promise<Profile | null> {
+    if (!this.isAllowedEmail(email, role)) {
+      this.logger.warn(
+        `Blocked profile creation for disallowed email domain. userId=${userId}, email=${email}`,
+      );
+      return null;
+    }
+
+    return this.getOrCreateProfile(userId, email, name);
   }
 
   /**
    * Get or create user profile in database
    *
-   * DEVELOPER NOTES: Database Constraints
-   * =====================================
-   *
-   * 1. Email Domain Constraint (valid_mahidol_email):
-   *    - The database has a CHECK constraint on the profiles.email column
-   *    - Only allows emails from specific Mahidol University domains
-   *    - Error code: '23514' (CHECK constraint violation)
-   *    - Error message: "new row for relation 'profiles' violates check constraint 'valid_mahidol_email'"
-   *
-   * 2. Allowed Domains Configuration:
-   *    - Configured via ALLOWED_EMAIL_DOMAINS environment variable
-   *    - Default: '@student.mahidol.edu,@student.mahidol.ac.th'
-   *    - To allow other domains during development, update this variable
-   *
-   * 3. Common Debugging Scenarios:
-   *    a) User sees "valid_mahidol_email" error:
-   *       - Check the email domain in the error log
-   *       - Verify ALLOWED_EMAIL_DOMAINS includes that domain
-   *       - For development: Add '@gmail.com' or other test domains
-   *       - For production: Keep only Mahidol domains for security
-   *
-   *    b) Admin users bypassing domain check:
-   *       - Set role='admin' when manually inserting into database
-   *       - Admins can have any email domain (see isAllowedEmail method)
-   *
-   *    c) Error codes:
-   *       - PGRST116: Profile not found (safe to create new)
-   *       - 23514: CHECK constraint violation (email domain not allowed)
-   *       - 23505: UNIQUE violation (userId already exists)
-   *
-   * 4. Testing with non-Mahidol emails:
-   *    - Set ALLOWED_EMAIL_DOMAINS=@test.com,@gmail.com in .env
-   *    - Or insert profile directly into database with admin role
-   *
    * @param userId - Google OAuth subject identifier (unique per Google account)
-   * @param email - User's email address (must match valid_mahidol_email constraint)
+    * @param email - User's email address
    * @param name - User's display name from Google profile
    * @returns Profile object if successful, null if creation fails
    */
@@ -231,13 +220,10 @@ export class AuthService {
    *
    * FLOW:
    * 1. Verify Google ID token with Google's servers
-   * 2. Get or create user profile in database
-   * 3. Validate email domain (must match ALLOWED_EMAIL_DOMAINS)
+    * 2. Validate email domain (must match ALLOWED_EMAIL_DOMAINS)
+    * 3. Get or create user profile in database
    * 4. Sign server session JWT
    * 5. Return user data and session token
-   *
-   * If login fails with "valid_mahidol_email" constraint error, see
-   * getOrCreateProfile() method documentation for debugging steps.
    */
   async verifyCredential(credential: string): Promise<{
     user: UserWithoutPassword;
@@ -250,6 +236,15 @@ export class AuthService {
       throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { provider: 'google' }, 'Invalid Google token');
     }
 
+    // Validate email domain before any profile write.
+    if (!this.isAllowedEmail(payload.email)) {
+      throw new AppException(
+        ErrorCode.AUTHZ_FORBIDDEN,
+        { email: payload.email, allowedDomains: this.allowedEmailDomains },
+        `Access restricted to ${this.allowedEmailDomains.join(', ')} emails only. Your email: ${payload.email}`
+      );
+    }
+
     // Get or create profile
     const profile = await this.getOrCreateProfile(
       payload.sub,
@@ -259,15 +254,6 @@ export class AuthService {
 
     if (!profile) {
       throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'profile' }, 'Failed to create profile');
-    }
-
-    // Check email domain
-    if (!this.isAllowedEmail(payload.email, profile?.role)) {
-      throw new AppException(
-        ErrorCode.AUTHZ_FORBIDDEN,
-        { email: payload.email, allowedDomains: this.allowedEmailDomains },
-        `Access restricted to ${this.allowedEmailDomains.join(', ')} emails only. Your email: ${payload.email}`
-      );
     }
 
     // Sign server session token
@@ -300,12 +286,16 @@ export class AuthService {
       return null;
     }
 
-    // Fetch profile from DB
-    const profile = await this.getOrCreateProfile(
+    // Fetch profile from DB with domain validation guard.
+    const profile = await this.getOrCreateProfileWithValidation(
       String(sessionPayload.sub),
       String(sessionPayload.email || ''),
       String(sessionPayload.name || '')
     );
+
+    if (!profile) {
+      return null;
+    }
 
     return {
       id: String(sessionPayload.sub),
@@ -325,11 +315,15 @@ export class AuthService {
       return null;
     }
 
-    const profile = await this.getOrCreateProfile(
+    const profile = await this.getOrCreateProfileWithValidation(
       payload.sub,
       payload.email,
       payload.name || payload.email.split('@')[0]
     );
+
+    if (!profile) {
+      return null;
+    }
 
     return {
       id: payload.sub,

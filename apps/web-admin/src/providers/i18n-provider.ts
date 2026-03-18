@@ -203,6 +203,8 @@ const translations: Record<string, TranslationMap> = {
     'pages.calendar.validation.timeRangeRequired': 'กรุณาเลือกช่วงเวลา',
     'pages.calendar.placeholders.title': 'เช่น Anatomy I - Midterm Examination',
     'pages.calendar.placeholders.subject': 'เลือกรายวิชา (ถ้ามี)',
+    'pages.calendar.placeholders.dateRangeStart': 'วันที่เริ่มต้น',
+    'pages.calendar.placeholders.dateRangeEnd': 'วันที่สิ้นสุด',
     'pages.calendar.placeholders.location': 'เช่น ห้องสอบ 1-2',
     'pages.calendar.types.exam': 'Exam',
     'pages.calendar.types.lecture': 'Lecture',
@@ -225,6 +227,8 @@ const translations: Record<string, TranslationMap> = {
     'pages.auditLogs.fields.ipAddress': 'IP Address',
     'pages.auditLogs.fields.userAgent': 'User Agent',
     'pages.auditLogs.fields.createdAt': 'วันที่',
+    'pages.auditLogs.placeholders.dateRangeStart': 'วันที่เริ่มต้น',
+    'pages.auditLogs.placeholders.dateRangeEnd': 'วันที่สิ้นสุด',
   },
   en: {
     'languages.th': 'Thai',
@@ -424,6 +428,8 @@ const translations: Record<string, TranslationMap> = {
     'pages.calendar.validation.timeRangeRequired': 'Please select time range',
     'pages.calendar.placeholders.title': 'e.g. Anatomy I - Midterm Examination',
     'pages.calendar.placeholders.subject': 'Select subject (optional)',
+    'pages.calendar.placeholders.dateRangeStart': 'Start date',
+    'pages.calendar.placeholders.dateRangeEnd': 'End date',
     'pages.calendar.placeholders.location': 'e.g. Room 1-2',
     'pages.calendar.types.exam': 'Exam',
     'pages.calendar.types.lecture': 'Lecture',
@@ -446,6 +452,8 @@ const translations: Record<string, TranslationMap> = {
     'pages.auditLogs.fields.ipAddress': 'IP Address',
     'pages.auditLogs.fields.userAgent': 'User Agent',
     'pages.auditLogs.fields.createdAt': 'Created At',
+    'pages.auditLogs.placeholders.dateRangeStart': 'Start date',
+    'pages.auditLogs.placeholders.dateRangeEnd': 'End date',
   },
 };
 

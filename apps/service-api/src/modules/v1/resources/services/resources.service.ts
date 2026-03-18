@@ -148,7 +148,58 @@ export class ResourcesService {
     throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'resource' });
   }
 
-  async findAll(subjectId?: string, sectionId?: string, lectureId?: string, type?: string, isActive: boolean = true, search?: string) {
+  private mapHierarchyWriteError(error: { code?: string; message?: string; details?: string | null; hint?: string | null }): never {
+    if (error.code === '23505') {
+      const signature = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`.toLowerCase();
+
+      if (signature.includes('subjects_code_key') || signature.includes('(code)')) {
+        throw new AppException(ErrorCode.SUBJECT_CODE_DUPLICATE, { field: 'subject_code' });
+      }
+      if (signature.includes('idx_subjects_name_unique_ci') || signature.includes('(name)')) {
+        throw new AppException(ErrorCode.SUBJECT_NAME_DUPLICATE, { field: 'subject_name' });
+      }
+      if (signature.includes('idx_sections_subject_name_unique_ci') || signature.includes('(subject_id, lower(name))')) {
+        throw new AppException(ErrorCode.SECTION_NAME_DUPLICATE, { field: 'section_name' });
+      }
+      if (signature.includes('idx_lectures_section_title_unique_ci') || signature.includes('(section_id, lower(title))')) {
+        throw new AppException(ErrorCode.LECTURE_TITLE_DUPLICATE, { field: 'lecture_name' });
+      }
+
+      throw new AppException(ErrorCode.RESOURCE_CONFLICT, { resource: 'resource_hierarchy' });
+    }
+
+    this.mapResourceWriteError(error);
+  }
+
+  private resolveSort(
+    sortBy?: string,
+    sortOrder?: string,
+  ): { field: string; ascending: boolean; isDerivedField: boolean } {
+    const directFields = new Set(['lecture_id', 'label', 'type', 'url', 'order_index', 'is_active', 'created_at', 'updated_at']);
+    const derivedFields = new Set(['lecture_title', 'section_name', 'subject_name', 'subject_code']);
+    const normalizedOrder = (sortOrder || '').toLowerCase();
+    const ascending = normalizedOrder === 'asc' || normalizedOrder === 'ascend';
+
+    if (sortBy && directFields.has(sortBy)) {
+      return { field: sortBy, ascending, isDerivedField: false };
+    }
+    if (sortBy && derivedFields.has(sortBy)) {
+      return { field: sortBy, ascending, isDerivedField: true };
+    }
+
+    return { field: 'order_index', ascending: true, isDerivedField: false };
+  }
+
+  async findAll(
+    subjectId?: string,
+    sectionId?: string,
+    lectureId?: string,
+    type?: string,
+    isActive: boolean = true,
+    search?: string,
+    sortBy?: string,
+    sortOrder?: string,
+  ) {
     let scopedSectionIds: string[] | undefined;
     let sectionLectureIds: string[] | undefined;
 
@@ -195,7 +246,27 @@ export class ResourcesService {
       }
     }
 
-    let query = this.supabaseAdmin.from('resources').select('*');
+    let query = this.supabaseAdmin
+      .from('resources')
+      .select(`
+        *,
+        lecture:lectures!resources_lecture_id_fkey(
+          id,
+          title,
+          section_id,
+          section:sections!lectures_section_id_fkey(
+            id,
+            name,
+            subject_id,
+            subject:subjects!sections_subject_id_fkey(
+              id,
+              code,
+              name,
+              year_level
+            )
+          )
+        )
+      `);
 
     if (lectureId) {
       query = query.eq('lecture_id', lectureId);
@@ -213,11 +284,102 @@ export class ResourcesService {
       query = query.or(`label.ilike.${term},url.ilike.${term}`);
     }
 
-    const { data, error } = await query.order('order_index');
+    const sort = this.resolveSort(sortBy, sortOrder);
+    if (!sort.isDerivedField) {
+      query = query.order(sort.field, { ascending: sort.ascending });
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       this.logger.warn(`Failed to fetch resources (code=${error.code ?? 'unknown'})`);
       throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'resource' }, 'Failed to fetch resources');
+    }
+
+    const mappedRows = (data ?? []).map((item: any) => ({
+      ...item,
+      lecture_title: item.lecture?.title ?? null,
+      section_id: item.lecture?.section?.id ?? null,
+      section_name: item.lecture?.section?.name ?? null,
+      subject_id: item.lecture?.section?.subject?.id ?? null,
+      subject_code: item.lecture?.section?.subject?.code ?? null,
+      subject_name: item.lecture?.section?.subject?.name ?? null,
+      subject_year_level: item.lecture?.section?.subject?.year_level ?? null,
+    }));
+
+    if (sort.isDerivedField) {
+      mappedRows.sort((left: any, right: any) => {
+        const leftValue = (left[sort.field] ?? '').toString().toLowerCase();
+        const rightValue = (right[sort.field] ?? '').toString().toLowerCase();
+        const order = leftValue.localeCompare(rightValue);
+        return sort.ascending ? order : -order;
+      });
+    }
+
+    return mappedRows;
+  }
+
+  async fullCreate(payload: any) {
+    const subjectId = typeof payload?.subject_id === 'string' ? payload.subject_id : null;
+    const subjectName = typeof payload?.subject_name === 'string' ? payload.subject_name.trim() : null;
+    const sectionId = typeof payload?.section_id === 'string' ? payload.section_id : null;
+    const sectionName = typeof payload?.section_name === 'string' ? payload.section_name.trim() : null;
+    const lectureId = typeof payload?.lecture_id === 'string' ? payload.lecture_id : null;
+    const lectureName = typeof payload?.lecture_name === 'string' ? payload.lecture_name.trim() : null;
+
+    if (!subjectId && !subjectName) {
+      throw new AppException(
+        ErrorCode.VALIDATION_INVALID_INPUT,
+        { field: 'subject_id|subject_name' },
+        'subject_id or subject_name is required',
+      );
+    }
+    if (!sectionId && !sectionName) {
+      throw new AppException(
+        ErrorCode.VALIDATION_INVALID_INPUT,
+        { field: 'section_id|section_name' },
+        'section_id or section_name is required',
+      );
+    }
+    if (!lectureId && !lectureName) {
+      throw new AppException(
+        ErrorCode.VALIDATION_INVALID_INPUT,
+        { field: 'lecture_id|lecture_name' },
+        'lecture_id or lecture_name is required',
+      );
+    }
+
+    const label = this.requireStringField(payload, 'label');
+    const url = this.requireStringField(payload, 'url');
+    const type = this.requireStringField(payload, 'type');
+    this.validateResourcePayload({ url });
+
+    const rpcPayload = {
+      resource_id: typeof payload?.resource_id === 'string' ? payload.resource_id : null,
+      subject_id: subjectId,
+      subject_name: subjectName,
+      subject_code: typeof payload?.subject_code === 'string' ? payload.subject_code.trim() : null,
+      subject_year_level: typeof payload?.subject_year_level === 'number' ? payload.subject_year_level : null,
+      section_id: sectionId,
+      section_name: sectionName,
+      lecture_id: lectureId,
+      lecture_name: lectureName,
+      label,
+      url,
+      type,
+      file_size_bytes: typeof payload?.file_size_bytes === 'number' ? payload.file_size_bytes : null,
+      duration_seconds: typeof payload?.duration_seconds === 'number' ? payload.duration_seconds : null,
+      order_index: typeof payload?.order_index === 'number' ? payload.order_index : 0,
+      is_active: typeof payload?.is_active === 'boolean' ? payload.is_active : true,
+    };
+
+    const { data, error } = await this.supabaseAdmin.rpc('admin_full_create_resource', {
+      payload: rpcPayload,
+    });
+
+    if (error) {
+      this.logger.warn(`Failed to full-create resource hierarchy (code=${error.code ?? 'unknown'})`);
+      this.mapHierarchyWriteError(error);
     }
 
     return data;
@@ -244,7 +406,9 @@ export class ResourcesService {
     await this.assertResourceHierarchy(subjectId, sectionId, lectureId);
     this.validateResourcePayload(data);
 
-    const { subject_id: _subjectId, section_id: _sectionId, ...payload } = data;
+    const payload = { ...(data || {}) };
+    delete payload.subject_id;
+    delete payload.section_id;
 
     const { data: result, error } = await this.supabaseAdmin
       .from('resources')
@@ -269,7 +433,12 @@ export class ResourcesService {
       this.validateResourcePayload(item);
     }
 
-    const payload = resources.map(({ subject_id, section_id, ...item }) => item);
+    const payload = resources.map((item) => {
+      const normalizedItem = { ...(item || {}) };
+      delete normalizedItem.subject_id;
+      delete normalizedItem.section_id;
+      return normalizedItem;
+    });
 
     const { data, error } = await this.supabaseAdmin
       .from('resources')
@@ -291,7 +460,9 @@ export class ResourcesService {
     await this.assertResourceHierarchy(subjectId, sectionId, lectureId);
     this.validateResourcePayload(data);
 
-    const { subject_id: _subjectId, section_id: _sectionId, ...payload } = data;
+    const payload = { ...(data || {}) };
+    delete payload.subject_id;
+    delete payload.section_id;
 
     const { data: oldData } = await this.supabaseAdmin
       .from('resources')

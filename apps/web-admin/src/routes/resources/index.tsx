@@ -1,15 +1,35 @@
 /**
  * Resources List Page
- * Migrated from src/app/resources/page.tsx
+ * Single-page workflow for hierarchy-aware resource management.
  */
 
-import { useList, useTranslate } from '@refinedev/core';
-import { List, useTable, EditButton, DeleteButton } from '@refinedev/antd';
-import { Button, Input, Select, Space, Table, Tag } from 'antd';
+import {
+  useDataProvider,
+  useDelete,
+  useInvalidate,
+  useList,
+  useTranslate,
+} from '@refinedev/core';
+import { List, useTable } from '@refinedev/antd';
+import {
+  App,
+  Button,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Popconfirm,
+  Select,
+  Space,
+  Switch,
+  Table,
+  Tag,
+} from 'antd';
 import { ResourceType } from '@medical-portal/shared';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Resource, Lecture, Section, Subject } from '@medical-portal/shared';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ResourceWithHierarchy, Section, Subject, Lecture } from '@medical-portal/shared';
 import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
+import { resolveApiErrorMessage } from '../../utils/api-error';
 
 const resourceTypeColors: Record<string, string> = {
   [ResourceType.YOUTUBE]: 'red',
@@ -20,7 +40,12 @@ const resourceTypeColors: Record<string, string> = {
 
 const ResourcesList = () => {
   const t = useTranslate();
-  const { tableProps, setFilters, filters } = useTable<Resource>({
+  const { message } = App.useApp();
+  const [form] = Form.useForm();
+  const invalidate = useInvalidate();
+  const dataProvider = useDataProvider();
+  const { mutateAsync: deleteOne } = useDelete();
+  const { tableProps, setFilters, filters } = useTable<ResourceWithHierarchy>({
     syncWithLocation: true,
   });
 
@@ -31,45 +56,63 @@ const ResourcesList = () => {
     { label: `🔗 ${t('pages.resources.types.external', {}, 'External Link')}`, value: ResourceType.EXTERNAL },
   ];
 
-  const { data: lecturesData } = useList<Lecture>({
-    resource: 'lectures',
-  });
-  const { data: sectionsData } = useList<Section>({
-    resource: 'sections',
-  });
-  const { data: subjectsData } = useList<Subject>({
-    resource: 'subjects',
-  });
-
-  const lectures = lecturesData?.data || [];
-  const sections = sectionsData?.data || [];
-  const subjects = subjectsData?.data || [];
-  const lectureMap = useMemo(() => new Map(lectures.map((l) => [l.id, l])), [lectures]);
-  const sectionMap = useMemo(() => new Map(sections.map((s) => [s.id, s])), [sections]);
-
   const [search, setSearch] = useState('');
   const [subjectId, setSubjectId] = useState<string | undefined>(undefined);
   const [sectionId, setSectionId] = useState<string | undefined>(undefined);
   const [lectureId, setLectureId] = useState<string | undefined>(undefined);
   const [resourceType, setResourceType] = useState<string | undefined>(undefined);
   const [isActive, setIsActive] = useState<boolean | undefined>(undefined);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingResource, setEditingResource] = useState<ResourceWithHierarchy | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [modalSubjectSearchText, setModalSubjectSearchText] = useState('');
+  const [modalSectionSearchText, setModalSectionSearchText] = useState('');
+  const [modalLectureSearchText, setModalLectureSearchText] = useState('');
   const debouncedSearch = useDebouncedValue(search, 350);
   const hasHydratedFromUrl = useRef(false);
 
-  const filteredSections = useMemo(() => {
-    if (!subjectId) {
-      return sections;
-    }
+  const { data: subjectsData } = useList<Subject>({
+    resource: 'subjects',
+  });
+  const { data: sectionsData } = useList<Section>({
+    resource: 'sections',
+    filters: subjectId ? [{ field: 'subject_id', operator: 'eq', value: subjectId }] : [],
+    queryOptions: {
+      enabled: !!subjectId,
+    },
+  });
+  const { data: lecturesData } = useList<Lecture>({
+    resource: 'lectures',
+    filters: sectionId ? [{ field: 'section_id', operator: 'eq', value: sectionId }] : [],
+    queryOptions: {
+      enabled: !!sectionId,
+    },
+  });
 
-    return sections.filter((section) => section.subject_id === subjectId);
-  }, [sections, subjectId]);
+  const subjects = subjectsData?.data || [];
+  const sections = sectionsData?.data || [];
+  const lectures = lecturesData?.data || [];
 
-  const filteredLectures = useMemo(() => {
-    if (!sectionId) {
-      return [];
-    }
-    return lectures.filter((lecture) => lecture.section_id === sectionId);
-  }, [lectures, sectionId]);
+  const modalSubjectId = Form.useWatch('subject_id', form);
+  const modalSectionId = Form.useWatch('section_id', form);
+
+  const { data: modalSectionsData } = useList<Section>({
+    resource: 'sections',
+    filters: modalSubjectId ? [{ field: 'subject_id', operator: 'eq', value: modalSubjectId }] : [],
+    queryOptions: {
+      enabled: !!modalSubjectId,
+    },
+  });
+  const { data: modalLecturesData } = useList<Lecture>({
+    resource: 'lectures',
+    filters: modalSectionId ? [{ field: 'section_id', operator: 'eq', value: modalSectionId }] : [],
+    queryOptions: {
+      enabled: !!modalSectionId,
+    },
+  });
+
+  const modalSections = modalSectionsData?.data ?? [];
+  const modalLectures = modalLecturesData?.data ?? [];
 
   const buildFilters = useCallback((searchValue: string) => {
     const nextFilters: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
@@ -123,51 +166,6 @@ const ResourcesList = () => {
     setFilters(buildFilters(debouncedSearch), 'replace');
   }, [buildFilters, debouncedSearch, setFilters]);
 
-  useEffect(() => {
-    if (!subjectId || !sectionId) {
-      return;
-    }
-
-    const selectedSection = sectionMap.get(sectionId);
-    if (selectedSection && selectedSection.subject_id !== subjectId) {
-      setSectionId(undefined);
-      setLectureId(undefined);
-    }
-  }, [sectionId, sectionMap, subjectId]);
-
-  useEffect(() => {
-    if (subjectId || !sectionId) {
-      return;
-    }
-
-    const selectedSection = sectionMap.get(sectionId);
-    if (selectedSection?.subject_id) {
-      setSubjectId(selectedSection.subject_id);
-    }
-  }, [sectionId, sectionMap, subjectId]);
-
-  useEffect(() => {
-    if (!sectionId || !lectureId) {
-      return;
-    }
-
-    const selectedLecture = lectureMap.get(lectureId);
-    if (selectedLecture && selectedLecture.section_id !== sectionId) {
-      setLectureId(undefined);
-    }
-  }, [lectureId, lectureMap, sectionId]);
-
-  useEffect(() => {
-    if (sectionId || !lectureId) {
-      return;
-    }
-
-    const selectedLecture = lectureMap.get(lectureId);
-    if (selectedLecture?.section_id) {
-      setSectionId(selectedLecture.section_id);
-    }
-  }, [lectureId, lectureMap, sectionId]);
-
   const resetFilters = () => {
     setSearch('');
     setSubjectId(undefined);
@@ -178,8 +176,133 @@ const ResourcesList = () => {
     setFilters([], 'replace');
   };
 
+  const openCreateModal = () => {
+    setEditingResource(null);
+    setModalSubjectSearchText('');
+    setModalSectionSearchText('');
+    setModalLectureSearchText('');
+    form.resetFields();
+    form.setFieldsValue({
+      order_index: 0,
+      is_active: true,
+    });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (record: ResourceWithHierarchy) => {
+    setEditingResource(record);
+    setModalSubjectSearchText('');
+    setModalSectionSearchText('');
+    setModalLectureSearchText('');
+    form.setFieldsValue({
+      subject_id: record.subject_id || undefined,
+      section_id: record.section_id || undefined,
+      lecture_id: record.lecture_id,
+      label: record.label,
+      type: record.type,
+      url: record.url,
+      order_index: record.order_index,
+      is_active: record.is_active,
+    });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingResource(null);
+    setModalSubjectSearchText('');
+    setModalSectionSearchText('');
+    setModalLectureSearchText('');
+  };
+
+  const handleDelete = async (id: string) => {
+    await deleteOne({
+      resource: 'resources',
+      id,
+      successNotification: {
+        message: t('notifications.deleteSuccess', {}, 'Deleted successfully'),
+        type: 'success',
+      },
+      errorNotification: {
+        message: t('notifications.deleteError', {}, 'Failed to delete'),
+        type: 'error',
+      },
+    });
+    await invalidate({ resource: 'resources', invalidates: ['list'] });
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+
+      const subjectText = modalSubjectSearchText.trim();
+      const sectionText = modalSectionSearchText.trim();
+      const lectureText = modalLectureSearchText.trim();
+
+      const payload = {
+        resource_id: editingResource?.id,
+        subject_id: values.subject_id || undefined,
+        subject_name: values.subject_id ? undefined : subjectText,
+        section_id: values.section_id || undefined,
+        section_name: values.section_id ? undefined : sectionText,
+        lecture_id: values.lecture_id || undefined,
+        lecture_name: values.lecture_id ? undefined : lectureText,
+        label: values.label,
+        url: values.url,
+        type: values.type,
+        order_index: values.order_index,
+        is_active: values.is_active,
+      };
+
+      setIsSubmitting(true);
+      const provider = dataProvider();
+      if (!provider?.custom) {
+        throw new Error('Data provider custom method is not available');
+      }
+
+      await provider.custom({
+        url: '/api/v1/admin/resources/full-create',
+        method: 'post',
+        payload,
+      });
+
+      message.success(
+        editingResource
+          ? t('notifications.updateSuccess', {}, 'Updated successfully')
+          : t('notifications.createSuccess', {}, 'Created successfully'),
+      );
+
+      await Promise.all([
+        invalidate({ resource: 'resources', invalidates: ['list'] }),
+        invalidate({ resource: 'subjects', invalidates: ['list'] }),
+        invalidate({ resource: 'sections', invalidates: ['list'] }),
+        invalidate({ resource: 'lectures', invalidates: ['list'] }),
+      ]);
+
+      closeModal();
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'errorFields' in error &&
+        Array.isArray((error as { errorFields?: unknown[] }).errorFields)
+      ) {
+        return;
+      }
+      const errorMessage = resolveApiErrorMessage(error, 'notifications.error');
+      message.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <List createButtonProps={{ children: t('buttons.create', {}, 'Create') }}>
+    <List
+      createButtonProps={{
+        children: t('buttons.create', {}, 'Create'),
+        onClick: openCreateModal,
+      }}
+    >
       <Space wrap size="small" style={{ marginBottom: 12 }} className="resource-filter-bar">
         <Input.Search
           className="resource-filter-control"
@@ -215,7 +338,8 @@ const ResourcesList = () => {
           }}
           placeholder={t('pages.resources.fields.section', {}, 'Section')}
           style={{ width: 280 }}
-          options={filteredSections.map((section) => ({
+          disabled={!subjectId}
+          options={sections.map((section) => ({
             label: section.name,
             value: section.id,
           }))}
@@ -228,7 +352,7 @@ const ResourcesList = () => {
           placeholder={t('pages.resources.fields.lecture', {}, 'Lecture')}
           style={{ width: 280 }}
           disabled={!sectionId}
-          options={filteredLectures.map((lecture) => ({
+          options={lectures.map((lecture) => ({
             label: lecture.title,
             value: lecture.id,
           }))}
@@ -264,22 +388,41 @@ const ResourcesList = () => {
         scroll={{ x: 'max-content' }}
       >
         <Table.Column
-          dataIndex="lecture_id"
+          dataIndex="subject_name"
+          title={t('pages.resources.fields.subject', {}, 'Subject')}
+          ellipsis
+          sorter
+          render={(_, record: ResourceWithHierarchy) => (
+            record.subject_code && record.subject_name
+              ? `${record.subject_code} - ${record.subject_name}`
+              : t('common.notAvailable', {}, '-')
+          )}
+        />
+        <Table.Column
+          dataIndex="section_name"
+          title={t('pages.resources.fields.section', {}, 'Section')}
+          ellipsis
+          sorter
+        />
+        <Table.Column
+          dataIndex="lecture_title"
           title={t('pages.resources.fields.lecture', {}, 'Lecture')}
           ellipsis
-          render={(value) => lectureMap.get(value)?.title || value}
+          sorter
         />
-        <Table.Column dataIndex="label" title={t('pages.resources.fields.label', {}, 'Button Label')} ellipsis />
+        <Table.Column dataIndex="label" title={t('pages.resources.fields.label', {}, 'Button Label')} ellipsis sorter />
         <Table.Column
           dataIndex="type"
           title={t('pages.resources.fields.type', {}, 'Resource Type')}
           width={150}
+          sorter
           render={(value) => (
             <Tag color={resourceTypeColors[value] || 'default'}>
               {resourceTypeOptions.find((o) => o.value === value)?.label || value}
             </Tag>
           )}
         />
+        <Table.Column dataIndex="url" title={t('pages.resources.fields.url', {}, 'URL / Video ID')} ellipsis sorter />
         <Table.Column
           dataIndex="order_index"
           title={t('common.order', {}, 'Order')}
@@ -290,6 +433,7 @@ const ResourcesList = () => {
           dataIndex="is_active"
           title={t('common.status', {}, 'Status')}
           width={100}
+          sorter
           render={(value) => (
             <Tag color={value ? 'green' : 'red'}>
               {value ? t('common.active', {}, 'Active') : t('common.inactive', {}, 'Inactive')}
@@ -300,14 +444,161 @@ const ResourcesList = () => {
           title={t('common.actions', {}, 'Actions')}
           fixed="right"
           width={120}
-          render={(_, record: Resource) => (
+          render={(_, record: ResourceWithHierarchy) => (
             <Space size="small">
-              <EditButton hideText size="small" recordItemId={record.id} />
-              <DeleteButton hideText size="small" recordItemId={record.id} />
+              <Button size="small" onClick={() => openEditModal(record)}>
+                {t('buttons.edit', {}, 'Edit')}
+              </Button>
+              <Popconfirm
+                title={t('common.actions', {}, 'Actions')}
+                description={t('notifications.deleteError', {}, 'Failed to delete')}
+                onConfirm={() => handleDelete(record.id)}
+              >
+                <Button danger size="small">Delete</Button>
+              </Popconfirm>
             </Space>
           )}
         />
       </Table>
+
+      <Modal
+        title={editingResource ? t('resources.titles.edit', {}, 'Edit Resource') : t('resources.titles.create', {}, 'Create Resource')}
+        open={isModalOpen}
+        onCancel={closeModal}
+        onOk={handleSubmit}
+        confirmLoading={isSubmitting}
+        width={760}
+        destroyOnClose
+      >
+        <Form form={form} layout="vertical" initialValues={{ order_index: 0, is_active: true }}>
+          <Form.Item
+            label={t('pages.resources.fields.subject', {}, 'Subject')}
+            name="subject_id"
+            rules={[
+              {
+                validator: async (_, value) => {
+                  if (value || modalSubjectSearchText.trim()) {
+                    return;
+                  }
+                  throw new Error(t('pages.resources.validation.subjectRequired', {}, 'Please select subject'));
+                },
+              },
+            ]}
+          >
+            <Select
+              showSearch
+              allowClear
+              optionFilterProp="label"
+              placeholder={t('pages.resources.placeholders.subject', {}, 'Select subject')}
+              options={subjects.map((subject) => ({
+                label: `${subject.code} - ${subject.name}`,
+                value: subject.id,
+              }))}
+              onSearch={setModalSubjectSearchText}
+              onChange={() => {
+                setModalSubjectSearchText('');
+                form.setFieldValue('section_id', undefined);
+                form.setFieldValue('lecture_id', undefined);
+                setModalSectionSearchText('');
+                setModalLectureSearchText('');
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label={t('pages.resources.fields.section', {}, 'Section')}
+            name="section_id"
+            rules={[
+              {
+                validator: async (_, value) => {
+                  if (value || modalSectionSearchText.trim()) {
+                    return;
+                  }
+                  throw new Error(t('pages.resources.validation.sectionRequired', {}, 'Please select section'));
+                },
+              },
+            ]}
+          >
+            <Select
+              showSearch
+              allowClear
+              disabled={!modalSubjectId && !modalSubjectSearchText.trim()}
+              optionFilterProp="label"
+              placeholder={t('pages.resources.placeholders.section', {}, 'Select section')}
+              options={modalSections.map((section) => ({
+                label: section.name,
+                value: section.id,
+              }))}
+              onSearch={setModalSectionSearchText}
+              onChange={() => {
+                setModalSectionSearchText('');
+                form.setFieldValue('lecture_id', undefined);
+                setModalLectureSearchText('');
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label={t('pages.resources.fields.lecture', {}, 'Lecture')}
+            name="lecture_id"
+            rules={[
+              {
+                validator: async (_, value) => {
+                  if (value || modalLectureSearchText.trim()) {
+                    return;
+                  }
+                  throw new Error(t('pages.resources.validation.lectureRequired', {}, 'Please select lecture'));
+                },
+              },
+            ]}
+          >
+            <Select
+              showSearch
+              allowClear
+              disabled={!modalSectionId && !modalSectionSearchText.trim()}
+              optionFilterProp="label"
+              placeholder={t('pages.resources.placeholders.lecture', {}, 'Select lecture')}
+              options={modalLectures.map((lecture) => ({
+                label: lecture.title,
+                value: lecture.id,
+              }))}
+              onSearch={setModalLectureSearchText}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label={t('pages.resources.fields.label', {}, 'Button Label')}
+            name="label"
+            rules={[{ required: true, message: t('pages.resources.validation.labelRequired', {}, 'Please enter label') }]}
+          >
+            <Input placeholder={t('pages.resources.placeholders.label', {}, 'e.g. Slide, Video, Summary')} />
+          </Form.Item>
+
+          <Form.Item
+            label={t('pages.resources.fields.type', {}, 'Resource Type')}
+            name="type"
+            rules={[{ required: true, message: t('pages.resources.validation.typeRequired', {}, 'Please select type') }]}
+          >
+            <Select options={resourceTypeOptions} />
+          </Form.Item>
+
+          <Form.Item
+            label={t('pages.resources.fields.url', {}, 'URL / Video ID')}
+            name="url"
+            rules={[{ required: true, message: t('pages.resources.validation.urlRequired', {}, 'Please enter URL') }]}
+          >
+            <Input placeholder={t('pages.resources.placeholders.url', {}, 'URL or Video ID')} />
+          </Form.Item>
+
+          <Form.Item label={t('pages.resources.fields.orderIndex', {}, 'Display Order')} name="order_index">
+            <InputNumber min={0} style={{ width: '100%' }} />
+          </Form.Item>
+
+          <Form.Item label={t('pages.resources.fields.isActive', {}, 'Active')} name="is_active" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        </Form>
+      </Modal>
     </List>
   );
 };

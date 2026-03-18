@@ -185,6 +185,42 @@ export interface UpdateResourceDto extends Partial<CreateResourceDto> {
   is_active?: boolean;
 }
 
+export interface ResourceWithHierarchy extends Resource {
+  lecture_title: string | null;
+  section_id: string | null;
+  section_name: string | null;
+  subject_id: string | null;
+  subject_code: string | null;
+  subject_name: string | null;
+  subject_year_level: number | null;
+}
+
+export interface ResourceFullCreateDto {
+  resource_id?: string;
+  subject_id?: string;
+  subject_name?: string;
+  subject_code?: string;
+  subject_year_level?: number;
+  section_id?: string;
+  section_name?: string;
+  lecture_id?: string;
+  lecture_name?: string;
+  label: string;
+  url: string;
+  type: ResourceType;
+  file_size_bytes?: number;
+  duration_seconds?: number;
+  order_index?: number;
+  is_active?: boolean;
+}
+
+export interface ResourceFullCreateResponse {
+  subject: Subject;
+  section: Section;
+  lecture: Lecture;
+  resource: Resource;
+}
+
 // =====================================================
 // CALENDAR EVENT
 // =====================================================

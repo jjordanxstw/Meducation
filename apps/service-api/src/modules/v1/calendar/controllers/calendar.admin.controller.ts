@@ -32,8 +32,10 @@ export class CalendarAdminController {
     @Query('type') type?: string,
     @Query('subject_id') subjectId?: string,
     @Query('search') search?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
   ) {
-    const data = await this.calendarService.findAll(startDate, endDate, type, subjectId, search);
+    const data = await this.calendarService.findAll(startDate, endDate, type, subjectId, search, sortBy, sortOrder);
     return { success: true, data };
   }
 

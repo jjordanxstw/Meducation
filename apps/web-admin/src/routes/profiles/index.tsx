@@ -117,25 +117,28 @@ const ProfilesList = () => {
           dataIndex="avatar_url"
           title=""
           width={50}
+          sorter
           render={(value, record: Profile) => (
             <Avatar src={value} size="small">
               {record.full_name?.charAt(0)}
             </Avatar>
           )}
         />
-        <Table.Column dataIndex="full_name" title={t('pages.profiles.fields.fullName', {}, 'Full Name')} ellipsis />
-        <Table.Column dataIndex="email" title={t('pages.profiles.fields.email', {}, 'Email')} ellipsis />
-        <Table.Column dataIndex="student_id" title={t('pages.profiles.fields.studentId', {}, 'Student ID')} ellipsis />
+        <Table.Column dataIndex="full_name" title={t('pages.profiles.fields.fullName', {}, 'Full Name')} ellipsis sorter />
+        <Table.Column dataIndex="email" title={t('pages.profiles.fields.email', {}, 'Email')} ellipsis sorter />
+        <Table.Column dataIndex="student_id" title={t('pages.profiles.fields.studentId', {}, 'Student ID')} ellipsis sorter />
         <Table.Column
           dataIndex="year_level"
           title={t('pages.profiles.fields.yearLevel', {}, 'Year Level')}
           width={80}
+          sorter
           render={(value) => (value ? `${t('common.yearPrefix', {}, 'Year')} ${value}` : t('common.notAvailable', {}, '-'))}
         />
         <Table.Column
           dataIndex="role"
           title={t('pages.profiles.fields.role', {}, 'Role')}
           width={120}
+          sorter
           render={(value) => (
             <Tag color={value === UserRole.ADMIN ? 'gold' : 'blue'}>
               {value === UserRole.ADMIN

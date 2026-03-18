@@ -30,11 +30,15 @@ export class SubjectsAdminController {
     @Query('year_level') yearLevel?: string,
     @Query('is_active') isActive?: string,
     @Query('search') search?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
   ) {
     const data = await this.subjectsService.findAll(
       yearLevel ? parseInt(yearLevel, 10) : undefined,
       isActive === 'false' ? false : true,
       search,
+      sortBy,
+      sortOrder,
     );
 
     return { success: true, data };

@@ -6,9 +6,6 @@
 import React from 'react';
 import {
   DashboardOutlined,
-  BookOutlined,
-  PartitionOutlined,
-  VideoCameraOutlined,
   FileTextOutlined,
   CalendarOutlined,
   UserOutlined,
@@ -22,37 +19,6 @@ export const buildResources = (label: (key: string, fallback: string) => string)
     meta: {
       label: label('menu.dashboard', 'Dashboard'),
       icon: React.createElement(DashboardOutlined),
-    },
-  },
-  {
-    name: 'subjects',
-    list: '/subjects',
-    create: '/subjects/create',
-    edit: '/subjects/edit/:id',
-    show: '/subjects/show/:id',
-    meta: {
-      label: label('menu.subjects', 'Subjects'),
-      icon: React.createElement(BookOutlined),
-    },
-  },
-  {
-    name: 'sections',
-    list: '/sections',
-    create: '/sections/create',
-    edit: '/sections/edit/:id',
-    meta: {
-      label: label('menu.sections', 'Sections'),
-      icon: React.createElement(PartitionOutlined),
-    },
-  },
-  {
-    name: 'lectures',
-    list: '/lectures',
-    create: '/lectures/create',
-    edit: '/lectures/edit/:id',
-    meta: {
-      label: label('menu.lectures', 'Lectures'),
-      icon: React.createElement(VideoCameraOutlined),
     },
   },
   {

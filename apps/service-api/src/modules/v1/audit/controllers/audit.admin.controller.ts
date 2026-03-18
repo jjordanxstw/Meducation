@@ -31,6 +31,8 @@ export class AuditAdminController {
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
   ) {
     const result = await this.auditService.getLogs({
       userId,
@@ -41,6 +43,8 @@ export class AuditAdminController {
       search,
       page: page ? parseInt(page, 10) : 1,
       pageSize: pageSize ? parseInt(pageSize, 10) : 50,
+      sortBy,
+      sortOrder,
     });
 
     return {

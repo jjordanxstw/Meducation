@@ -42,7 +42,26 @@ export class ProfilesService {
     throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'profile' });
   }
 
-  async findAll(page: number = 1, pageSize: number = 20, role?: string, yearLevel?: number, search?: string) {
+  private resolveSort(
+    sortBy?: string,
+    sortOrder?: string,
+  ): { field: string; ascending: boolean } {
+    const allowed = new Set(['full_name', 'email', 'student_id', 'year_level', 'role', 'created_at', 'updated_at']);
+    const field = sortBy && allowed.has(sortBy) ? sortBy : 'created_at';
+    const normalizedOrder = (sortOrder || '').toLowerCase();
+    const ascending = normalizedOrder === 'asc' || normalizedOrder === 'ascend';
+    return { field, ascending };
+  }
+
+  async findAll(
+    page: number = 1,
+    pageSize: number = 20,
+    role?: string,
+    yearLevel?: number,
+    search?: string,
+    sortBy?: string,
+    sortOrder?: string,
+  ) {
     let query = this.supabaseAdmin
       .from('profiles')
       .select('*', { count: 'exact' });
@@ -61,8 +80,10 @@ export class ProfilesService {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
+    const sort = this.resolveSort(sortBy, sortOrder);
+
     const { data, error, count } = await query
-      .order('created_at', { ascending: false })
+      .order(sort.field, { ascending: sort.ascending })
       .range(from, to);
 
     if (error) {

@@ -98,7 +98,26 @@ export class CalendarService {
     }
   }
 
-  async findAll(startDate?: string, endDate?: string, type?: string, subjectId?: string, search?: string) {
+  private resolveSort(
+    sortBy?: string,
+    sortOrder?: string,
+  ): { field: string; ascending: boolean } {
+    const allowed = new Set(['title', 'type', 'start_time', 'end_time', 'is_all_day', 'created_at', 'updated_at']);
+    const field = sortBy && allowed.has(sortBy) ? sortBy : 'start_time';
+    const normalizedOrder = (sortOrder || '').toLowerCase();
+    const ascending = normalizedOrder === 'asc' || normalizedOrder === 'ascend';
+    return { field, ascending };
+  }
+
+  async findAll(
+    startDate?: string,
+    endDate?: string,
+    type?: string,
+    subjectId?: string,
+    search?: string,
+    sortBy?: string,
+    sortOrder?: string,
+  ) {
     let query = this.supabaseAdmin
       .from('calendar_events')
       .select('*, subjects:subject_id(name, code)');
@@ -120,7 +139,8 @@ export class CalendarService {
       query = query.or(`title.ilike.${term},description.ilike.${term},location.ilike.${term}`);
     }
 
-    const { data, error } = await query.order('start_time');
+    const sort = this.resolveSort(sortBy, sortOrder);
+    const { data, error } = await query.order(sort.field, { ascending: sort.ascending });
 
     if (error) {
       this.logger.warn(`Failed to fetch calendar events (code=${error.code ?? 'unknown'})`);

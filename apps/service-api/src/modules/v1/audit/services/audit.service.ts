@@ -26,6 +26,8 @@ export interface GetLogsParams {
   search?: string;
   page?: number;
   pageSize?: number;
+  sortBy?: string;
+  sortOrder?: string;
 }
 
 @Injectable()
@@ -44,6 +46,17 @@ export class AuditService {
     });
   }
 
+  private resolveSort(
+    sortBy?: string,
+    sortOrder?: string,
+  ): { field: string; ascending: boolean } {
+    const allowed = new Set(['table_name', 'action', 'record_id', 'old_data', 'new_data', 'created_at']);
+    const field = sortBy && allowed.has(sortBy) ? sortBy : 'created_at';
+    const normalizedOrder = (sortOrder || '').toLowerCase();
+    const ascending = normalizedOrder === 'asc' || normalizedOrder === 'ascend';
+    return { field, ascending };
+  }
+
   async getLogs(params: GetLogsParams) {
     const {
       userId,
@@ -54,6 +67,8 @@ export class AuditService {
       search,
       page = 1,
       pageSize = 50,
+      sortBy,
+      sortOrder,
     } = params;
 
     let query = this.supabaseAdmin
@@ -83,8 +98,10 @@ export class AuditService {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
+    const sort = this.resolveSort(sortBy, sortOrder);
+
     const { data, error, count } = await query
-      .order('created_at', { ascending: false })
+      .order(sort.field, { ascending: sort.ascending })
       .range(from, to);
 
     if (error) {
@@ -93,7 +110,11 @@ export class AuditService {
     }
 
     return {
-      data,
+      data: (data || []).map((row: any) => ({
+        ...row,
+        old_values: row.old_data,
+        new_values: row.new_data,
+      })),
       pagination: {
         page,
         pageSize,
