@@ -176,14 +176,9 @@ const LecturesList = () => {
         scroll={{ x: 'max-content' }}
       >
         <Table.Column
-          dataIndex="section_id"
-          title={t('pages.lectures.fields.section', {}, 'Section')}
-          ellipsis
-          render={(value) => sectionMap.get(value)?.name || value}
-        />
-        <Table.Column
           title={t('pages.lectures.fields.subject', {}, 'Subject')}
           ellipsis
+          sorter
           render={(_, record: Lecture) => {
             const section = sectionMap.get(record.section_id);
             if (!section) {
@@ -194,14 +189,22 @@ const LecturesList = () => {
             return subject ? `${subject.code} - ${subject.name}` : t('common.notAvailable', {}, '-');
           }}
         />
-        <Table.Column dataIndex="title" title={t('pages.lectures.fields.title', {}, 'Lecture Title')} ellipsis />
+        <Table.Column
+          dataIndex="section_id"
+          title={t('pages.lectures.fields.section', {}, 'Section')}
+          ellipsis
+          render={(value) => sectionMap.get(value)?.name || value}
+          sorter
+        />
+        <Table.Column sorter dataIndex="title" title={t('pages.lectures.fields.title', {}, 'Lecture Title')} ellipsis />
         <Table.Column
           dataIndex="lecture_date"
           title={t('pages.lectures.fields.lectureDate', {}, 'Lecture Date')}
           width={120}
+          sorter
           render={(value) => value ? dayjs(value).format('DD/MM/YYYY') : t('common.notAvailable', {}, '-')}
         />
-        <Table.Column dataIndex="lecturer_name" title={t('pages.lectures.fields.lecturerName', {}, 'Lecturer')} ellipsis />
+        <Table.Column sorter dataIndex="lecturer_name" title={t('pages.lectures.fields.lecturerName', {}, 'Lecturer')} ellipsis />
         <Table.Column
           dataIndex="order_index"
           title={t('common.order', {}, 'Order')}

@@ -120,6 +120,7 @@ const SubjectsList = () => {
           title={t('pages.subjects.fields.yearLevel', {}, 'Year Level')}
           width={150}
           render={(value) => `${t('common.yearPrefix', {}, 'Year')} ${value}`}
+          sorter
         />
         <Table.Column
           dataIndex="order_index"
