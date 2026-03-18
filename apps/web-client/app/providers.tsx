@@ -3,7 +3,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { NextUIProvider } from '@nextui-org/react';
 import { SessionProvider } from 'next-auth/react';
-import { ReactNode, createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { createQueryClient } from '../lib/queryClient';
@@ -22,37 +22,49 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<AppTheme>('light');
-  const [isReady, setIsReady] = useState(false);
+  const [theme, setThemeState] = useState<AppTheme>(() => {
+    if (typeof document === 'undefined') {
+      return 'light';
+    }
 
-  useEffect(() => {
-    const root = document.documentElement;
-    const rootTheme = root.classList.contains('dark') ? 'dark' : 'light';
-    setThemeState(rootTheme);
-    setIsReady(true);
-  }, []);
+    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+  });
 
-  const setTheme = (nextTheme: AppTheme) => {
-    setThemeState(nextTheme);
+  const applyTheme = useCallback((nextTheme: AppTheme) => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
     const root = document.documentElement;
     root.classList.remove('light', 'dark');
     root.classList.add(nextTheme);
     root.dataset.theme = nextTheme;
-    localStorage.setItem('med:theme', nextTheme);
-  };
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('med:theme', nextTheme);
+    }
+  }, []);
 
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
-  };
+  const setTheme = useCallback((nextTheme: AppTheme) => {
+    setThemeState(nextTheme);
+    applyTheme(nextTheme);
+  }, [applyTheme]);
+
+  const toggleTheme = useCallback(() => {
+    setThemeState((previousTheme) => {
+      const nextTheme = previousTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(nextTheme);
+      return nextTheme;
+    });
+  }, [applyTheme]);
 
   const value = useMemo(
     () => ({
       theme,
       setTheme,
       toggleTheme,
-      isReady,
+      isReady: true,
     }),
-    [theme, isReady],
+    [theme, setTheme, toggleTheme],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

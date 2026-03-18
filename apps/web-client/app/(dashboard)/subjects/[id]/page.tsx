@@ -317,7 +317,7 @@ export default function SubjectDetailPage({
             <FiVideo className="mx-auto mb-4 h-16 w-16 text-default-300" />
             <h3 className="font-semibold text-lg mb-2">No Content Available</h3>
             <p className="text-default-500">
-              This subject doesn't have content yet. Please check back later.
+              This subject doesn&apos;t have content yet. Please check back later.
             </p>
           </CardBody>
         </Card>

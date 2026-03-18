@@ -18,7 +18,7 @@ import {
   DropdownItem,
   Button,
 } from '@nextui-org/react';
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore, useState } from 'react';
 import { signOut, useSession } from 'next-auth/react';
 import { FiHome, FiLayers, FiBookOpen, FiUser, FiLogOut, FiMoon, FiSun, FiMail, FiMenu, FiX } from 'react-icons/fi';
 import { api } from '@/lib/api';
@@ -32,19 +32,16 @@ const menuItems = [
 ];
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [menuOpenPath, setMenuOpenPath] = useState<string | null>(null);
   const pathname = usePathname();
   const { data: session } = useSession();
   const { theme, toggleTheme, isReady: isThemeReady } = useAppTheme();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    setIsMenuOpen(false);
-  }, [pathname]);
+  const mounted = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
+  const isMenuOpen = menuOpenPath === pathname;
 
   const handleLogout = async () => {
     await api.auth.logout();
@@ -52,7 +49,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   };
 
   const handleLogoutFromMenu = async () => {
-    setIsMenuOpen(false);
+    setMenuOpenPath(null);
     await handleLogout();
   };
 
@@ -89,7 +86,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             disableRipple
             aria-label={isMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
             className="icon-circle-btn border-none bg-transparent text-[var(--ink-1)] shadow-none outline-none ring-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0 data-[hover=true]:bg-transparent data-[pressed=true]:bg-transparent data-[focus-visible=true]:outline-none data-[focus-visible=true]:ring-0 sm:hidden"
-            onPress={() => setIsMenuOpen((prev) => !prev)}
+            onPress={() => setMenuOpenPath((previousPath) => (previousPath === pathname ? null : pathname))}
           >
             {isMenuOpen ? <FiX className="h-5 w-5" /> : <FiMenu className="h-5 w-5" />}
           </Button>
@@ -211,7 +208,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => setIsMenuOpen(false)}
+                onClick={() => setMenuOpenPath(null)}
                 className={`flex items-center gap-3 rounded-[var(--radius-md)] px-4 py-3 ${
                   pathname === item.href
                     ? 'bg-primary/10 text-primary font-semibold'

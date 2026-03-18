@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { Button } from '@nextui-org/react';
@@ -47,7 +47,7 @@ function AuthSyncContent() {
     setSyncError(null);
   };
 
-  const handleAuthFailure = async (errorCode: 'session_expired' | 'domain_restricted' = 'session_expired') => {
+  const handleAuthFailure = useCallback(async (errorCode: 'session_expired' | 'domain_restricted' = 'session_expired') => {
     if (isHandlingAuthFailure.current) {
       return;
     }
@@ -73,7 +73,7 @@ function AuthSyncContent() {
     }
 
     router.replace(`/login?error=${errorCode}`);
-  };
+  }, [router]);
 
   useEffect(() => {
     const syncBackendSession = async () => {
@@ -129,7 +129,7 @@ function AuthSyncContent() {
     };
 
     void syncBackendSession();
-  }, [status, session, router, searchParams, syncError]);
+  }, [status, session, router, searchParams, syncError, handleAuthFailure]);
 
   if (syncError) {
     return (
@@ -137,7 +137,7 @@ function AuthSyncContent() {
         <div className="glass-orb-a pointer-events-none left-[-6%] top-[-10%]" />
         <div className="glass-orb-b pointer-events-none bottom-[-12%] right-[-4%]" />
         <div className="glass-card w-full max-w-lg space-y-4 rounded-2xl p-5 sm:p-6">
-          <h2 className="text-lg font-semibold text-[var(--ink-1)]">We couldn't reach the server.</h2>
+          <h2 className="text-lg font-semibold text-[var(--ink-1)]">We couldn&apos;t reach the server.</h2>
           <div className="flex">
             <Button
               color="primary"

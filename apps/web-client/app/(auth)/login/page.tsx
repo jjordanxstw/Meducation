@@ -27,7 +27,17 @@ function LoginContent() {
   const { theme, toggleTheme, isReady } = useAppTheme();
   const authError = searchParams.get('error');
   const handledAuthErrorRef = useRef(false);
-  const [storedAuthError, setStoredAuthError] = useState<string | null>(null);
+  const [storedAuthError] = useState<string | null>(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    try {
+      return sessionStorage.getItem('auth_error');
+    } catch {
+      return null;
+    }
+  });
 
   const authErrorMessageMap: Record<string, string> = {
     missing_token: 'Google sign-in completed but no id token was returned. Please sign in again.',
@@ -42,28 +52,6 @@ function LoginContent() {
   const authErrorMessage = effectiveAuthError
     ? authErrorMessageMap[effectiveAuthError] || 'Authentication failed. Please try again.'
     : null;
-
-  useEffect(() => {
-    if (authError) {
-      setStoredAuthError(authError);
-      try {
-        sessionStorage.removeItem('auth_error');
-      } catch {
-        // Ignore storage failures.
-      }
-      return;
-    }
-
-    try {
-      const fallbackError = sessionStorage.getItem('auth_error');
-      if (fallbackError) {
-        setStoredAuthError(fallbackError);
-        sessionStorage.removeItem('auth_error');
-      }
-    } catch {
-      // Ignore storage failures.
-    }
-  }, [authError]);
 
   useEffect(() => {
     // Keep users on the login page when an auth error is present,

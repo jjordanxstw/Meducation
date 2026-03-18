@@ -68,8 +68,10 @@ export default function CalendarPage() {
     queryFn: () => api.calendar.list(dateRange),
   });
 
-  const events: (CalendarEvent & { subjects?: { name: string; code: string } })[] =
-    data?.data?.data || [];
+  const events: (CalendarEvent & { subjects?: { name: string; code: string } })[] = useMemo(
+    () => data?.data?.data ?? [],
+    [data],
+  );
 
   // Filter events by type
   const filteredEvents = useMemo(() => {

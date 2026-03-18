@@ -24,7 +24,6 @@
     "clean": "pnpm run --parallel clean && rimraf node_modules",
     "db": "tsx database/scripts/migrate.ts",
     "db:status": "tsx database/scripts/migrate.ts status",
-    "db:apply": "tsx database/scripts/migrate-apply.ts",
     "db:migrate": "tsx database/scripts/migrate-apply.ts",
     "db:reset": "tsx database/scripts/reset.ts",
     "db:seed": "tsx database/scripts/seed.ts",

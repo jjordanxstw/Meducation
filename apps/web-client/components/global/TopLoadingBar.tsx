@@ -2,16 +2,19 @@
 
 import { useIsFetching, useIsMutating } from '@tanstack/react-query';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 export function TopLoadingBar() {
   const fetchingCount = useIsFetching();
   const mutatingCount = useIsMutating();
   const pathname = usePathname();
-  const [isRouteNavigating, setIsRouteNavigating] = useState(false);
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
+  const currentPath = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return pathname;
+    }
 
-  useEffect(() => {
-    setIsRouteNavigating(false);
+    return `${pathname}${window.location.search}`;
   }, [pathname]);
 
   useEffect(() => {
@@ -50,7 +53,7 @@ export function TopLoadingBar() {
         return;
       }
 
-      setIsRouteNavigating(true);
+      setPendingPath(nextPath);
     };
 
     document.addEventListener('click', handleDocumentClick, true);
@@ -59,6 +62,7 @@ export function TopLoadingBar() {
     };
   }, []);
 
+  const isRouteNavigating = pendingPath !== null && pendingPath !== currentPath;
   const isBusy = fetchingCount + mutatingCount > 0 || isRouteNavigating;
 
   return (
