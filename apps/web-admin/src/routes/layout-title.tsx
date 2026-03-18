@@ -10,6 +10,9 @@ type LayoutTitleProps = {
 
 export const AppLayoutTitle = ({ collapsed }: LayoutTitleProps) => {
   const t = useTranslate();
+  const logoSize = collapsed ? 40 : 28;
+  const initialsRadius = collapsed ? 10 : 8;
+  const initialsFontSize = collapsed ? 14 : 12;
 
   const toggleSider = () => {
     const triggerButton = document.querySelector<HTMLButtonElement>('.ant-layout-sider-trigger button');
@@ -41,23 +44,23 @@ export const AppLayoutTitle = ({ collapsed }: LayoutTitleProps) => {
           }}
           aria-label={collapsed ? t('buttons.expand', {}, 'Expand') : 'MedPI Logo'}
         >
-          <img src={LOGO_PATH} alt="MedPI Logo" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+          <img src={LOGO_PATH} alt="MedPI Logo" style={{ width: logoSize, height: logoSize, objectFit: 'contain' }} />
         </button>
       ) : (
         <button
           type="button"
           onClick={expandFromCollapsed}
           style={{
-            width: 28,
-            height: 28,
-            borderRadius: 8,
+            width: logoSize,
+            height: logoSize,
+            borderRadius: initialsRadius,
             border: '1px solid rgba(255, 255, 255, 0.55)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: '#ffffff',
             fontWeight: 600,
-            fontSize: 12,
+            fontSize: initialsFontSize,
             background: 'transparent',
             padding: 0,
             cursor: collapsed ? 'pointer' : 'default',

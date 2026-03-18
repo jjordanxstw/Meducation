@@ -75,6 +75,7 @@ h1, h2, h3, h4, h5, h6 {
 .ant-layout-sider > div:first-child > div,
 .ant-layout-sider .ant-menu {
   background: #1b2d48 !important;
+  width: 100% !important;
 }
 
 .ant-layout-sider {
@@ -108,6 +109,8 @@ h1, h2, h3, h4, h5, h6 {
   overflow-x: hidden;
   margin-top: 0 !important;
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
 /* Hide bottom trigger; custom trigger is rendered in title area */
@@ -131,10 +134,25 @@ h1, h2, h3, h4, h5, h6 {
 .ant-layout-sider .ant-menu-item,
 .ant-layout-sider .ant-menu-submenu-title {
   max-width: 100%;
+  width: calc(100% - 4px);
+  margin-inline: 2px !important;
+  min-height: 44px;
+  line-height: 44px;
+  border-radius: 10px;
+  padding-left: 22px !important;
 }
 
 .ant-layout-sider .ant-menu-item-selected {
   background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 10px;
+}
+
+.ant-layout-sider .ant-menu-item-selected:hover,
+.ant-layout-sider .ant-menu-item-selected.ant-menu-item-active,
+.ant-layout-sider .ant-menu-item-selected:focus-visible,
+.ant-layout-sider .ant-menu-submenu-selected > .ant-menu-submenu-title:hover,
+.ant-layout-sider .ant-menu-submenu-selected > .ant-menu-submenu-title:focus-visible {
+  border-radius: 10px;
 }
 
 .ant-layout-sider .ant-menu-item-selected .ant-menu-title-content,
@@ -190,15 +208,23 @@ h1, h2, h3, h4, h5, h6 {
   margin-left: auto;
   margin-right: auto;
   margin-bottom: 16px;
-  padding-inline: 0 !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding-inline: calc(50% - 12px) !important;
 }
 
 .ant-layout-sider.ant-layout-sider-collapsed .ant-layout-sider-children > .ant-menu .admin-sider-logout .anticon,
 .ant-layout-sider.ant-layout-sider-collapsed .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child .anticon {
   margin-inline-end: 0 !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  opacity: 1 !important;
+}
+
+.ant-layout-sider.ant-layout-sider-collapsed .ant-layout-sider-children > .ant-menu .admin-sider-logout .ant-menu-title-content,
+.ant-layout-sider.ant-layout-sider-collapsed .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child .ant-menu-title-content {
+  display: none !important;
 }
 
 .ant-layout-sider .sider-top-trigger {
