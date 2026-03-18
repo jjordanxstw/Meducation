@@ -72,7 +72,7 @@ export function LoginPage() {
       <Card style={{ width: '100%', maxWidth: 420 }}>
         <div style={{ marginBottom: 20, textAlign: 'center' }}>
           <Title level={4} style={{ marginBottom: 8 }}>
-            {t('pages.login.brand', {}, 'Medical Admin')}
+            {t('pages.login.brand', {}, 'MedPi Admin')}
           </Title>
           <Text type="secondary">{t('pages.login.subtitle', {}, 'Sign in with admin account')}</Text>
         </div>
