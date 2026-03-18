@@ -1,269 +1,185 @@
-# 🏥 Medical Learning Portal
+# Medical Learning Portal
 
-A production-ready monorepo for a Medical Learning Portal built with modern web technologies.
+Production-grade monorepo for a medical education platform with separate student and admin experiences, a modular API, shared domain contracts, and migration-driven database operations.
 
-## 📁 Project Structure
+## Portfolio Snapshot
 
+- Built as a multi-app monorepo with shared TypeScript contracts across frontend and backend.
+- Uses API-first architecture with standardized responses, centralized error catalog, and request tracing.
+- Supports dual authentication flows: student OAuth session flow and admin JWT + refresh-token flow.
+- Designed for operational reliability: SQL migrations, seed/reset scripts, audit logging, and verification pipelines.
+
+## Repository Layout
+
+```text
+.
+|- apps/
+|  |- service-api/     # NestJS REST API
+|  |- web-client/      # Next.js 16 student portal
+|  `- web-admin/       # React + Vite + Refine admin portal
+|- packages/
+|  `- shared/          # Shared types, errors, and utilities
+`- database/
+     |- migrations/      # Versioned SQL migrations
+     `- scripts/         # Migration/seed/reset/admin CLI tools
 ```
-webpi/
-├── apps/
-│   ├── web-client/       # Student-facing Next.js app
-│   ├── web-admin/        # Admin panel with Refine.dev + Ant Design
-│   └── service-api/      # Express + TypeScript REST API
-├── packages/
-│   └── shared/           # Shared TypeScript types & utilities
-└── database/
-    ├── schema.sql        # Supabase PostgreSQL schema
-    └── seed.sql          # Sample seed data
+
+## Stack Matrix
+
+| Layer | Core Technologies | Notes |
+|---|---|---|
+| Monorepo | pnpm workspaces, TypeScript 5, Makefile | Single workspace for apps and shared package |
+| API | NestJS 11, Express adapter, class-validator, cookie-parser, compression | URI versioning (`/api/v1`), global filters/interceptors/pipes |
+| Student App | Next.js 16 App Router, React 18, NextAuth, Zustand, React Query v5, Tailwind, NextUI | SSR-ready architecture with session-aware API client |
+| Admin App | Vite 5, React 18, Refine, React Router v6, Ant Design, React Query v4 | CRUD-heavy management UI with auth/data providers |
+| Shared Package | tsup, dual CJS/ESM exports | Shared enums, interfaces, error catalog, helpers |
+| Data Layer | PostgreSQL (Supabase), SQL migrations, `pg` scripts | Migration-first schema evolution with indexes and constraints |
+
+## Architecture Overview
+
+### 1) Monorepo Contract-Driven Design
+
+`@medical-portal/shared` is consumed by API and both web apps via `workspace:*`. This keeps domain types and error contracts consistent across boundaries and reduces integration drift.
+
+### 2) API Architecture (NestJS)
+
+The API is organized by domain modules under `modules/v1` and shared infrastructure under `common`.
+
+- Domain modules include auth, admin-auth, resources, lectures, sections, subjects, profiles, calendar, audit, and statistics.
+- Global request lifecycle includes:
+    - request ID middleware for traceability
+    - validation pipe for DTO input safety
+    - logging interceptor (method/status/duration/request ID)
+    - response envelope interceptor for normalized payload format
+    - exception filter mapping to shared error codes
+- Versioning strategy: URI-based versioning (`/api/v1/*`) with global `/api` prefix.
+
+### 3) Student Web Architecture (Next.js)
+
+The student app uses App Router route groups (`(auth)` and `(dashboard)`), with provider composition for session, cache, theme, and loading UX.
+
+- Auth/session strategy:
+    - NextAuth session as primary user session source.
+    - Axios client uses same-origin `/api/v1` in browser for first-party cookie behavior.
+    - Request interceptor validates session; response interceptor applies refresh-first on 401.
+- State and data:
+    - Zustand for lightweight client auth/profile state.
+    - React Query v5 for cache and server-state synchronization.
+
+### 4) Admin Web Architecture (Refine + Vite)
+
+The admin app is built around Refine resource-driven routing and Ant Design layouts.
+
+- Auth provider encapsulates login/check/logout/getIdentity/getPermissions behavior.
+- Axios-based refresh flow protects admin UX from token expiry interruptions.
+- Router uses authenticated layout guards and dedicated `/login` route.
+- Vercel rewrite strategy supports:
+    - `/api/v1/*` proxying to API host
+    - SPA fallback rewrite for deep links
+
+### 5) Database and Data Operations
+
+Database changes are managed through ordered SQL migrations (`0001` to `0012`) and script-based tooling.
+
+- Migration runner stores history in `_schema_migrations` and applies each migration in a transaction.
+- Includes integrity/performance hardening such as:
+    - unique constraints (e.g., subject/resource-level dedup rules)
+    - check constraints (e.g., calendar time range)
+    - query indexes for common admin list/filter paths
+    - audit schema improvements (`audit_logs.user_email` + index)
+- Operational scripts cover: status, apply, reset, seed, generate-migration, and interactive admin creation.
+
+## System Flow (Pseudo-Diagram)
+
+```text
+Student Browser / Admin Browser
+                |
+                v
+Web Layer
+- web-client (Next.js App Router)
+- web-admin (Vite + Refine)
+                |
+                |  /api/v1/* (same-origin or rewrite/proxy)
+                v
+service-api (NestJS)
+- Auth guards (student/admin/cookie flows)
+- Validation + logging + response envelope + exception mapping
+- Domain modules (resources/calendar/profiles/audit/...)
+                |
+                v
+PostgreSQL (Supabase)
+- Core domain tables
+- refresh tokens / active sessions
+- audit logs
+- migration history
 ```
 
-## 🛠 Tech Stack
+## Engineering Quality Signals
 
-| Layer | Technology |
-|-------|------------|
-| **Package Manager** | pnpm 8.15.0 with workspaces |
-| **Database** | PostgreSQL (Supabase) with Row Level Security |
-| **Auth** | Google OAuth 2.0 (restricted to @student.mahidol.ac.th) |
-| **API** | Node.js + Express + TypeScript |
-| **Web Client** | Next.js + React 18 + TypeScript + Hero UI + Tailwind CSS |
-| **Web Admin** | Refine.dev + Ant Design + @dnd-kit |
-| **State** | Zustand + TanStack Query |
-| **Calendar** | FullCalendar |
+### Security
 
-## 🚀 Quick Start
+- httpOnly cookie-capable authentication flows for both student and admin paths.
+- Environment validation for required secrets at API bootstrap.
+- Sanitized error messaging in admin auth flow.
+- Audit logging support with indexed query paths.
 
-### Prerequisites
+### Reliability
 
-- Node.js 18+
-- pnpm 8+
-- Supabase project (or local PostgreSQL)
-- Google Cloud Console project with OAuth 2.0 credentials
+- Shared error contract and global exception mapping.
+- Request-level tracing with request IDs.
+- Centralized migration history table and idempotent SQL migration style.
 
-### 1. Clone & Install
+### Maintainability
+
+- Strong TypeScript baseline across workspace.
+- Shared package for domain model reuse.
+- Scripted operations for build, verify, and database lifecycle.
+
+## Key Commands
+
+### Install
 
 ```bash
-cd webpi
 pnpm install
 ```
 
-### 2. Setup Supabase Database
-
-1. Create a new Supabase project at [supabase.com](https://supabase.com)
-2. Go to SQL Editor and run:
-
-```sql
--- Run database/schema.sql
--- Then run database/seed.sql for sample data
-```
-
-### 3. Configure Environment Variables
-
-**apps/service-api/.env**
-```env
-PORT=3000
-NODE_ENV=development
-
-# Supabase
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# Google OAuth
-GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
-
-# JWT
-JWT_SECRET=your-super-secret-jwt-key
-JWT_EXPIRES_IN=7d
-WATERMARK_SECRET=your-watermark-secret-key
-```
-
-**apps/web-client/.env**
-```env
-NEXT_PUBLIC_API_URL=http://localhost:3000
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
-```
-
-**apps/web-admin/.env**
-```env
-VITE_API_URL=http://localhost:3000/api/v1
-```
-
-### 4. Google OAuth Setup
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing
-3. Navigate to **APIs & Services > Credentials**
-4. Create **OAuth 2.0 Client ID** (Web application)
-5. Add authorized JavaScript origins:
-   - `http://localhost:5173` (web-client)
-   - `http://localhost:5174` (web-admin)
-   - Your production URLs
-6. Add authorized redirect URIs as needed
-
-### 5. Run Development Servers
+### Development
 
 ```bash
-# Run all apps in parallel
-pnpm dev
-
-# Or run individually:
-pnpm --filter service-api dev    # API: http://localhost:3000
-pnpm --filter web-client dev     # Client: http://localhost:5173
-pnpm --filter web-admin dev      # Admin: http://localhost:5174
+pnpm dev          # run all apps in parallel
+pnpm dev:api      # API only
+pnpm dev:web      # student app only
+pnpm dev:admin    # admin app only
 ```
 
-## 📚 API Endpoints
-
-### Health
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/health` | API liveness check |
-
-### Public Authentication (Student)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/auth/verify` | Verify Google token and sign in |
-| GET | `/api/v1/auth/me` | Get current student profile |
-| POST | `/api/v1/auth/refresh` | Refresh student access token |
-| POST | `/api/v1/auth/logout` | Logout student |
-
-### Admin Authentication
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/admin/auth/login` | Admin username/password login |
-| GET | `/api/v1/admin/auth/me` | Get current admin profile |
-| POST | `/api/v1/admin/auth/refresh` | Refresh admin access token |
-| POST | `/api/v1/admin/auth/logout` | Logout admin |
-
-### Public Read Resources (Student)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/subjects` | List subjects |
-| GET | `/api/v1/subjects/:id` | Subject detail with hierarchy |
-| GET | `/api/v1/sections` | List sections |
-| GET | `/api/v1/lectures` | List lectures |
-| GET | `/api/v1/resources` | List resources |
-| GET | `/api/v1/calendar` | List events |
-| GET | `/api/v1/profiles/:id` | Student self profile |
-
-### Admin Management Resources
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/admin/subjects` | List subjects |
-| POST | `/api/v1/admin/subjects` | Create subject |
-| PUT | `/api/v1/admin/subjects/:id` | Update subject |
-| DELETE | `/api/v1/admin/subjects/:id` | Delete subject |
-| PATCH | `/api/v1/admin/subjects/reorder` | Reorder subjects |
-| GET | `/api/v1/admin/sections` | List sections |
-| POST | `/api/v1/admin/sections` | Create section |
-| PUT | `/api/v1/admin/sections/:id` | Update section |
-| DELETE | `/api/v1/admin/sections/:id` | Delete section |
-| GET | `/api/v1/admin/lectures` | List lectures |
-| POST | `/api/v1/admin/lectures` | Create lecture |
-| PUT | `/api/v1/admin/lectures/:id` | Update lecture |
-| DELETE | `/api/v1/admin/lectures/:id` | Delete lecture |
-| PATCH | `/api/v1/admin/lectures/reorder` | Reorder lectures |
-| GET | `/api/v1/admin/resources` | List resources |
-| POST | `/api/v1/admin/resources` | Create resource |
-| PUT | `/api/v1/admin/resources/:id` | Update resource |
-| DELETE | `/api/v1/admin/resources/:id` | Delete resource |
-| PATCH | `/api/v1/admin/resources/reorder` | Reorder resources |
-| GET | `/api/v1/admin/calendar` | List calendar events |
-| POST | `/api/v1/admin/calendar` | Create calendar event |
-| PUT | `/api/v1/admin/calendar/:id` | Update calendar event |
-| DELETE | `/api/v1/admin/calendar/:id` | Delete calendar event |
-| GET | `/api/v1/admin/profiles` | List profiles |
-| PATCH | `/api/v1/admin/profiles/:id` | Update profile |
-| GET | `/api/v1/admin/audit-logs` | List audit logs |
-
-## 🎨 Design System
-
-### Colors
-| Name | Value | Usage |
-|------|-------|-------|
-| Primary | `#0070F3` | Buttons, Links, Accents |
-| Primary Dark | `#1d4ed8` | Hover states |
-| White | `#FFFFFF` | Backgrounds |
-| Black | `#000000` | Text |
-
-### Typography
-- **Headings**: Google Fonts - Kanit
-- **Body**: Google Fonts - Prompt
-
-## 🔒 Security Features
-
-### Email Domain Restriction
-Only `@student.mahidol.ac.th` emails are allowed to authenticate.
-
-### Video Watermarking
-Videos display a floating watermark overlay with:
-- User email
-- Current timestamp
-- Random position animation (anti-screen-capture)
-
-### Row Level Security (RLS)
-- Students can only read active content
-- Only admins can insert/update/delete
-
-### Audit Logging
-All admin actions are logged with:
-- User ID
-- Action type (INSERT/UPDATE/DELETE)
-- Table name
-- Old and new data
-- Timestamp
-
-## 📦 Build for Production
+### Build and Verification
 
 ```bash
-# Build all packages
 pnpm build
-
-# Build individual apps
-pnpm --filter service-api build
-pnpm --filter web-client build
-pnpm --filter web-admin build
-```
-
-## 🧪 Linting
-
-```bash
+pnpm verify:apps
 pnpm lint
 ```
 
-## 📋 Database Tables
+### Database Operations
 
-| Table | Description |
-|-------|-------------|
-| `profiles` | User profiles linked to Supabase Auth |
-| `subjects` | Academic subjects with year_level |
-| `sections` | Sections/blocks within subjects |
-| `lectures` | Individual lectures within sections |
-| `resources` | Dynamic buttons/links for each lecture |
-| `calendar_events` | Exams, holidays, events |
-| `audit_logs` | Admin action audit trail |
-
-## 🔄 Content Hierarchy
-
-```
-Subject (รายวิชา)
-└── Section (หมวดหมู่/Block)
-    └── Lecture (บทเรียน)
-        └── Resources (ปุ่มต่างๆ: Slide, Video, Summary...)
+```bash
+pnpm db:status
+pnpm db:migrate
+pnpm db:seed
+pnpm db:reset
+pnpm admin:create
 ```
 
-## 🤝 Contributing
+## Minimal Environment Checklist
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Provide environment variables for:
 
-## 📄 License
+- `apps/service-api`: Supabase URL/keys, JWT secret, CORS origins, cookie settings, optional APP_ENV/NODE_ENV.
+- `apps/web-client`: `NEXT_PUBLIC_API_URL`, NextAuth-related values, optional APP_ENV-specific env files.
+- `apps/web-admin`: API base/proxy settings and environment mode (`uat`/`prod` when needed).
 
-This project is licensed under the MIT License.
+## Why This Project Is Portfolio-Ready
 
----
-
-Built with ❤️ for Mahidol University Medical Students
+- Clear separation of concerns across API, student app, and admin app.
+- Demonstrates modern full-stack patterns (SSR-ready frontend, modular backend, migration-first DB).
+- Shows practical production concerns: auth refresh strategy, CORS/proxy routing, auditability, and schema evolution.
