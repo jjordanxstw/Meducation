@@ -5,17 +5,111 @@
 
 import { List, useTable, EditButton, ShowButton, DeleteButton } from '@refinedev/antd';
 import { useTranslate } from '@refinedev/core';
-import { Table, Space, Tag } from 'antd';
+import { Button, Input, Select, Space, Table, Tag } from 'antd';
+import { useEffect, useRef, useState } from 'react';
 import type { Subject } from '@medical-portal/shared';
+import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
 
 const SubjectsList = () => {
   const t = useTranslate();
-  const { tableProps } = useTable<Subject>({
+  const { tableProps, setFilters, filters } = useTable<Subject>({
     syncWithLocation: true,
   });
 
+  const [search, setSearch] = useState('');
+  const [yearLevel, setYearLevel] = useState<number | undefined>(undefined);
+  const [isActive, setIsActive] = useState<boolean | undefined>(undefined);
+  const debouncedSearch = useDebouncedValue(search, 350);
+  const hasHydratedFromUrl = useRef(false);
+
+  const buildFilters = (searchValue: string) => {
+    const nextFilters: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
+
+    if (searchValue.trim()) {
+      nextFilters.push({ field: 'search', operator: 'contains', value: searchValue.trim() });
+    }
+    if (typeof yearLevel === 'number') {
+      nextFilters.push({ field: 'year_level', operator: 'eq', value: yearLevel });
+    }
+    if (typeof isActive === 'boolean') {
+      nextFilters.push({ field: 'is_active', operator: 'eq', value: isActive });
+    }
+
+    return nextFilters;
+  };
+
+  useEffect(() => {
+    if (hasHydratedFromUrl.current) {
+      return;
+    }
+
+    const searchValue = getFilterValue(filters, 'search');
+    const yearLevelValue = getFilterValue(filters, 'year_level');
+    const isActiveValue = getFilterValue(filters, 'is_active');
+
+    setSearch(typeof searchValue === 'string' ? searchValue : '');
+    setYearLevel(typeof yearLevelValue === 'number' ? yearLevelValue : undefined);
+    setIsActive(typeof isActiveValue === 'boolean' ? isActiveValue : undefined);
+
+    hasHydratedFromUrl.current = true;
+  }, [filters]);
+
+  useEffect(() => {
+    if (!hasHydratedFromUrl.current) {
+      return;
+    }
+
+    setFilters(buildFilters(debouncedSearch), 'replace');
+  }, [debouncedSearch]);
+
+  const applyFilters = () => {
+    setFilters(buildFilters(search), 'replace');
+  };
+
+  const resetFilters = () => {
+    setSearch('');
+    setYearLevel(undefined);
+    setIsActive(undefined);
+    setFilters([], 'replace');
+  };
+
   return (
     <List createButtonProps={{ children: t('buttons.create', {}, 'Create') }}>
+      <Space wrap size="small" style={{ marginBottom: 12 }}>
+        <Input.Search
+          allowClear
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          onSearch={applyFilters}
+          placeholder={t('common.searchPlaceholder', {}, 'Search')}
+          style={{ width: 240 }}
+        />
+        <Select
+          allowClear
+          value={yearLevel}
+          onChange={(value) => setYearLevel(value)}
+          placeholder={t('pages.subjects.fields.yearLevel', {}, 'Year Level')}
+          style={{ width: 160 }}
+          options={[1, 2, 3, 4, 5, 6].map((value) => ({
+            label: `${t('common.yearPrefix', {}, 'Year')} ${value}`,
+            value,
+          }))}
+        />
+        <Select
+          allowClear
+          value={isActive}
+          onChange={(value) => setIsActive(value)}
+          placeholder={t('common.status', {}, 'Status')}
+          style={{ width: 160 }}
+          options={[
+            { label: t('common.active', {}, 'Active'), value: true },
+            { label: t('common.inactive', {}, 'Inactive'), value: false },
+          ]}
+        />
+        <Button type="primary" onClick={applyFilters}>{t('common.applyFilters', {}, 'Apply')}</Button>
+        <Button onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
+      </Space>
+
       <Table
         {...tableProps}
         rowKey="id"

@@ -29,10 +29,12 @@ export class LecturesAdminController {
   async findAll(
     @Query('section_id') sectionId?: string,
     @Query('is_active') isActive?: string,
+    @Query('search') search?: string,
   ) {
     const data = await this.lecturesService.findAll(
       sectionId,
       isActive === 'false' ? false : true,
+      search,
     );
     return { success: true, data };
   }

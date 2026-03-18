@@ -66,7 +66,7 @@ export class ResourcesService {
     throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'resource' });
   }
 
-  async findAll(lectureId?: string, type?: string, isActive: boolean = true) {
+  async findAll(lectureId?: string, type?: string, isActive: boolean = true, search?: string) {
     let query = this.supabaseAdmin.from('resources').select('*');
 
     if (lectureId) {
@@ -77,6 +77,10 @@ export class ResourcesService {
     }
     if (isActive) {
       query = query.eq('is_active', true);
+    }
+    if (search?.trim()) {
+      const term = `%${search.trim()}%`;
+      query = query.or(`label.ilike.${term},url.ilike.${term}`);
     }
 
     const { data, error } = await query.order('order_index');

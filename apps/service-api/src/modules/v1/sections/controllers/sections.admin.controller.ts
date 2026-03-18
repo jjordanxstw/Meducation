@@ -29,10 +29,12 @@ export class SectionsAdminController {
   async findAll(
     @Query('subject_id') subjectId?: string,
     @Query('is_active') isActive?: string,
+    @Query('search') search?: string,
   ) {
     const data = await this.sectionsService.findAll(
       subjectId,
       isActive === 'false' ? false : true,
+      search,
     );
     return { success: true, data };
   }

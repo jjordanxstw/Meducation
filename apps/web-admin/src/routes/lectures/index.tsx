@@ -5,13 +5,15 @@
 
 import { useList, useTranslate } from '@refinedev/core';
 import { List, useTable, EditButton, DeleteButton } from '@refinedev/antd';
-import { Table, Space, Tag } from 'antd';
+import { Button, Input, Select, Space, Table, Tag } from 'antd';
 import dayjs from 'dayjs';
+import { useEffect, useRef, useState } from 'react';
 import type { Lecture, Section } from '@medical-portal/shared';
+import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
 
 const LecturesList = () => {
   const t = useTranslate();
-  const { tableProps } = useTable<Lecture>({
+  const { tableProps, setFilters, filters } = useTable<Lecture>({
     syncWithLocation: true,
   });
 
@@ -22,8 +24,97 @@ const LecturesList = () => {
   const sections = sectionsData?.data || [];
   const sectionMap = new Map(sections.map((s) => [s.id, s]));
 
+  const [search, setSearch] = useState('');
+  const [sectionId, setSectionId] = useState<string | undefined>(undefined);
+  const [isActive, setIsActive] = useState<boolean | undefined>(undefined);
+  const debouncedSearch = useDebouncedValue(search, 350);
+  const hasHydratedFromUrl = useRef(false);
+
+  const buildFilters = (searchValue: string) => {
+    const nextFilters: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
+    if (searchValue.trim()) {
+      nextFilters.push({ field: 'search', operator: 'contains', value: searchValue.trim() });
+    }
+    if (sectionId) {
+      nextFilters.push({ field: 'section_id', operator: 'eq', value: sectionId });
+    }
+    if (typeof isActive === 'boolean') {
+      nextFilters.push({ field: 'is_active', operator: 'eq', value: isActive });
+    }
+    return nextFilters;
+  };
+
+  useEffect(() => {
+    if (hasHydratedFromUrl.current) {
+      return;
+    }
+
+    const searchValue = getFilterValue(filters, 'search');
+    const sectionValue = getFilterValue(filters, 'section_id');
+    const activeValue = getFilterValue(filters, 'is_active');
+
+    setSearch(typeof searchValue === 'string' ? searchValue : '');
+    setSectionId(typeof sectionValue === 'string' ? sectionValue : undefined);
+    setIsActive(typeof activeValue === 'boolean' ? activeValue : undefined);
+
+    hasHydratedFromUrl.current = true;
+  }, [filters]);
+
+  useEffect(() => {
+    if (!hasHydratedFromUrl.current) {
+      return;
+    }
+    setFilters(buildFilters(debouncedSearch), 'replace');
+  }, [debouncedSearch]);
+
+  const applyFilters = () => {
+    setFilters(buildFilters(search), 'replace');
+  };
+
+  const resetFilters = () => {
+    setSearch('');
+    setSectionId(undefined);
+    setIsActive(undefined);
+    setFilters([], 'replace');
+  };
+
   return (
     <List createButtonProps={{ children: t('buttons.create', {}, 'Create') }}>
+      <Space wrap size="small" style={{ marginBottom: 12 }}>
+        <Input.Search
+          allowClear
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          onSearch={applyFilters}
+          placeholder={t('common.searchPlaceholder', {}, 'Search')}
+          style={{ width: 240 }}
+        />
+        <Select
+          allowClear
+          value={sectionId}
+          onChange={(value) => setSectionId(value)}
+          placeholder={t('pages.lectures.fields.section', {}, 'Section')}
+          style={{ width: 280 }}
+          options={sections.map((section) => ({
+            label: section.name,
+            value: section.id,
+          }))}
+        />
+        <Select
+          allowClear
+          value={isActive}
+          onChange={(value) => setIsActive(value)}
+          placeholder={t('common.status', {}, 'Status')}
+          style={{ width: 160 }}
+          options={[
+            { label: t('common.active', {}, 'Active'), value: true },
+            { label: t('common.inactive', {}, 'Inactive'), value: false },
+          ]}
+        />
+        <Button type="primary" onClick={applyFilters}>{t('common.applyFilters', {}, 'Apply')}</Button>
+        <Button onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
+      </Space>
+
       <Table
         {...tableProps}
         rowKey="id"

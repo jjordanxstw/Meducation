@@ -98,7 +98,7 @@ export class CalendarService {
     }
   }
 
-  async findAll(startDate?: string, endDate?: string, type?: string, subjectId?: string) {
+  async findAll(startDate?: string, endDate?: string, type?: string, subjectId?: string, search?: string) {
     let query = this.supabaseAdmin
       .from('calendar_events')
       .select('*, subjects:subject_id(name, code)');
@@ -114,6 +114,10 @@ export class CalendarService {
     }
     if (subjectId) {
       query = query.eq('subject_id', subjectId);
+    }
+    if (search?.trim()) {
+      const term = `%${search.trim()}%`;
+      query = query.or(`title.ilike.${term},description.ilike.${term},location.ilike.${term}`);
     }
 
     const { data, error } = await query.order('start_time');

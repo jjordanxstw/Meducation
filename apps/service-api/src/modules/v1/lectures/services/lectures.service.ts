@@ -39,7 +39,7 @@ export class LecturesService {
     throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'lecture' });
   }
 
-  async findAll(sectionId?: string, isActive: boolean = true) {
+  async findAll(sectionId?: string, isActive: boolean = true, search?: string) {
     let query = this.supabaseAdmin.from('lectures').select('*');
 
     if (sectionId) {
@@ -47,6 +47,10 @@ export class LecturesService {
     }
     if (isActive) {
       query = query.eq('is_active', true);
+    }
+    if (search?.trim()) {
+      const term = `%${search.trim()}%`;
+      query = query.or(`title.ilike.${term},description.ilike.${term},lecturer_name.ilike.${term}`);
     }
 
     const { data, error } = await query.order('order_index');

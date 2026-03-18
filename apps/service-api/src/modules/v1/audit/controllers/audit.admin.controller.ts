@@ -28,6 +28,7 @@ export class AuditAdminController {
     @Query('action') action?: AuditAction,
     @Query('start_date') startDate?: string,
     @Query('end_date') endDate?: string,
+    @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
@@ -37,6 +38,7 @@ export class AuditAdminController {
       action,
       startDate,
       endDate,
+      search,
       page: page ? parseInt(page, 10) : 1,
       pageSize: pageSize ? parseInt(pageSize, 10) : 50,
     });

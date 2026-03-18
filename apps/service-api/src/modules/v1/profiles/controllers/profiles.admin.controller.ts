@@ -29,12 +29,14 @@ export class ProfilesAdminController {
     @Query('pageSize') pageSize?: string,
     @Query('role') role?: string,
     @Query('year_level') yearLevel?: string,
+    @Query('search') search?: string,
   ) {
     const result = await this.profilesService.findAll(
       page ? parseInt(page, 10) : 1,
       pageSize ? parseInt(pageSize, 10) : 20,
       role,
       yearLevel ? parseInt(yearLevel, 10) : undefined,
+      search,
     );
     return { success: true, ...result };
   }

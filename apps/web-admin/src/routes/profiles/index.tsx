@@ -5,18 +5,111 @@
 
 import { List, useTable, EditButton, ShowButton } from '@refinedev/antd';
 import { useTranslate } from '@refinedev/core';
-import { Table, Space, Tag, Avatar } from 'antd';
+import { Avatar, Button, Input, Select, Space, Table, Tag } from 'antd';
+import { useEffect, useRef, useState } from 'react';
 import { UserRole } from '@medical-portal/shared';
 import type { Profile } from '@medical-portal/shared';
+import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
 
 const ProfilesList = () => {
   const t = useTranslate();
-  const { tableProps } = useTable<Profile>({
+  const { tableProps, setFilters, filters } = useTable<Profile>({
     syncWithLocation: true,
   });
 
+  const [search, setSearch] = useState('');
+  const [role, setRole] = useState<string | undefined>(undefined);
+  const [yearLevel, setYearLevel] = useState<number | undefined>(undefined);
+  const debouncedSearch = useDebouncedValue(search, 350);
+  const hasHydratedFromUrl = useRef(false);
+
+  const buildFilters = (searchValue: string) => {
+    const nextFilters: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
+
+    if (searchValue.trim()) {
+      nextFilters.push({ field: 'search', operator: 'contains', value: searchValue.trim() });
+    }
+    if (role) {
+      nextFilters.push({ field: 'role', operator: 'eq', value: role });
+    }
+    if (typeof yearLevel === 'number') {
+      nextFilters.push({ field: 'year_level', operator: 'eq', value: yearLevel });
+    }
+
+    return nextFilters;
+  };
+
+  useEffect(() => {
+    if (hasHydratedFromUrl.current) {
+      return;
+    }
+
+    const searchValue = getFilterValue(filters, 'search');
+    const roleValue = getFilterValue(filters, 'role');
+    const yearLevelValue = getFilterValue(filters, 'year_level');
+
+    setSearch(typeof searchValue === 'string' ? searchValue : '');
+    setRole(typeof roleValue === 'string' ? roleValue : undefined);
+    setYearLevel(typeof yearLevelValue === 'number' ? yearLevelValue : undefined);
+
+    hasHydratedFromUrl.current = true;
+  }, [filters]);
+
+  useEffect(() => {
+    if (!hasHydratedFromUrl.current) {
+      return;
+    }
+    setFilters(buildFilters(debouncedSearch), 'replace');
+  }, [debouncedSearch]);
+
+  const applyFilters = () => {
+    setFilters(buildFilters(search), 'replace');
+  };
+
+  const resetFilters = () => {
+    setSearch('');
+    setRole(undefined);
+    setYearLevel(undefined);
+    setFilters([], 'replace');
+  };
+
   return (
     <List>
+      <Space wrap size="small" style={{ marginBottom: 12 }}>
+        <Input.Search
+          allowClear
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          onSearch={applyFilters}
+          placeholder={t('common.searchPlaceholder', {}, 'Search')}
+          style={{ width: 260 }}
+        />
+        <Select
+          allowClear
+          value={role}
+          onChange={(value) => setRole(value)}
+          placeholder={t('pages.profiles.fields.role', {}, 'Role')}
+          style={{ width: 180 }}
+          options={[
+            { label: t('pages.profiles.roles.admin', {}, 'Admin'), value: UserRole.ADMIN },
+            { label: t('pages.profiles.roles.student', {}, 'Student'), value: UserRole.STUDENT },
+          ]}
+        />
+        <Select
+          allowClear
+          value={yearLevel}
+          onChange={(value) => setYearLevel(value)}
+          placeholder={t('pages.profiles.fields.yearLevel', {}, 'Year Level')}
+          style={{ width: 160 }}
+          options={[1, 2, 3, 4, 5, 6].map((value) => ({
+            label: `${t('common.yearPrefix', {}, 'Year')} ${value}`,
+            value,
+          }))}
+        />
+        <Button type="primary" onClick={applyFilters}>{t('common.applyFilters', {}, 'Apply')}</Button>
+        <Button onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
+      </Space>
+
       <Table
         {...tableProps}
         rowKey="id"

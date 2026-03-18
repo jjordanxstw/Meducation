@@ -26,6 +26,10 @@ export const AppLayoutHeader = () => {
         alignItems: 'center',
         padding: '0 24px',
         height: '64px',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        boxShadow: '0 1px 0 rgba(15, 23, 42, 0.08)',
       }}
     >
       <Space size="middle">

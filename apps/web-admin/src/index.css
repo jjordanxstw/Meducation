@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --color-primary: #0070F3;
-  --color-primary-dark: #1d4ed8;
+  --color-primary: #1b2d48;
+  --color-primary-dark: #142238;
   --font-kanit: 'Kanit', sans-serif;
   --font-prompt: 'Prompt', sans-serif;
 }
@@ -31,6 +31,7 @@ body,
 
 body {
   font-family: var(--font-prompt), sans-serif;
+  overflow: hidden;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -67,67 +68,202 @@ h1, h2, h3, h4, h5, h6 {
   scrollbar-width: none;
 }
 
-/* Keep the logout action pinned to the bottom of Refine sidebar */
+/* Sidebar shell (legacy Refine ThemedLayout) */
+.ant-layout-sider,
+.ant-layout-sider .ant-layout-sider-children,
+.ant-layout-sider > div:first-child,
+.ant-layout-sider > div:first-child > div,
+.ant-layout-sider .ant-menu {
+  background: #1b2d48 !important;
+}
+
+.ant-layout-sider {
+  border-right: 0 !important;
+  overflow: hidden !important;
+}
+
+.ant-layout-sider > div:first-child {
+  margin-bottom: 0 !important;
+  border-bottom: 0 !important;
+}
+
+.ant-layout-sider > div:first-child,
+.ant-layout-sider > div:first-child * {
+  color: #ffffff !important;
+}
+
+.ant-layout-sider .ant-layout-sider-children {
+  position: relative;
+  z-index: 1;
+}
+
+/* Menu layout: no seam at top and no horizontal jitter */
 .ant-layout-sider .ant-layout-sider-children > .ant-menu {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-top: 0 !important;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+}
+
+/* Hide bottom trigger; custom trigger is rendered in title area */
+.ant-layout-sider-trigger,
+.sidebar-collapse-trigger {
+  display: none !important;
+}
+
+.ant-layout-sider .ant-layout-sider-zero-width-trigger {
+  background: #1b2d48 !important;
+}
+
+/* Regular item colors */
+.ant-layout-sider .ant-menu-item,
+.ant-layout-sider .ant-menu-submenu-title,
+.ant-layout-sider .ant-menu-title-content,
+.ant-layout-sider .ant-menu-item .anticon {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.ant-layout-sider .ant-menu-item,
+.ant-layout-sider .ant-menu-submenu-title {
+  max-width: 100%;
+}
+
+.ant-layout-sider .ant-menu-item-selected {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.ant-layout-sider .ant-menu-item-selected .ant-menu-title-content,
+.ant-layout-sider .ant-menu-item-selected .anticon {
+  color: #ffffff !important;
+}
+
+/* Logout button: support both custom class and legacy last-item rendering */
+.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout,
+.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child {
+  margin-top: auto;
+  margin-bottom: 16px;
+  border-radius: 10px;
+  background: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout:hover,
+.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout.ant-menu-item-active,
+.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout.ant-menu-item-selected,
+.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout:focus-visible,
+.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child:hover,
+.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child.ant-menu-item-active,
+.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child.ant-menu-item-selected,
+.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child:focus-visible {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+}
+
+.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout .ant-menu-title-content,
+.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout .anticon,
+.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child .ant-menu-title-content,
+.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child .anticon {
+  color: #ffffff !important;
+}
+
+/* Collapsed mode: slightly narrower sider + centered logout */
+.ant-layout-sider.ant-layout-sider-collapsed {
+  width: 70px !important;
+  min-width: 76px !important;
+  max-width: 76px !important;
+  flex: 0 0 76px !important;
+}
+
+.ant-layout-sider.ant-layout-sider-collapsed > div:first-child {
+  width: 76px !important;
+}
+
+.ant-layout-sider.ant-layout-sider-collapsed .ant-layout-sider-children > .ant-menu .admin-sider-logout,
+.ant-layout-sider.ant-layout-sider-collapsed .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child {
+  width: 60px;
+  min-width: 60px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 16px;
+  padding-inline: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ant-layout-sider.ant-layout-sider-collapsed .ant-layout-sider-children > .ant-menu .admin-sider-logout .anticon,
+.ant-layout-sider.ant-layout-sider-collapsed .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child .anticon {
+  margin-inline-end: 0 !important;
+}
+
+.ant-layout-sider .sider-top-trigger {
+  color: #ffffff !important;
+}
+
+.ant-layout-sider .sider-top-trigger:hover,
+.ant-layout-sider .sider-top-trigger:focus-visible {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+/* Own scroll in content area so header/sider remain stable */
+.refine-layout,
+.refine-layout > .ant-layout {
+  height: 100%;
+}
+
+.refine-layout .ant-layout {
+  min-height: 100%;
+}
+
+.refine-layout .ant-layout-sider {
+  height: 100dvh;
+  position: sticky;
+  top: 0;
+  z-index: 120;
+}
+
+.refine-layout .ant-layout-sider-children {
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
 
-.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout {
-  margin-top: auto;
-}
-
-/* Fix sidebar collapse trigger z-index to stay behind white background */
-.ant-layout-sider-trigger {
-  position: absolute !important;
-  bottom: 0;
-  z-index: 0 !important;
-}
-
-.sidebar-collapse-trigger {
-  z-index: 0 !important;
-}
-
-/* Ensure the sider children (content) is above the trigger */
-.ant-layout-sider-children {
-  position: relative;
-  z-index: 1;
-  background-color: #fff;
-}
-
-/* Sidebar collapse trigger - always white background */
-.sidebar-collapse-trigger,
-.ant-layout-sider-trigger .ant-btn,
-.ant-layout-sider-trigger button {
-  background-color: #fff !important;
-}
-
-.sidebar-collapse-trigger:hover,
-.ant-layout-sider-trigger .ant-btn:hover,
-.ant-layout-sider-trigger button:hover {
-  background-color: #fff !important;
-  color: #0070F3 !important;
-}
-
-/* Fix Refine ThemedLayout scroll issues - only show scrollbar when content actually overflows */
 .refine-layout .ant-layout-content {
-  overflow: visible;
-  min-height: 0;
+  height: calc(100dvh - 64px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 24px;
 }
 
-/* Prevent double scrollbars on body level */
-.ant-layout {
-  overflow: visible;
-  min-height: 100vh;
-}
-
-/* Fix Refine layout container */
-.refine-layout {
-  height: 100%;
-  overflow: hidden;
-}
-
-/* Ensure content area doesn't have unnecessary scrollbar */
 .refine-layout .ant-layout-content > div {
-  overflow: visible;
+  min-height: fit-content;
+}
+
+@media (max-width: 992px) {
+  .refine-layout .ant-layout-content {
+    height: calc(100dvh - 56px);
+    padding: 12px;
+  }
+
+  .refine-layout .ant-layout-header {
+    height: 56px !important;
+    line-height: 56px !important;
+    padding: 0 12px !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .refine-layout .ant-card {
+    border-radius: 12px;
+  }
+
+  .refine-layout .ant-space {
+    row-gap: 8px;
+  }
 }

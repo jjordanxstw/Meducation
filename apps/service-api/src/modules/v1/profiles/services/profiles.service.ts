@@ -42,7 +42,7 @@ export class ProfilesService {
     throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'profile' });
   }
 
-  async findAll(page: number = 1, pageSize: number = 20, role?: string, yearLevel?: number) {
+  async findAll(page: number = 1, pageSize: number = 20, role?: string, yearLevel?: number, search?: string) {
     let query = this.supabaseAdmin
       .from('profiles')
       .select('*', { count: 'exact' });
@@ -52,6 +52,10 @@ export class ProfilesService {
     }
     if (yearLevel !== undefined) {
       query = query.eq('year_level', yearLevel);
+    }
+    if (search?.trim()) {
+      const term = `%${search.trim()}%`;
+      query = query.or(`full_name.ilike.${term},email.ilike.${term},student_id.ilike.${term}`);
     }
 
     const from = (page - 1) * pageSize;

@@ -4,11 +4,14 @@
  */
 
 import { List, useTable, EditButton, DeleteButton } from '@refinedev/antd';
-import { useTranslate } from '@refinedev/core';
-import { Table, Space, Tag } from 'antd';
+import { useList, useTranslate } from '@refinedev/core';
+import { Button, DatePicker, Input, Select, Space, Table, Tag } from 'antd';
 import dayjs from 'dayjs';
 import { EventType } from '@medical-portal/shared';
+import { useEffect, useRef, useState } from 'react';
+import type { Subject } from '@medical-portal/shared';
 import type { CalendarEvent } from '@medical-portal/shared';
+import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
 
 const eventTypeColors: Record<string, string> = {
   [EventType.EXAM]: 'red',
@@ -19,9 +22,10 @@ const eventTypeColors: Record<string, string> = {
 
 const CalendarList = () => {
   const t = useTranslate();
-  const { tableProps } = useTable<CalendarEvent>({
+  const { tableProps, setFilters, filters } = useTable<CalendarEvent>({
     syncWithLocation: true,
   });
+  const { RangePicker } = DatePicker;
 
   const eventTypeOptions = [
     { label: `🎯 ${t('pages.calendar.types.exam', {}, 'Exam')}`, value: EventType.EXAM },
@@ -30,8 +34,124 @@ const CalendarList = () => {
     { label: `📅 ${t('pages.calendar.types.event', {}, 'Event')}`, value: EventType.EVENT },
   ];
 
+  const { data: subjectsData } = useList<Subject>({ resource: 'subjects' });
+  const subjects = subjectsData?.data ?? [];
+
+  const [search, setSearch] = useState('');
+  const [eventType, setEventType] = useState<string | undefined>(undefined);
+  const [subjectId, setSubjectId] = useState<string | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<[string, string] | undefined>(undefined);
+  const debouncedSearch = useDebouncedValue(search, 350);
+  const hasHydratedFromUrl = useRef(false);
+
+  const buildFilters = (searchValue: string) => {
+    const nextFilters: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
+
+    if (searchValue.trim()) {
+      nextFilters.push({ field: 'search', operator: 'contains', value: searchValue.trim() });
+    }
+    if (eventType) {
+      nextFilters.push({ field: 'type', operator: 'eq', value: eventType });
+    }
+    if (subjectId) {
+      nextFilters.push({ field: 'subject_id', operator: 'eq', value: subjectId });
+    }
+    if (dateRange) {
+      nextFilters.push({ field: 'start_date', operator: 'eq', value: dateRange[0] });
+      nextFilters.push({ field: 'end_date', operator: 'eq', value: dateRange[1] });
+    }
+
+    return nextFilters;
+  };
+
+  useEffect(() => {
+    if (hasHydratedFromUrl.current) {
+      return;
+    }
+
+    const searchValue = getFilterValue(filters, 'search');
+    const typeValue = getFilterValue(filters, 'type');
+    const subjectValue = getFilterValue(filters, 'subject_id');
+    const startDate = getFilterValue(filters, 'start_date');
+    const endDate = getFilterValue(filters, 'end_date');
+
+    setSearch(typeof searchValue === 'string' ? searchValue : '');
+    setEventType(typeof typeValue === 'string' ? typeValue : undefined);
+    setSubjectId(typeof subjectValue === 'string' ? subjectValue : undefined);
+    if (typeof startDate === 'string' && typeof endDate === 'string') {
+      setDateRange([startDate, endDate]);
+    }
+
+    hasHydratedFromUrl.current = true;
+  }, [filters]);
+
+  useEffect(() => {
+    if (!hasHydratedFromUrl.current) {
+      return;
+    }
+    setFilters(buildFilters(debouncedSearch), 'replace');
+  }, [debouncedSearch]);
+
+  const applyFilters = () => {
+    setFilters(buildFilters(search), 'replace');
+  };
+
+  const resetFilters = () => {
+    setSearch('');
+    setEventType(undefined);
+    setSubjectId(undefined);
+    setDateRange(undefined);
+    setFilters([], 'replace');
+  };
+
   return (
     <List createButtonProps={{ children: t('buttons.create', {}, 'Create') }}>
+      <Space wrap size="small" style={{ marginBottom: 12 }}>
+        <Input.Search
+          allowClear
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          onSearch={applyFilters}
+          placeholder={t('common.searchPlaceholder', {}, 'Search')}
+          style={{ width: 220 }}
+        />
+        <Select
+          allowClear
+          value={eventType}
+          onChange={(value) => setEventType(value)}
+          placeholder={t('pages.calendar.fields.type', {}, 'Type')}
+          style={{ width: 180 }}
+          options={eventTypeOptions}
+        />
+        <Select
+          allowClear
+          value={subjectId}
+          onChange={(value) => setSubjectId(value)}
+          placeholder={t('pages.calendar.fields.subject', {}, 'Related Subject')}
+          style={{ width: 260 }}
+          options={subjects.map((subject) => ({
+            label: `${subject.code} - ${subject.name}`,
+            value: subject.id,
+          }))}
+        />
+        <RangePicker
+          value={
+            dateRange
+              ? [dayjs(dateRange[0]), dayjs(dateRange[1])]
+              : undefined
+          }
+          onChange={(values) => {
+            if (!values?.[0] || !values?.[1]) {
+              setDateRange(undefined);
+              return;
+            }
+            setDateRange([values[0].startOf('day').toISOString(), values[1].endOf('day').toISOString()]);
+          }}
+        />
+        <Button type="primary" onClick={applyFilters}>{t('common.applyFilters', {}, 'Apply')}</Button>
+        <Button onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
+      </Space>
+
       <Table
         {...tableProps}
         rowKey="id"

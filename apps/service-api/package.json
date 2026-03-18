@@ -14,6 +14,7 @@
     "clean": "rimraf dist",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit",
+    "test:smoke:admin": "tsx src/scripts/smoke-admin-endpoints.ts",
     "db:migrate": "ts-node src/scripts/migrate.ts",
     "db:seed": "ts-node src/scripts/seed.ts"
   },

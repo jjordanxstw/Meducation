@@ -31,8 +31,9 @@ export class CalendarAdminController {
     @Query('end_date') endDate?: string,
     @Query('type') type?: string,
     @Query('subject_id') subjectId?: string,
+    @Query('search') search?: string,
   ) {
-    const data = await this.calendarService.findAll(startDate, endDate, type, subjectId);
+    const data = await this.calendarService.findAll(startDate, endDate, type, subjectId, search);
     return { success: true, data };
   }
 

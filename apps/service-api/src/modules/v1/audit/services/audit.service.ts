@@ -23,6 +23,7 @@ export interface GetLogsParams {
   action?: AuditAction;
   startDate?: string;
   endDate?: string;
+  search?: string;
   page?: number;
   pageSize?: number;
 }
@@ -50,6 +51,7 @@ export class AuditService {
       action,
       startDate,
       endDate,
+      search,
       page = 1,
       pageSize = 50,
     } = params;
@@ -72,6 +74,10 @@ export class AuditService {
     }
     if (endDate) {
       query = query.lte('created_at', endDate);
+    }
+    if (search?.trim()) {
+      const term = `%${search.trim()}%`;
+      query = query.or(`table_name.ilike.${term},action.ilike.${term},record_id.ilike.${term},user_email.ilike.${term},ip_address.ilike.${term}`);
     }
 
     const from = (page - 1) * pageSize;

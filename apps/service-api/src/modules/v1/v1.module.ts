@@ -8,6 +8,7 @@ import { ResourcesModule } from './resources/resources.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { ProfilesModule } from './profiles/profiles.module';
 import { AuditModule } from './audit/audit.module';
+import { StatisticsModule } from './statistics/statistics.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AuditModule } from './audit/audit.module';
     CalendarModule,
     ProfilesModule,
     AuditModule,
+    StatisticsModule,
   ],
 })
 export class V1Module {}

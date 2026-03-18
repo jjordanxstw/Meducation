@@ -80,7 +80,7 @@ const Root: React.FC = () => {
       theme={{
         ...RefineThemes.Blue,
         token: {
-          colorPrimary: '#0070F3',
+          colorPrimary: '#1b2d48',
           fontFamily: 'Prompt, sans-serif',
           borderRadius: 12,
           wireframe: false,
@@ -89,7 +89,7 @@ const Root: React.FC = () => {
           Layout: {
             bodyBg: '#f8fafc',
             headerBg: '#ffffff',
-            siderBg: '#ffffff',
+            siderBg: '#1b2d48',
           },
           Card: {
             borderRadiusLG: 16,
@@ -104,7 +104,7 @@ const Root: React.FC = () => {
           Button: {
             borderRadius: 12,
             fontWeight: 500,
-            boxShadow: '0 2px 4px rgba(0, 112, 243, 0.2)',
+            boxShadow: '0 2px 4px rgba(27, 45, 72, 0.22)',
           },
           Input: {
             borderRadius: 12,

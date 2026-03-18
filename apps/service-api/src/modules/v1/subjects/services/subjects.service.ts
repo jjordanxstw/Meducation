@@ -45,7 +45,7 @@ export class SubjectsService {
     throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'subject' });
   }
 
-  async findAll(yearLevel?: number, isActive: boolean = true) {
+  async findAll(yearLevel?: number, isActive: boolean = true, search?: string) {
     let query = this.supabaseAdmin
       .from('subjects')
       .select('*');
@@ -56,6 +56,11 @@ export class SubjectsService {
 
     if (isActive) {
       query = query.eq('is_active', true);
+    }
+
+    if (search?.trim()) {
+      const term = `%${search.trim()}%`;
+      query = query.or(`code.ilike.${term},name.ilike.${term},description.ilike.${term}`);
     }
 
     const { data, error } = await query.order('order_index');

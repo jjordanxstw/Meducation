@@ -29,10 +29,12 @@ export class SubjectsAdminController {
   async findAll(
     @Query('year_level') yearLevel?: string,
     @Query('is_active') isActive?: string,
+    @Query('search') search?: string,
   ) {
     const data = await this.subjectsService.findAll(
       yearLevel ? parseInt(yearLevel, 10) : undefined,
       isActive === 'false' ? false : true,
+      search,
     );
 
     return { success: true, data };
