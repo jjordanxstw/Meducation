@@ -71,6 +71,11 @@ const ResourcesList = () => {
   const debouncedSearch = useDebouncedValue(search, 350);
   const hasHydratedFromUrl = useRef(false);
 
+  // Quick create states
+  const [quickCreateType, setQuickCreateType] = useState<'subject' | 'section' | 'lecture' | null>(null);
+  const [quickCreateForm] = Form.useForm();
+  const [isQuickCreateSubmitting, setIsQuickCreateSubmitting] = useState(false);
+
   const { data: subjectsData } = useList<Subject>({
     resource: 'subjects',
   });
@@ -92,9 +97,18 @@ const ResourcesList = () => {
   const subjects = subjectsData?.data || [];
   const sections = sectionsData?.data || [];
   const lectures = lecturesData?.data || [];
+  const quickCreateSubjectId = Form.useWatch('subject_id', quickCreateForm);
 
   const modalSubjectId = Form.useWatch('subject_id', form);
   const modalSectionId = Form.useWatch('section_id', form);
+
+  const { data: quickCreateSectionsData } = useList<Section>({
+    resource: 'sections',
+    filters: quickCreateSubjectId ? [{ field: 'subject_id', operator: 'eq', value: quickCreateSubjectId }] : [],
+    queryOptions: {
+      enabled: !!quickCreateSubjectId,
+    },
+  });
 
   const { data: modalSectionsData } = useList<Section>({
     resource: 'sections',
@@ -113,6 +127,7 @@ const ResourcesList = () => {
 
   const modalSections = modalSectionsData?.data ?? [];
   const modalLectures = modalLecturesData?.data ?? [];
+  const quickCreateSections = quickCreateSectionsData?.data ?? [];
 
   const buildFilters = useCallback((searchValue: string) => {
     const nextFilters: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
@@ -213,6 +228,88 @@ const ResourcesList = () => {
     setModalSubjectSearchText('');
     setModalSectionSearchText('');
     setModalLectureSearchText('');
+  };
+
+  // Quick create handlers
+  const openQuickCreateModal = (type: 'subject' | 'section' | 'lecture') => {
+    setQuickCreateType(type);
+    quickCreateForm.resetFields();
+    if (type === 'section' && modalSubjectId) {
+      quickCreateForm.setFieldValue('subject_id', modalSubjectId);
+    }
+    if (type === 'lecture') {
+      if (modalSubjectId) {
+        quickCreateForm.setFieldValue('subject_id', modalSubjectId);
+      }
+      if (modalSectionId) {
+        quickCreateForm.setFieldValue('section_id', modalSectionId);
+      }
+    }
+  };
+
+  const closeQuickCreateModal = () => {
+    setQuickCreateType(null);
+    quickCreateForm.resetFields();
+  };
+
+  const handleQuickCreate = async () => {
+    try {
+      const values = await quickCreateForm.validateFields();
+      setIsQuickCreateSubmitting(true);
+
+      const provider = dataProvider();
+      if (!provider?.custom) {
+        throw new Error('Data provider custom method is not available');
+      }
+
+      if (quickCreateType === 'subject') {
+        await provider.custom({
+          url: '/api/v1/admin/subjects',
+          method: 'post',
+          payload: { code: values.code, name: values.name, year_level: values.year_level },
+        });
+        message.success(t('notifications.createSuccess', {}, 'Created successfully'));
+      } else if (quickCreateType === 'section') {
+        await provider.custom({
+          url: '/api/v1/admin/sections',
+          method: 'post',
+          payload: { subject_id: values.subject_id, name: values.name },
+        });
+        message.success(t('notifications.createSuccess', {}, 'Created successfully'));
+      } else if (quickCreateType === 'lecture') {
+        await provider.custom({
+          url: '/api/v1/admin/lectures',
+          method: 'post',
+          payload: {
+            subject_id: values.subject_id,
+            section_id: values.section_id,
+            title: values.title,
+          },
+        });
+        message.success(t('notifications.createSuccess', {}, 'Created successfully'));
+      }
+
+      await Promise.all([
+        invalidate({ resource: 'subjects', invalidates: ['list'] }),
+        invalidate({ resource: 'sections', invalidates: ['list'] }),
+        invalidate({ resource: 'lectures', invalidates: ['list'] }),
+      ]);
+
+      closeQuickCreateModal();
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'errorFields' in error &&
+        Array.isArray((error as { errorFields?: unknown[] }).errorFields)
+      ) {
+        return;
+      }
+      const errorMessage = resolveApiErrorMessage(error, 'notifications.error');
+      message.error(errorMessage);
+    } finally {
+      setIsQuickCreateSubmitting(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -466,14 +563,17 @@ const ResourcesList = () => {
         open={isModalOpen}
         onCancel={closeModal}
         onOk={handleSubmit}
+        okText={t('buttons.confirm', {}, 'Confirm')}
+        cancelText={t('buttons.cancel', {}, 'Cancel')}
         confirmLoading={isSubmitting}
         width={760}
         destroyOnClose
       >
         <Form form={form} layout="vertical" initialValues={{ order_index: 0, is_active: true }}>
           <Form.Item
-            label={t('pages.resources.fields.subject', {}, 'Subject')}
+            label={<>{t('pages.resources.fields.subject', {}, 'Subject')}</>}
             name="subject_id"
+            required
             rules={[
               {
                 validator: async (_, value) => {
@@ -485,29 +585,35 @@ const ResourcesList = () => {
               },
             ]}
           >
-            <Select
-              showSearch
-              allowClear
-              optionFilterProp="label"
-              placeholder={t('pages.resources.placeholders.subject', {}, 'Select subject')}
-              options={subjects.map((subject) => ({
-                label: `${subject.code} - ${subject.name}`,
-                value: subject.id,
-              }))}
-              onSearch={setModalSubjectSearchText}
-              onChange={() => {
-                setModalSubjectSearchText('');
-                form.setFieldValue('section_id', undefined);
-                form.setFieldValue('lecture_id', undefined);
-                setModalSectionSearchText('');
-                setModalLectureSearchText('');
-              }}
-            />
+            <Space.Compact style={{ width: '100%' }}>
+              <Select
+                showSearch
+                allowClear
+                optionFilterProp="label"
+                placeholder={t('pages.resources.placeholders.subject', {}, 'Select subject')}
+                style={{ flex: 1 }}
+                options={subjects.map((subject) => ({
+                  label: `${subject.code} - ${subject.name}`,
+                  value: subject.id,
+                }))}
+                onSearch={setModalSubjectSearchText}
+                onChange={(value) => {
+                  form.setFieldValue('subject_id', value || undefined);
+                  setModalSubjectSearchText('');
+                  form.setFieldValue('section_id', undefined);
+                  form.setFieldValue('lecture_id', undefined);
+                  setModalSectionSearchText('');
+                  setModalLectureSearchText('');
+                }}
+              />
+              <Button onClick={() => openQuickCreateModal('subject')}>{t('buttons.create', {}, '+Create')}</Button>
+            </Space.Compact>
           </Form.Item>
 
           <Form.Item
-            label={t('pages.resources.fields.section', {}, 'Section')}
+            label={<>{t('pages.resources.fields.section', {}, 'Section')}</>}
             name="section_id"
+            required
             rules={[
               {
                 validator: async (_, value) => {
@@ -519,28 +625,34 @@ const ResourcesList = () => {
               },
             ]}
           >
-            <Select
-              showSearch
-              allowClear
-              disabled={!modalSubjectId && !modalSubjectSearchText.trim()}
-              optionFilterProp="label"
-              placeholder={t('pages.resources.placeholders.section', {}, 'Select section')}
-              options={modalSections.map((section) => ({
-                label: section.name,
-                value: section.id,
-              }))}
-              onSearch={setModalSectionSearchText}
-              onChange={() => {
-                setModalSectionSearchText('');
-                form.setFieldValue('lecture_id', undefined);
-                setModalLectureSearchText('');
-              }}
-            />
+            <Space.Compact style={{ width: '100%' }}>
+              <Select
+                showSearch
+                allowClear
+                disabled={!modalSubjectId}
+                optionFilterProp="label"
+                placeholder={t('pages.resources.placeholders.section', {}, 'Select section')}
+                style={{ flex: 1 }}
+                options={modalSections.map((section) => ({
+                  label: section.name,
+                  value: section.id,
+                }))}
+                onSearch={setModalSectionSearchText}
+                onChange={(value) => {
+                  form.setFieldValue('section_id', value || undefined);
+                  setModalSectionSearchText('');
+                  form.setFieldValue('lecture_id', undefined);
+                  setModalLectureSearchText('');
+                }}
+              />
+              <Button onClick={() => openQuickCreateModal('section')} disabled={!modalSubjectId}>{t('buttons.create', {}, '+Create')}</Button>
+            </Space.Compact>
           </Form.Item>
 
           <Form.Item
-            label={t('pages.resources.fields.lecture', {}, 'Lecture')}
+            label={<>{t('pages.resources.fields.lecture', {}, 'Lecture')}</>}
             name="lecture_id"
+            required
             rules={[
               {
                 validator: async (_, value) => {
@@ -552,18 +664,22 @@ const ResourcesList = () => {
               },
             ]}
           >
-            <Select
-              showSearch
-              allowClear
-              disabled={!modalSectionId && !modalSectionSearchText.trim()}
-              optionFilterProp="label"
-              placeholder={t('pages.resources.placeholders.lecture', {}, 'Select lecture')}
-              options={modalLectures.map((lecture) => ({
-                label: lecture.title,
-                value: lecture.id,
-              }))}
-              onSearch={setModalLectureSearchText}
-            />
+            <Space.Compact style={{ width: '100%' }}>
+              <Select
+                showSearch
+                allowClear
+                disabled={!modalSectionId}
+                optionFilterProp="label"
+                placeholder={t('pages.resources.placeholders.lecture', {}, 'Select lecture')}
+                style={{ flex: 1 }}
+                options={modalLectures.map((lecture) => ({
+                  label: lecture.title,
+                  value: lecture.id,
+                }))}
+                onSearch={setModalLectureSearchText}
+              />
+              <Button onClick={() => openQuickCreateModal('lecture')} disabled={!modalSectionId}>{t('buttons.create', {}, '+Create')}</Button>
+            </Space.Compact>
           </Form.Item>
 
           <Form.Item
@@ -596,6 +712,135 @@ const ResourcesList = () => {
 
           <Form.Item label={t('pages.resources.fields.isActive', {}, 'Active')} name="is_active" valuePropName="checked">
             <Switch />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Quick Create Modals */}
+      <Modal
+        title={t('pages.resources.titles.createSubject', {}, 'Create Subject')}
+        open={quickCreateType === 'subject'}
+        onCancel={closeQuickCreateModal}
+        onOk={handleQuickCreate}
+        okText={t('buttons.confirm', {}, 'Confirm')}
+        cancelText={t('buttons.cancel', {}, 'Cancel')}
+        confirmLoading={isQuickCreateSubmitting}
+        destroyOnClose
+      >
+        <Form form={quickCreateForm} layout="vertical">
+          <Form.Item
+            label={<>{t('pages.subjects.fields.code', {}, 'Code')}</>}
+            name="code"
+            required
+            rules={[{ required: true, message: t('pages.subjects.validation.codeRequired', {}, 'Please enter code') }]}
+          >
+            <Input placeholder={t('pages.subjects.placeholders.code', {}, 'e.g. CS101')} />
+          </Form.Item>
+          <Form.Item
+            label={<>{t('pages.subjects.fields.name', {}, 'Name')}</>}
+            name="name"
+            required
+            rules={[{ required: true, message: t('pages.subjects.validation.nameRequired', {}, 'Please enter name') }]}
+          >
+            <Input placeholder={t('pages.subjects.placeholders.name', {}, 'Subject name')} />
+          </Form.Item>
+          <Form.Item
+            label={<>{t('pages.subjects.fields.yearLevel', {}, 'Year Level')}</>}
+            name="year_level"
+            required
+            rules={[{ required: true, message: t('pages.subjects.validation.yearLevelRequired', {}, 'Please specify year level') }]}
+          >
+            <InputNumber min={1} max={6} placeholder={t('pages.subjects.placeholders.yearLevel', {}, '1-6')} style={{ width: '100%' }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={t('pages.resources.titles.createSection', {}, 'Create Section')}
+        open={quickCreateType === 'section'}
+        onCancel={closeQuickCreateModal}
+        onOk={handleQuickCreate}
+        okText={t('buttons.confirm', {}, 'Confirm')}
+        cancelText={t('buttons.cancel', {}, 'Cancel')}
+        confirmLoading={isQuickCreateSubmitting}
+        destroyOnClose
+      >
+        <Form form={quickCreateForm} layout="vertical">
+          <Form.Item
+            label={<>{t('pages.resources.fields.subject', {}, 'Subject')}</>}
+            name="subject_id"
+            required
+            rules={[{ required: true, message: t('pages.resources.validation.subjectRequired', {}, 'Please select subject') }]}
+          >
+            <Select
+              placeholder={t('pages.resources.placeholders.subject', {}, 'Select subject')}
+              options={subjects.map((subject) => ({
+                label: `${subject.code} - ${subject.name}`,
+                value: subject.id,
+              }))}
+            />
+          </Form.Item>
+          <Form.Item
+            label={<>{t('pages.sections.fields.name', {}, 'Name')}</>}
+            name="name"
+            required
+            rules={[{ required: true, message: t('pages.sections.validation.nameRequired', {}, 'Please enter name') }]}
+          >
+            <Input placeholder={t('pages.sections.placeholders.name', {}, 'Section name')} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={t('pages.resources.titles.createLecture', {}, 'Create Lecture')}
+        open={quickCreateType === 'lecture'}
+        onCancel={closeQuickCreateModal}
+        onOk={handleQuickCreate}
+        okText={t('buttons.confirm', {}, 'Confirm')}
+        cancelText={t('buttons.cancel', {}, 'Cancel')}
+        confirmLoading={isQuickCreateSubmitting}
+        destroyOnClose
+      >
+        <Form form={quickCreateForm} layout="vertical">
+          <Form.Item
+            label={<>{t('pages.resources.fields.subject', {}, 'Subject')}</>}
+            name="subject_id"
+            required
+            rules={[{ required: true, message: t('pages.resources.validation.subjectRequired', {}, 'Please select subject') }]}
+          >
+            <Select
+              placeholder={t('pages.resources.placeholders.subject', {}, 'Select subject')}
+              options={subjects.map((subject) => ({
+                label: `${subject.code} - ${subject.name}`,
+                value: subject.id,
+              }))}
+              onChange={() => {
+                quickCreateForm.setFieldValue('section_id', undefined);
+              }}
+            />
+          </Form.Item>
+          <Form.Item
+            label={<>{t('pages.resources.fields.section', {}, 'Section')}</>}
+            name="section_id"
+            required
+            rules={[{ required: true, message: t('pages.resources.validation.sectionRequired', {}, 'Please select section') }]}
+          >
+            <Select
+              disabled={!quickCreateSubjectId}
+              placeholder={t('pages.resources.placeholders.section', {}, 'Select section')}
+              options={quickCreateSections.map((section) => ({
+                label: section.name,
+                value: section.id,
+              }))}
+            />
+          </Form.Item>
+          <Form.Item
+            label={<>{t('pages.lectures.fields.title', {}, 'Title')}</>}
+            name="title"
+            required
+            rules={[{ required: true, message: t('pages.lectures.validation.titleRequired', {}, 'Please enter title') }]}
+          >
+            <Input placeholder={t('pages.lectures.placeholders.title', {}, 'Lecture title')} />
           </Form.Item>
         </Form>
       </Modal>
