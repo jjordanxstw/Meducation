@@ -76,6 +76,42 @@ export class StatisticsService {
       .map(([yearLevel, count]) => ({ yearLevel, count }));
   }
 
+  private async getRecentAuditLogs() {
+    const primary = await this.supabaseAdmin
+      .from('audit_logs')
+      .select('id, action, table_name, record_id, user_email, created_at')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (!primary.error) {
+      return primary;
+    }
+
+    if (primary.error.code !== '42703') {
+      return primary;
+    }
+
+    this.logger.warn('audit_logs.user_email not found, using compatibility query without user_email');
+
+    const fallback = await this.supabaseAdmin
+      .from('audit_logs')
+      .select('id, action, table_name, record_id, created_at')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (fallback.error) {
+      return fallback;
+    }
+
+    return {
+      data: (fallback.data ?? []).map((row: Record<string, unknown>) => ({
+        ...row,
+        user_email: null,
+      })),
+      error: null,
+    };
+  }
+
   async getDashboardOverview() {
     const [subjects, sections, lectures, resources, profiles, calendarEvents, studentsByYear, upcomingEventsResult, recentAuditResult] = await Promise.all([
       this.countTable('subjects', 'is_active'),
@@ -91,11 +127,7 @@ export class StatisticsService {
         .gte('start_time', new Date().toISOString())
         .order('start_time', { ascending: true })
         .limit(8),
-      this.supabaseAdmin
-        .from('audit_logs')
-        .select('id, action, table_name, record_id, user_email, created_at')
-        .order('created_at', { ascending: false })
-        .limit(10),
+      this.getRecentAuditLogs(),
     ]);
 
     if (upcomingEventsResult.error) {
