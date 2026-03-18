@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ServiceApiController } from './service-api.controller';
 import { ServiceApiService } from './service-api.service';
 import { V1Module } from './modules/v1/v1.module';
+import { CommonModule } from './common';
 
 const appEnv = process.env.APP_ENV?.trim();
 const nodeEnv = process.env.NODE_ENV?.trim();
@@ -24,6 +25,7 @@ envFilePath.push('.env');
       isGlobal: true,
       envFilePath,
     }),
+    CommonModule,
     V1Module,
   ],
   controllers: [ServiceApiController],

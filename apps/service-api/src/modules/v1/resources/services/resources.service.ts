@@ -199,7 +199,13 @@ export class ResourcesService {
     search?: string,
     sortBy?: string,
     sortOrder?: string,
+    page?: number,
+    pageSize?: number,
   ) {
+    const shouldPaginate = page !== undefined && pageSize !== undefined;
+    const safePage = shouldPaginate ? Math.max(1, Number(page) || 1) : 1;
+    const safePageSize = shouldPaginate ? Math.min(100, Math.max(1, Number(pageSize) || 15)) : 0;
+
     let scopedSectionIds: string[] | undefined;
     let sectionLectureIds: string[] | undefined;
 
@@ -216,10 +222,22 @@ export class ResourcesService {
 
       scopedSectionIds = (sections ?? []).map((section: { id: string }) => section.id);
       if (scopedSectionIds.length === 0) {
+        if (shouldPaginate) {
+          return {
+            data: [],
+            pagination: { page: safePage, pageSize: safePageSize, total: 0, totalPages: 0 },
+          };
+        }
         return [];
       }
 
       if (sectionId && !scopedSectionIds.includes(sectionId)) {
+        if (shouldPaginate) {
+          return {
+            data: [],
+            pagination: { page: safePage, pageSize: safePageSize, total: 0, totalPages: 0 },
+          };
+        }
         return [];
       }
     }
@@ -238,10 +256,22 @@ export class ResourcesService {
       sectionLectureIds = (lectures ?? []).map((lecture: { id: string }) => lecture.id);
 
       if (sectionLectureIds.length === 0) {
+        if (shouldPaginate) {
+          return {
+            data: [],
+            pagination: { page: safePage, pageSize: safePageSize, total: 0, totalPages: 0 },
+          };
+        }
         return [];
       }
 
       if (lectureId && !sectionLectureIds.includes(lectureId)) {
+        if (shouldPaginate) {
+          return {
+            data: [],
+            pagination: { page: safePage, pageSize: safePageSize, total: 0, totalPages: 0 },
+          };
+        }
         return [];
       }
     }
@@ -266,7 +296,7 @@ export class ResourcesService {
             )
           )
         )
-      `);
+      `, shouldPaginate ? { count: 'exact' } : undefined);
 
     if (lectureId) {
       query = query.eq('lecture_id', lectureId);
@@ -287,9 +317,14 @@ export class ResourcesService {
     const sort = this.resolveSort(sortBy, sortOrder);
     if (!sort.isDerivedField) {
       query = query.order(sort.field, { ascending: sort.ascending });
+      if (shouldPaginate) {
+        const from = (safePage - 1) * safePageSize;
+        const to = from + safePageSize - 1;
+        query = query.range(from, to);
+      }
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
 
     if (error) {
       this.logger.warn(`Failed to fetch resources (code=${error.code ?? 'unknown'})`);
@@ -314,6 +349,35 @@ export class ResourcesService {
         const order = leftValue.localeCompare(rightValue);
         return sort.ascending ? order : -order;
       });
+
+      if (shouldPaginate) {
+        const from = (safePage - 1) * safePageSize;
+        const to = from + safePageSize;
+        const pagedRows = mappedRows.slice(from, to);
+        const total = mappedRows.length;
+        return {
+          data: pagedRows,
+          pagination: {
+            page: safePage,
+            pageSize: safePageSize,
+            total,
+            totalPages: Math.ceil(total / safePageSize),
+          },
+        };
+      }
+    }
+
+    if (shouldPaginate) {
+      const total = count ?? mappedRows.length;
+      return {
+        data: mappedRows,
+        pagination: {
+          page: safePage,
+          pageSize: safePageSize,
+          total,
+          totalPages: Math.ceil(total / safePageSize),
+        },
+      };
     }
 
     return mappedRows;

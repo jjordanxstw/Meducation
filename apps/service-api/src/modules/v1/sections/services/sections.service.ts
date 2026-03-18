@@ -92,8 +92,20 @@ export class SectionsService {
     return { field, ascending };
   }
 
-  async findAll(subjectId?: string, isActive: boolean = true, search?: string, sortBy?: string, sortOrder?: string) {
-    let query = this.supabaseAdmin.from('sections').select('*');
+  async findAll(
+    subjectId?: string,
+    isActive: boolean = true,
+    search?: string,
+    sortBy?: string,
+    sortOrder?: string,
+    page?: number,
+    pageSize?: number,
+  ) {
+    const shouldPaginate = page !== undefined && pageSize !== undefined;
+    const safePage = shouldPaginate ? Math.max(1, Number(page) || 1) : 1;
+    const safePageSize = shouldPaginate ? Math.min(100, Math.max(1, Number(pageSize) || 15)) : 0;
+
+    let query = this.supabaseAdmin.from('sections').select('*', shouldPaginate ? { count: 'exact' } : undefined);
 
     if (subjectId) {
       query = query.eq('subject_id', subjectId);
@@ -106,12 +118,31 @@ export class SectionsService {
       query = query.or(`name.ilike.${term},description.ilike.${term}`);
     }
 
+    if (shouldPaginate) {
+      const from = (safePage - 1) * safePageSize;
+      const to = from + safePageSize - 1;
+      query = query.range(from, to);
+    }
+
     const sort = this.resolveSort(sortBy, sortOrder);
-    const { data, error } = await query.order(sort.field, { ascending: sort.ascending });
+    const { data, error, count } = await query.order(sort.field, { ascending: sort.ascending });
 
     if (error) {
       this.logger.warn(`Failed to fetch sections (code=${error.code ?? 'unknown'})`);
       throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'section' }, 'Failed to fetch sections');
+    }
+
+    if (shouldPaginate) {
+      const total = count ?? 0;
+      return {
+        data: data ?? [],
+        pagination: {
+          page: safePage,
+          pageSize: safePageSize,
+          total,
+          totalPages: Math.ceil(total / safePageSize),
+        },
+      };
     }
 
     return data;

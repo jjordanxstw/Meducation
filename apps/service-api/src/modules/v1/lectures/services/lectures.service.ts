@@ -114,7 +114,20 @@ export class LecturesService {
     return { field, ascending };
   }
 
-  async findAll(subjectId?: string, sectionId?: string, isActive: boolean = true, search?: string, sortBy?: string, sortOrder?: string) {
+  async findAll(
+    subjectId?: string,
+    sectionId?: string,
+    isActive: boolean = true,
+    search?: string,
+    sortBy?: string,
+    sortOrder?: string,
+    page?: number,
+    pageSize?: number,
+  ) {
+    const shouldPaginate = page !== undefined && pageSize !== undefined;
+    const safePage = shouldPaginate ? Math.max(1, Number(page) || 1) : 1;
+    const safePageSize = shouldPaginate ? Math.min(100, Math.max(1, Number(pageSize) || 15)) : 0;
+
     let subjectSectionIds: string[] | undefined;
 
     if (subjectId) {
@@ -131,15 +144,27 @@ export class LecturesService {
       subjectSectionIds = (sections ?? []).map((section: { id: string }) => section.id);
 
       if (subjectSectionIds.length === 0) {
+        if (shouldPaginate) {
+          return {
+            data: [],
+            pagination: { page: safePage, pageSize: safePageSize, total: 0, totalPages: 0 },
+          };
+        }
         return [];
       }
 
       if (sectionId && !subjectSectionIds.includes(sectionId)) {
+        if (shouldPaginate) {
+          return {
+            data: [],
+            pagination: { page: safePage, pageSize: safePageSize, total: 0, totalPages: 0 },
+          };
+        }
         return [];
       }
     }
 
-    let query = this.supabaseAdmin.from('lectures').select('*');
+    let query = this.supabaseAdmin.from('lectures').select('*', shouldPaginate ? { count: 'exact' } : undefined);
 
     if (sectionId) {
       query = query.eq('section_id', sectionId);
@@ -154,12 +179,31 @@ export class LecturesService {
       query = query.or(`title.ilike.${term},description.ilike.${term},lecturer_name.ilike.${term}`);
     }
 
+    if (shouldPaginate) {
+      const from = (safePage - 1) * safePageSize;
+      const to = from + safePageSize - 1;
+      query = query.range(from, to);
+    }
+
     const sort = this.resolveSort(sortBy, sortOrder);
-    const { data, error } = await query.order(sort.field, { ascending: sort.ascending });
+    const { data, error, count } = await query.order(sort.field, { ascending: sort.ascending });
 
     if (error) {
       this.logger.warn(`Failed to fetch lectures (code=${error.code ?? 'unknown'})`);
       throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'lecture' }, 'Failed to fetch lectures');
+    }
+
+    if (shouldPaginate) {
+      const total = count ?? 0;
+      return {
+        data: data ?? [],
+        pagination: {
+          page: safePage,
+          pageSize: safePageSize,
+          total,
+          totalPages: Math.ceil(total / safePageSize),
+        },
+      };
     }
 
     return data;

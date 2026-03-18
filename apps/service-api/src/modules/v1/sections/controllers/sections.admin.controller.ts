@@ -17,12 +17,27 @@ import {
 } from '@nestjs/common';
 import { SectionsService } from '../services/sections.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
-import { SkipEnvelope } from '../../../../common';
+import { SkipEnvelope, ResponseCacheService } from '../../../../common';
+
+const INVALIDATE_SECTION_GRAPH_PREFIXES = [
+  'v1:sections:',
+  'v1:lectures:',
+  'v1:resources:',
+  'v1:calendar:',
+  'v1:admin:statistics:',
+];
 
 @Controller({ path: 'admin/sections', version: '1' })
 @UseGuards(AdminJwtAuthGuard)
 export class SectionsAdminController {
-  constructor(private readonly sectionsService: SectionsService) {}
+  constructor(
+    private readonly sectionsService: SectionsService,
+    private readonly responseCache: ResponseCacheService,
+  ) {}
+
+  private invalidateSectionGraphCache(): void {
+    this.responseCache.deleteByPrefixes(INVALIDATE_SECTION_GRAPH_PREFIXES);
+  }
 
   @Get()
   @SkipEnvelope()
@@ -32,15 +47,30 @@ export class SectionsAdminController {
     @Query('search') search?: string,
     @Query('sortBy') sortBy?: string,
     @Query('sortOrder') sortOrder?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
-    const data = await this.sectionsService.findAll(
+    const result = await this.sectionsService.findAll(
       subjectId,
       isActive === 'false' ? false : true,
       search,
       sortBy,
       sortOrder,
+      page ? parseInt(page, 10) : 1,
+      pageSize ? parseInt(pageSize, 10) : 15,
     );
-    return { success: true, data };
+
+    const data = Array.isArray(result) ? result : result.data;
+    const pagination = Array.isArray(result)
+      ? {
+          page: 1,
+          pageSize: data.length,
+          total: data.length,
+          totalPages: data.length > 0 ? 1 : 0,
+        }
+      : result.pagination;
+
+    return { success: true, data, pagination };
   }
 
   @Get(':id')
@@ -54,6 +84,7 @@ export class SectionsAdminController {
   @SkipEnvelope()
   async create(@Body() createDto: any) {
     const data = await this.sectionsService.create(createDto);
+    this.invalidateSectionGraphCache();
     return { success: true, data };
   }
 
@@ -61,6 +92,7 @@ export class SectionsAdminController {
   @SkipEnvelope()
   async update(@Param('id') id: string, @Body() updateDto: any) {
     const data = await this.sectionsService.update(id, updateDto);
+    this.invalidateSectionGraphCache();
     return { success: true, data: data.newData };
   }
 
@@ -68,6 +100,7 @@ export class SectionsAdminController {
   @SkipEnvelope()
   async delete(@Param('id') id: string) {
     await this.sectionsService.delete(id);
+    this.invalidateSectionGraphCache();
     return { success: true, message: 'Section deleted successfully' };
   }
 
@@ -75,6 +108,7 @@ export class SectionsAdminController {
   @SkipEnvelope()
   async reorder(@Body() body: { items: Array<{ id: string; order_index: number }> }) {
     const result = await this.sectionsService.reorder(body.items);
+    this.invalidateSectionGraphCache();
     return { success: true, ...result };
   }
 }

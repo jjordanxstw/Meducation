@@ -677,6 +677,10 @@ const ResourcesList = () => {
                   value: lecture.id,
                 }))}
                 onSearch={setModalLectureSearchText}
+                onChange={(value) => {
+                  form.setFieldValue('lecture_id', value || undefined);
+                  setModalLectureSearchText('');
+                }}
               />
               <Button onClick={() => openQuickCreateModal('lecture')} disabled={!modalSectionId}>{t('buttons.create', {}, '+Create')}</Button>
             </Space.Compact>
