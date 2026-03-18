@@ -31,7 +31,8 @@ body,
 
 body {
   font-family: var(--font-prompt), sans-serif;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -261,7 +262,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .refine-layout .ant-layout-content {
-  height: calc(100dvh - 64px);
+  height: auto;
+  min-height: 0;
+  flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   padding-bottom: 24px;
@@ -277,7 +280,6 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .refine-layout .ant-layout-content {
-    height: calc(100dvh - 56px);
     padding: 12px;
   }
 
@@ -288,6 +290,18 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+.resource-filter-bar {
+  width: 100%;
+}
+
+.resource-filter-control {
+  min-width: 140px;
+}
+
+.resource-filter-button {
+  min-width: 88px;
+}
+
 @media (max-width: 576px) {
   .refine-layout .ant-card {
     border-radius: 12px;
@@ -295,5 +309,23 @@ h1, h2, h3, h4, h5, h6 {
 
   .refine-layout .ant-space {
     row-gap: 8px;
+  }
+
+  .resource-filter-bar {
+    margin-bottom: 8px !important;
+  }
+
+  .resource-filter-control,
+  .resource-filter-control.ant-picker,
+  .resource-filter-button {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .resource-filter-control,
+  .resource-filter-control.ant-picker {
+    width: 100% !important;
+    max-width: 100%;
   }
 }

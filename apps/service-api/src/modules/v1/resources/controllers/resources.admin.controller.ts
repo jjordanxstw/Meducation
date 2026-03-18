@@ -27,12 +27,16 @@ export class ResourcesAdminController {
   @Get()
   @SkipEnvelope()
   async findAll(
+    @Query('subject_id') subjectId?: string,
     @Query('lecture_id') lectureId?: string,
+    @Query('section_id') sectionId?: string,
     @Query('type') type?: string,
     @Query('is_active') isActive?: string,
     @Query('search') search?: string,
   ) {
     const data = await this.resourcesService.findAll(
+      subjectId,
+      sectionId,
       lectureId,
       type,
       isActive === 'false' ? false : true,

@@ -15,9 +15,11 @@ export const AppLayoutTitle = ({ collapsed }: LayoutTitleProps) => {
   const initialsFontSize = collapsed ? 14 : 12;
 
   const toggleSider = () => {
-    const triggerButton = document.querySelector<HTMLButtonElement>('.ant-layout-sider-trigger button');
-    if (triggerButton) {
-      triggerButton.click();
+    const trigger = document.querySelector<HTMLElement>(
+      '.ant-layout-sider-zero-width-trigger, .ant-layout-sider-trigger',
+    );
+    if (trigger) {
+      trigger.click();
     }
   };
 

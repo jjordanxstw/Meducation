@@ -6,9 +6,10 @@
 import { useList, useTranslate } from '@refinedev/core';
 import { Edit, useForm } from '@refinedev/antd';
 import { useParams } from 'react-router-dom';
+import { useEffect, useMemo } from 'react';
 import { Form, Input, InputNumber, Switch, Select, DatePicker } from 'antd';
 import dayjs from 'dayjs';
-import type { Lecture, Section } from '@medical-portal/shared';
+import type { Lecture, Section, Subject } from '@medical-portal/shared';
 
 const { TextArea } = Input;
 
@@ -16,26 +17,70 @@ const LecturesEdit = () => {
   const t = useTranslate();
   const { id } = useParams<{ id: string }>();
   const { formProps, saveButtonProps } = useForm<Lecture>({ id });
+  const selectedSubjectId = Form.useWatch('subject_id', formProps.form);
+  const selectedSectionId = Form.useWatch('section_id', formProps.form);
 
   const { data: sectionsData } = useList<Section>({
     resource: 'sections',
   });
+  const { data: subjectsData } = useList<Subject>({
+    resource: 'subjects',
+  });
 
   const sections = sectionsData?.data || [];
+  const subjects = subjectsData?.data || [];
+  const sectionMap = useMemo(() => new Map(sections.map((section) => [section.id, section])), [sections]);
+  const sectionOptions = useMemo(() => {
+    if (!selectedSubjectId) {
+      return [];
+    }
+
+    return sections
+      .filter((section) => section.subject_id === selectedSubjectId)
+      .map((section) => ({
+        label: section.name,
+        value: section.id,
+      }));
+  }, [sections, selectedSubjectId]);
+
+  useEffect(() => {
+    if (!selectedSectionId || selectedSubjectId) {
+      return;
+    }
+
+    const section = sectionMap.get(selectedSectionId);
+    if (section?.subject_id) {
+      formProps.form?.setFieldValue('subject_id', section.subject_id);
+    }
+  }, [formProps.form, sectionMap, selectedSectionId, selectedSubjectId]);
 
   return (
     <Edit saveButtonProps={saveButtonProps} recordItemId={id}>
       <Form {...formProps} layout="vertical" style={{ maxWidth: 600 }}>
         <Form.Item
-          label={t('pages.lectures.fields.section', {}, 'Section')}
-          name="section_id"
-          rules={[{ required: true }]}
+          label={t('pages.lectures.fields.subject', {}, 'Subject')}
+          name="subject_id"
+          rules={[{ required: true, message: t('pages.lectures.validation.subjectRequired', {}, 'Please select a subject') }]}
         >
           <Select
-            options={sections.map((s) => ({
-              label: s.name,
-              value: s.id,
+            options={subjects.map((subject) => ({
+              label: `${subject.code} - ${subject.name}`,
+              value: subject.id,
             }))}
+            onChange={() => formProps.form?.setFieldValue('section_id', undefined)}
+            showSearch
+            optionFilterProp="label"
+          />
+        </Form.Item>
+
+        <Form.Item
+          label={t('pages.lectures.fields.section', {}, 'Section')}
+          name="section_id"
+          rules={[{ required: true, message: t('pages.lectures.validation.sectionRequired', {}, 'Please select a section') }]}
+        >
+          <Select
+            options={sectionOptions}
+            disabled={!selectedSubjectId}
             showSearch
             optionFilterProp="label"
           />

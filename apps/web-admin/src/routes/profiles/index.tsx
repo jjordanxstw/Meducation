@@ -6,7 +6,7 @@
 import { List, useTable, EditButton, ShowButton } from '@refinedev/antd';
 import { useTranslate } from '@refinedev/core';
 import { Avatar, Button, Input, Select, Space, Table, Tag } from 'antd';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { UserRole } from '@medical-portal/shared';
 import type { Profile } from '@medical-portal/shared';
 import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
@@ -23,7 +23,7 @@ const ProfilesList = () => {
   const debouncedSearch = useDebouncedValue(search, 350);
   const hasHydratedFromUrl = useRef(false);
 
-  const buildFilters = (searchValue: string) => {
+  const buildFilters = useCallback((searchValue: string) => {
     const nextFilters: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
 
     if (searchValue.trim()) {
@@ -37,7 +37,7 @@ const ProfilesList = () => {
     }
 
     return nextFilters;
-  };
+  }, [role, yearLevel]);
 
   useEffect(() => {
     if (hasHydratedFromUrl.current) {
@@ -60,11 +60,7 @@ const ProfilesList = () => {
       return;
     }
     setFilters(buildFilters(debouncedSearch), 'replace');
-  }, [debouncedSearch]);
-
-  const applyFilters = () => {
-    setFilters(buildFilters(search), 'replace');
-  };
+  }, [buildFilters, debouncedSearch, setFilters]);
 
   const resetFilters = () => {
     setSearch('');
@@ -75,16 +71,17 @@ const ProfilesList = () => {
 
   return (
     <List>
-      <Space wrap size="small" style={{ marginBottom: 12 }}>
+      <Space wrap size="small" style={{ marginBottom: 12 }} className="resource-filter-bar">
         <Input.Search
+          className="resource-filter-control"
           allowClear
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          onSearch={applyFilters}
           placeholder={t('common.searchPlaceholder', {}, 'Search')}
           style={{ width: 260 }}
         />
         <Select
+          className="resource-filter-control"
           allowClear
           value={role}
           onChange={(value) => setRole(value)}
@@ -96,6 +93,7 @@ const ProfilesList = () => {
           ]}
         />
         <Select
+          className="resource-filter-control"
           allowClear
           value={yearLevel}
           onChange={(value) => setYearLevel(value)}
@@ -106,8 +104,7 @@ const ProfilesList = () => {
             value,
           }))}
         />
-        <Button type="primary" onClick={applyFilters}>{t('common.applyFilters', {}, 'Apply')}</Button>
-        <Button onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
+        <Button className="resource-filter-button" onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
       </Space>
 
       <Table

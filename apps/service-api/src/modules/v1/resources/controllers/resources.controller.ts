@@ -22,11 +22,15 @@ export class ResourcesPublicController {
   @UseGuards(GoogleAuthGuard)
   @SkipEnvelope()
   async findAll(
+    @Query('subject_id') subjectId?: string,
+    @Query('section_id') sectionId?: string,
     @Query('lecture_id') lectureId?: string,
     @Query('type') type?: string,
     @Query('is_active') isActive?: string,
   ) {
     const data = await this.resourcesService.findAll(
+      subjectId,
+      sectionId,
       lectureId,
       type,
       isActive === 'false' ? false : true,

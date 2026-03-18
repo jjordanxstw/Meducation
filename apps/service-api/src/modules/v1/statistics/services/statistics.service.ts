@@ -82,7 +82,7 @@ export class StatisticsService {
       this.countTable('sections', 'is_active'),
       this.countTable('lectures', 'is_active'),
       this.countTable('resources', 'is_active'),
-      this.countTable('profiles', 'is_active'),
+      this.countTable('profiles'),
       this.countTable('calendar_events'),
       this.getStudentsByYear(),
       this.supabaseAdmin

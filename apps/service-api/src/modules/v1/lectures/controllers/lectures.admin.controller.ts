@@ -27,11 +27,13 @@ export class LecturesAdminController {
   @Get()
   @SkipEnvelope()
   async findAll(
+    @Query('subject_id') subjectId?: string,
     @Query('section_id') sectionId?: string,
     @Query('is_active') isActive?: string,
     @Query('search') search?: string,
   ) {
     const data = await this.lecturesService.findAll(
+      subjectId,
       sectionId,
       isActive === 'false' ? false : true,
       search,

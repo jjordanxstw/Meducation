@@ -6,7 +6,7 @@
 import { List, useTable } from '@refinedev/antd';
 import { useTranslate, useGetLocale } from '@refinedev/core';
 import { Button, DatePicker, Input, Select, Space, Table, Tag } from 'antd';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
 
@@ -45,7 +45,7 @@ const AuditLogsList = () => {
   const debouncedSearch = useDebouncedValue(search, 350);
   const hasHydratedFromUrl = useRef(false);
 
-  const buildFilters = (searchValue: string) => {
+  const buildFilters = useCallback((searchValue: string) => {
     const nextFilters: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
 
     if (searchValue.trim()) {
@@ -63,7 +63,7 @@ const AuditLogsList = () => {
     }
 
     return nextFilters;
-  };
+  }, [action, dateRange, tableName]);
 
   useEffect(() => {
     if (hasHydratedFromUrl.current) {
@@ -91,11 +91,7 @@ const AuditLogsList = () => {
       return;
     }
     setFilters(buildFilters(debouncedSearch), 'replace');
-  }, [debouncedSearch]);
-
-  const applyFilters = () => {
-    setFilters(buildFilters(search), 'replace');
-  };
+  }, [buildFilters, debouncedSearch, setFilters]);
 
   const resetFilters = () => {
     setSearch('');
@@ -107,16 +103,17 @@ const AuditLogsList = () => {
 
   return (
     <List>
-      <Space wrap size="small" style={{ marginBottom: 12 }}>
+      <Space wrap size="small" style={{ marginBottom: 12 }} className="resource-filter-bar">
         <Input.Search
+          className="resource-filter-control"
           allowClear
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          onSearch={applyFilters}
           placeholder={t('common.searchPlaceholder', {}, 'Search')}
           style={{ width: 240 }}
         />
         <Select
+          className="resource-filter-control"
           allowClear
           value={action}
           onChange={(value) => setAction(value)}
@@ -129,6 +126,7 @@ const AuditLogsList = () => {
           ]}
         />
         <Select
+          className="resource-filter-control"
           allowClear
           value={tableName}
           onChange={(value) => setTableName(value)}
@@ -144,6 +142,7 @@ const AuditLogsList = () => {
           ]}
         />
         <RangePicker
+          className="resource-filter-control"
           value={
             dateRange
               ? [dayjs(dateRange[0]), dayjs(dateRange[1])]
@@ -157,8 +156,7 @@ const AuditLogsList = () => {
             setDateRange([values[0].startOf('day').toISOString(), values[1].endOf('day').toISOString()]);
           }}
         />
-        <Button type="primary" onClick={applyFilters}>{t('common.applyFilters', {}, 'Apply')}</Button>
-        <Button onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
+        <Button className="resource-filter-button" onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
       </Space>
 
       <Table

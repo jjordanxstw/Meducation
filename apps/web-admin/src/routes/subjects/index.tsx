@@ -6,7 +6,7 @@
 import { List, useTable, EditButton, ShowButton, DeleteButton } from '@refinedev/antd';
 import { useTranslate } from '@refinedev/core';
 import { Button, Input, Select, Space, Table, Tag } from 'antd';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Subject } from '@medical-portal/shared';
 import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
 
@@ -22,7 +22,7 @@ const SubjectsList = () => {
   const debouncedSearch = useDebouncedValue(search, 350);
   const hasHydratedFromUrl = useRef(false);
 
-  const buildFilters = (searchValue: string) => {
+  const buildFilters = useCallback((searchValue: string) => {
     const nextFilters: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
 
     if (searchValue.trim()) {
@@ -36,7 +36,7 @@ const SubjectsList = () => {
     }
 
     return nextFilters;
-  };
+  }, [isActive, yearLevel]);
 
   useEffect(() => {
     if (hasHydratedFromUrl.current) {
@@ -60,11 +60,7 @@ const SubjectsList = () => {
     }
 
     setFilters(buildFilters(debouncedSearch), 'replace');
-  }, [debouncedSearch]);
-
-  const applyFilters = () => {
-    setFilters(buildFilters(search), 'replace');
-  };
+  }, [buildFilters, debouncedSearch, setFilters]);
 
   const resetFilters = () => {
     setSearch('');
@@ -75,16 +71,17 @@ const SubjectsList = () => {
 
   return (
     <List createButtonProps={{ children: t('buttons.create', {}, 'Create') }}>
-      <Space wrap size="small" style={{ marginBottom: 12 }}>
+      <Space wrap size="small" style={{ marginBottom: 12 }} className="resource-filter-bar">
         <Input.Search
+          className="resource-filter-control"
           allowClear
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          onSearch={applyFilters}
           placeholder={t('common.searchPlaceholder', {}, 'Search')}
           style={{ width: 240 }}
         />
         <Select
+          className="resource-filter-control"
           allowClear
           value={yearLevel}
           onChange={(value) => setYearLevel(value)}
@@ -96,6 +93,7 @@ const SubjectsList = () => {
           }))}
         />
         <Select
+          className="resource-filter-control"
           allowClear
           value={isActive}
           onChange={(value) => setIsActive(value)}
@@ -106,8 +104,7 @@ const SubjectsList = () => {
             { label: t('common.inactive', {}, 'Inactive'), value: false },
           ]}
         />
-        <Button type="primary" onClick={applyFilters}>{t('common.applyFilters', {}, 'Apply')}</Button>
-        <Button onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
+        <Button className="resource-filter-button" onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
       </Space>
 
       <Table
@@ -116,24 +113,24 @@ const SubjectsList = () => {
         size="small"
         scroll={{ x: 'max-content' }}
       >
-        <Table.Column dataIndex="code" title={t('pages.subjects.fields.code', {}, 'Subject Code')} width={120} />
-        <Table.Column dataIndex="name" title={t('pages.subjects.fields.name', {}, 'Subject Name')} ellipsis />
+        <Table.Column dataIndex="code" title={t('pages.subjects.fields.code', {}, 'Subject Code')} width={150} sorter/>
+        <Table.Column dataIndex="name" title={t('pages.subjects.fields.name', {}, 'Subject Name')} ellipsis sorter/>
         <Table.Column
           dataIndex="year_level"
           title={t('pages.subjects.fields.yearLevel', {}, 'Year Level')}
-          width={80}
+          width={150}
           render={(value) => `${t('common.yearPrefix', {}, 'Year')} ${value}`}
         />
         <Table.Column
           dataIndex="order_index"
           title={t('common.order', {}, 'Order')}
-          width={80}
+          width={10}
           sorter
         />
         <Table.Column
           dataIndex="is_active"
           title={t('common.status', {}, 'Status')}
-          width={100}
+          width={10}
           render={(value) => (
             <Tag color={value ? 'green' : 'red'}>
               {value ? t('common.active', {}, 'Active') : t('common.inactive', {}, 'Inactive')}
@@ -143,7 +140,7 @@ const SubjectsList = () => {
         <Table.Column
           title={t('common.actions', {}, 'Actions')}
           fixed="right"
-          width={180}
+          width={10}
           render={(_, record: Subject) => (
             <Space size="small">
               <ShowButton hideText size="small" recordItemId={record.id} />

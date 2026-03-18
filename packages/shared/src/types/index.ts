@@ -116,7 +116,7 @@ export interface CreateSectionDto {
   order_index?: number;
 }
 
-export interface UpdateSectionDto extends Partial<Omit<CreateSectionDto, 'subject_id'>> {
+export interface UpdateSectionDto extends Partial<CreateSectionDto> {
   is_active?: boolean;
 }
 
@@ -138,6 +138,7 @@ export interface Lecture extends BaseEntity, OrderableEntity {
 }
 
 export interface CreateLectureDto {
+  subject_id: string;
   section_id: string;
   title: string;
   description?: string;
@@ -146,7 +147,7 @@ export interface CreateLectureDto {
   order_index?: number;
 }
 
-export interface UpdateLectureDto extends Partial<Omit<CreateLectureDto, 'section_id'>> {
+export interface UpdateLectureDto extends Partial<CreateLectureDto> {
   is_active?: boolean;
 }
 
@@ -169,6 +170,8 @@ export interface Resource extends BaseEntity, OrderableEntity {
 }
 
 export interface CreateResourceDto {
+  subject_id: string;
+  section_id: string;
   lecture_id: string;
   label: string;
   url: string;
@@ -178,7 +181,7 @@ export interface CreateResourceDto {
   order_index?: number;
 }
 
-export interface UpdateResourceDto extends Partial<Omit<CreateResourceDto, 'lecture_id'>> {
+export interface UpdateResourceDto extends Partial<CreateResourceDto> {
   is_active?: boolean;
 }
 

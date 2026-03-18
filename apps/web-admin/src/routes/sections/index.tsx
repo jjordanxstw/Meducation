@@ -6,7 +6,7 @@
 import { useList, useTranslate } from '@refinedev/core';
 import { List, useTable, EditButton, DeleteButton } from '@refinedev/antd';
 import { Button, Input, Select, Space, Table, Tag } from 'antd';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Section, Subject } from '@medical-portal/shared';
 import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
 
@@ -29,7 +29,7 @@ const SectionsList = () => {
   const debouncedSearch = useDebouncedValue(search, 350);
   const hasHydratedFromUrl = useRef(false);
 
-  const buildFilters = (searchValue: string) => {
+  const buildFilters = useCallback((searchValue: string) => {
     const nextFilters: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
     if (searchValue.trim()) {
       nextFilters.push({ field: 'search', operator: 'contains', value: searchValue.trim() });
@@ -41,7 +41,7 @@ const SectionsList = () => {
       nextFilters.push({ field: 'is_active', operator: 'eq', value: isActive });
     }
     return nextFilters;
-  };
+  }, [isActive, subjectId]);
 
   useEffect(() => {
     if (hasHydratedFromUrl.current) {
@@ -64,11 +64,7 @@ const SectionsList = () => {
       return;
     }
     setFilters(buildFilters(debouncedSearch), 'replace');
-  }, [debouncedSearch]);
-
-  const applyFilters = () => {
-    setFilters(buildFilters(search), 'replace');
-  };
+  }, [buildFilters, debouncedSearch, setFilters]);
 
   const resetFilters = () => {
     setSearch('');
@@ -79,16 +75,17 @@ const SectionsList = () => {
 
   return (
     <List createButtonProps={{ children: t('buttons.create', {}, 'Create') }}>
-      <Space wrap size="small" style={{ marginBottom: 12 }}>
+      <Space wrap size="small" style={{ marginBottom: 12 }} className="resource-filter-bar">
         <Input.Search
+          className="resource-filter-control"
           allowClear
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          onSearch={applyFilters}
           placeholder={t('common.searchPlaceholder', {}, 'Search')}
           style={{ width: 240 }}
         />
         <Select
+          className="resource-filter-control"
           allowClear
           value={subjectId}
           onChange={(value) => setSubjectId(value)}
@@ -100,6 +97,7 @@ const SectionsList = () => {
           }))}
         />
         <Select
+          className="resource-filter-control"
           allowClear
           value={isActive}
           onChange={(value) => setIsActive(value)}
@@ -110,8 +108,7 @@ const SectionsList = () => {
             { label: t('common.inactive', {}, 'Inactive'), value: false },
           ]}
         />
-        <Button type="primary" onClick={applyFilters}>{t('common.applyFilters', {}, 'Apply')}</Button>
-        <Button onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
+        <Button className="resource-filter-button" onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
       </Space>
 
       <Table
@@ -128,18 +125,19 @@ const SectionsList = () => {
             const subject = subjectMap.get(value);
             return subject ? `${subject.code} - ${subject.name}` : value;
           }}
+          sorter
         />
-        <Table.Column dataIndex="name" title={t('pages.sections.fields.name', {}, 'Section Name')} ellipsis />
+        <Table.Column dataIndex="name" title={t('pages.sections.fields.name', {}, 'Section Name')} ellipsis sorter/>
         <Table.Column
           dataIndex="order_index"
           title={t('common.order', {}, 'Order')}
-          width={80}
+          width={10}
           sorter
         />
         <Table.Column
           dataIndex="is_active"
           title={t('common.status', {}, 'Status')}
-          width={100}
+          width={10}
           render={(value) => (
             <Tag color={value ? 'green' : 'red'}>
               {value ? t('common.active', {}, 'Active') : t('common.inactive', {}, 'Inactive')}
@@ -149,7 +147,7 @@ const SectionsList = () => {
         <Table.Column
           title={t('common.actions', {}, 'Actions')}
           fixed="right"
-          width={120}
+          width={10}
           render={(_, record: Section) => (
             <Space size="small">
               <EditButton hideText size="small" recordItemId={record.id} />

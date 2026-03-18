@@ -25,7 +25,62 @@ export class LecturesService {
     });
   }
 
+  private requireStringField(payload: any, field: string): string {
+    const value = payload?.[field];
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      throw new AppException(
+        ErrorCode.VALIDATION_INVALID_INPUT,
+        { field },
+        `Missing required field: ${field}`,
+      );
+    }
+
+    return value.trim();
+  }
+
+  private async assertSectionExists(sectionId: string): Promise<{ id: string; subject_id: string }> {
+    const { data, error } = await this.supabaseAdmin
+      .from('sections')
+      .select('id, subject_id')
+      .eq('id', sectionId)
+      .single();
+
+    if (error) {
+      throw new AppException(
+        ErrorCode.VALIDATION_INVALID_INPUT,
+        { field: 'section_id', value: sectionId },
+        'Section does not exist',
+      );
+    }
+
+    return data as { id: string; subject_id: string };
+  }
+
+  private async assertLectureHierarchy(subjectId: string, sectionId: string): Promise<void> {
+    const section = await this.assertSectionExists(sectionId);
+    if (section.subject_id !== subjectId) {
+      throw new AppException(
+        ErrorCode.VALIDATION_INVALID_INPUT,
+        { field: 'section_id', value: sectionId, subject_id: subjectId },
+        'Section does not belong to subject',
+      );
+    }
+  }
+
   private mapLectureWriteError(error: { code?: string; message?: string; details?: string | null; hint?: string | null }): never {
+    if (error.code === '23503') {
+      const signature = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`.toLowerCase();
+      if (signature.includes('section_id')) {
+        throw new AppException(
+          ErrorCode.VALIDATION_INVALID_INPUT,
+          { field: 'section_id' },
+          'Section does not exist',
+        );
+      }
+
+      throw new AppException(ErrorCode.VALIDATION_INVALID_INPUT, { resource: 'lecture' }, 'Invalid foreign key reference');
+    }
+
     if (error.code === '23505') {
       const signature = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`.toLowerCase();
 
@@ -39,11 +94,37 @@ export class LecturesService {
     throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'lecture' });
   }
 
-  async findAll(sectionId?: string, isActive: boolean = true, search?: string) {
+  async findAll(subjectId?: string, sectionId?: string, isActive: boolean = true, search?: string) {
+    let subjectSectionIds: string[] | undefined;
+
+    if (subjectId) {
+      const { data: sections, error: sectionsError } = await this.supabaseAdmin
+        .from('sections')
+        .select('id')
+        .eq('subject_id', subjectId);
+
+      if (sectionsError) {
+        this.logger.warn(`Failed to fetch sections for subject filter (code=${sectionsError.code ?? 'unknown'})`);
+        throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'lecture' }, 'Failed to fetch lectures');
+      }
+
+      subjectSectionIds = (sections ?? []).map((section: { id: string }) => section.id);
+
+      if (subjectSectionIds.length === 0) {
+        return [];
+      }
+
+      if (sectionId && !subjectSectionIds.includes(sectionId)) {
+        return [];
+      }
+    }
+
     let query = this.supabaseAdmin.from('lectures').select('*');
 
     if (sectionId) {
       query = query.eq('section_id', sectionId);
+    } else if (subjectSectionIds) {
+      query = query.in('section_id', subjectSectionIds);
     }
     if (isActive) {
       query = query.eq('is_active', true);
@@ -83,9 +164,15 @@ export class LecturesService {
   }
 
   async create(data: any) {
+    const subjectId = this.requireStringField(data, 'subject_id');
+    const sectionId = this.requireStringField(data, 'section_id');
+    await this.assertLectureHierarchy(subjectId, sectionId);
+
+    const { subject_id: _subjectId, ...payload } = data;
+
     const { data: result, error } = await this.supabaseAdmin
       .from('lectures')
-      .insert(data)
+      .insert(payload)
       .select()
       .single();
 
@@ -98,6 +185,12 @@ export class LecturesService {
   }
 
   async update(id: string, data: any) {
+    const subjectId = this.requireStringField(data, 'subject_id');
+    const sectionId = this.requireStringField(data, 'section_id');
+    await this.assertLectureHierarchy(subjectId, sectionId);
+
+    const { subject_id: _subjectId, ...payload } = data;
+
     const { data: oldData } = await this.supabaseAdmin
       .from('lectures')
       .select('*')
@@ -106,7 +199,7 @@ export class LecturesService {
 
     const { data: result, error } = await this.supabaseAdmin
       .from('lectures')
-      .update(data)
+      .update(payload)
       .eq('id', id)
       .select()
       .single();

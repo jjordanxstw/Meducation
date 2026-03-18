@@ -25,7 +25,49 @@ export class SectionsService {
     });
   }
 
+  private requireStringField(payload: any, field: string): string {
+    const value = payload?.[field];
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      throw new AppException(
+        ErrorCode.VALIDATION_INVALID_INPUT,
+        { field },
+        `Missing required field: ${field}`,
+      );
+    }
+
+    return value.trim();
+  }
+
+  private async assertSubjectExists(subjectId: string): Promise<void> {
+    const { error } = await this.supabaseAdmin
+      .from('subjects')
+      .select('id')
+      .eq('id', subjectId)
+      .single();
+
+    if (error) {
+      throw new AppException(
+        ErrorCode.VALIDATION_INVALID_INPUT,
+        { field: 'subject_id', value: subjectId },
+        'Subject does not exist',
+      );
+    }
+  }
+
   private mapSectionWriteError(error: { code?: string; message?: string; details?: string | null; hint?: string | null }): never {
+    if (error.code === '23503') {
+      const signature = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`.toLowerCase();
+      if (signature.includes('subject_id')) {
+        throw new AppException(
+          ErrorCode.VALIDATION_INVALID_INPUT,
+          { field: 'subject_id' },
+          'Subject does not exist',
+        );
+      }
+
+      throw new AppException(ErrorCode.VALIDATION_INVALID_INPUT, { resource: 'section' }, 'Invalid foreign key reference');
+    }
+
     if (error.code === '23505') {
       const signature = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`.toLowerCase();
 
@@ -78,6 +120,9 @@ export class SectionsService {
   }
 
   async create(data: any) {
+    const subjectId = this.requireStringField(data, 'subject_id');
+    await this.assertSubjectExists(subjectId);
+
     const { data: result, error } = await this.supabaseAdmin
       .from('sections')
       .insert(data)
@@ -93,6 +138,9 @@ export class SectionsService {
   }
 
   async update(id: string, data: any) {
+    const subjectId = this.requireStringField(data, 'subject_id');
+    await this.assertSubjectExists(subjectId);
+
     const { data: oldData } = await this.supabaseAdmin
       .from('sections')
       .select('*')
