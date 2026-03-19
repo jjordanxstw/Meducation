@@ -360,6 +360,27 @@ export class AdminRefreshTokenService {
   }
 
   /**
+   * Get the owner user_id of a refresh token by token ID
+   * Returns null if token not found or not owned by specified userType
+   */
+  async getTokenOwner(tokenId: string): Promise<{ userId: string; userType: string } | null> {
+    const { data, error } = await this.supabaseAdmin
+      .from('refresh_tokens')
+      .select('user_id, user_type')
+      .eq('id', tokenId)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return {
+      userId: data.user_id,
+      userType: data.user_type,
+    };
+  }
+
+  /**
    * Revoke all admin sessions except the current one
    */
   async revokeOtherSessions(userId: string, currentTokenId: string): Promise<number> {

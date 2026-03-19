@@ -82,6 +82,29 @@ export class GlobalValidationPipe extends ValidationPipe {
   }
 
   private getReceivedValue(error: ValidationError): unknown {
-    return error.value !== undefined ? error.value : 'Not provided';
+    // In production, redact sensitive values to prevent information disclosure
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    if (error.value === undefined) {
+      return 'Not provided';
+    }
+
+    if (isProduction) {
+      // Redact in production - only indicate type
+      const type = typeof error.value;
+      if (type === 'string') {
+        const len = (error.value as string).length;
+        return `[REDACTED: string:${len} chars]`;
+      }
+      if (type === 'object' && Array.isArray(error.value)) {
+        return `[REDACTED: array:${(error.value as unknown[]).length} items]`;
+      }
+      if (type === 'object') {
+        return '[REDACTED: object]';
+      }
+      return `[REDACTED: ${type}]`;
+    }
+
+    return error.value;
   }
 }

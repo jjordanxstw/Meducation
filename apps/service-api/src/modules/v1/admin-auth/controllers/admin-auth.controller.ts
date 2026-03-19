@@ -417,7 +417,7 @@ export class AdminAuthController {
 
   /**
    * Revoke Session
-   * Revoke a specific session
+   * Revoke a specific session (only own sessions)
    */
   @Post('sessions/:tokenId/revoke')
   @UseGuards(AdminJwtAuthGuard)
@@ -426,12 +426,27 @@ export class AdminAuthController {
   @SkipEnvelope()
   @ApiOperation({
     summary: 'Revoke a specific session',
-    description: 'Revoke a specific session by ID.',
+    description: 'Revoke a specific session by ID. Users can only revoke their own sessions.',
   })
   @ApiResponse({ status: 200, description: 'Session revoked successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Cannot revoke other users sessions' })
   @ApiResponse({ status: 404, description: 'Session not found' })
-  async revokeSession(@Param('tokenId') tokenId: string) {
+  async revokeSession(
+    @Param('tokenId') tokenId: string,
+    @Request() req: AdminRequest,
+  ) {
+    // Validate ownership - users can only revoke their own sessions
+    const tokenOwner = await this.refreshTokenService.getTokenOwner(tokenId);
+
+    if (!tokenOwner) {
+      throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'session' }, 'Session not found');
+    }
+
+    if (tokenOwner.userId !== req.admin!.id) {
+      throw new AppException(ErrorCode.AUTHZ_FORBIDDEN, undefined, 'Cannot revoke other users sessions');
+    }
+
     const success = await this.refreshTokenService.revokeRefreshToken(tokenId);
     if (!success) {
       throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'session' }, 'Session not found or already revoked');

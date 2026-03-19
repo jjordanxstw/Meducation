@@ -5,6 +5,8 @@ import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { ServiceApiModule } from './service-api.module';
 import { GlobalValidationPipe } from './common/pipes/validation.pipe';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -126,8 +128,60 @@ async function bootstrap() {
 
   const port = Number(configService.get<number>('PORT')) || 3001;
 
-  // JSON body parser
-  app.use(express.json());
+  // Security headers via Helmet
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        fontSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'"],
+        frameAncestors: ["'none'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // Allow embedding external resources if needed
+    frameguard: { action: 'deny' }, // Prevent clickjacking
+    xssFilter: true,
+    noSniff: true,
+  }));
+
+  // Rate limiting for authentication endpoints (prevent brute force)
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // 5 attempts per window per IP
+    message: {
+      error: 'Too many authentication attempts',
+      errorCode: 'RATE_LIMITED',
+      message: 'Please try again later'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: true, // Don't count successful logins
+  });
+
+  // Stricter rate limit for password operations
+  const passwordLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 3, // 3 attempts per hour
+    message: {
+      error: 'Too many password attempts',
+      errorCode: 'PASSWORD_RATE_LIMITED',
+      message: 'Please try again later'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Apply rate limiting to auth endpoints
+  // Note: Paths must include /api/v1/ prefix to match actual endpoint paths
+  app.use('/api/v1/admin/auth/login', authLimiter);
+  app.use('/api/v1/auth/verify', authLimiter);
+  app.use('/api/v1/admin/auth/change-password', passwordLimiter);
+
+  // JSON body parser with size limit to prevent DoS
+  app.use(express.json({ limit: '10kb' }));
 
   // Cookie parser for httpOnly cookie support
   app.use(cookieParser());

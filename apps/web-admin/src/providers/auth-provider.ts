@@ -10,17 +10,19 @@
 
 import type { AuthProvider } from '@refinedev/core';
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import DOMPurify from 'dompurify';
 import { resolveApiErrorMessage } from '../utils/api-error';
 
 /**
  * Sanitize error message to prevent XSS attacks
+ * Uses DOMPurify for comprehensive XSS prevention
  */
 function sanitizeErrorMessage(error: unknown): string {
   if (typeof error === 'string') {
-    return error.replace(/[<>]/g, '');
+    return DOMPurify.sanitize(error, { ALLOWED_TAGS: [] });
   }
   if (error instanceof Error) {
-    return error.message.replace(/[<>]/g, '');
+    return DOMPurify.sanitize(error.message, { ALLOWED_TAGS: [] });
   }
   return 'เกิดข้อผิดพลาด';
 }
