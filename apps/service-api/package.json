@@ -19,6 +19,7 @@
   "dependencies": {
     "@medical-portal/shared": "workspace:*",
     "@nestjs/common": "^11.1.16",
+    "ajv": "^8.18.0",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.1.16",
     "@nestjs/jwt": "^11.0.0",
