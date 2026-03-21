@@ -5,15 +5,15 @@ import './globals.css';
 import { Providers } from './providers';
 
 const kanit = Kanit({
-  weight: ['300', '400', '500', '600', '700'],
-  subsets: ['latin', 'thai'],
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
   variable: '--font-kanit',
   display: 'swap',
 });
 
 const prompt = Prompt({
-  weight: ['300', '400', '500', '600', '700'],
-  subsets: ['latin', 'thai'],
+  weight: ['400', '500', '600'],
+  subsets: ['latin'],
   variable: '--font-prompt',
   display: 'swap',
 });
@@ -42,10 +42,9 @@ export default function RootLayout({
             (function () {
               try {
                 var storageTheme = localStorage.getItem('med:theme');
-                var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                 var theme = storageTheme === 'dark' || storageTheme === 'light'
                   ? storageTheme
-                  : (systemDark ? 'dark' : 'light');
+                  : 'light';
                 var root = document.documentElement;
                 root.classList.remove('light', 'dark');
                 root.classList.add(theme);

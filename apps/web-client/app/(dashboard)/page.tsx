@@ -11,10 +11,28 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth.store';
 import { api } from '@/lib/api';
 import { FiBook, FiCalendar, FiClock, FiArrowRight, FiRefreshCw } from 'react-icons/fi';
-import { getYearLevelLabel, formatDateThai, getEventTypeColor, getEventTypeLabel } from '@medical-portal/shared';
+import { getYearLevelLabel, formatDateThai, getEventTypeColor } from '@medical-portal/shared';
 import type { Subject, CalendarEvent } from '@medical-portal/shared';
 import { EventListSkeleton, SubjectGridSkeleton } from '@/components/skeletons/DashboardSkeletons';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+
+// Preset brand colors for subject accent bars
+const SUBJECT_COLORS = [
+  'from-blue-500 to-blue-600',
+  'from-purple-500 to-purple-600',
+  'from-emerald-500 to-emerald-600',
+  'from-amber-500 to-amber-600',
+  'from-rose-500 to-rose-600',
+];
+
+// Generate consistent color based on subject code
+function getSubjectColor(code: string): string {
+  let hash = 0;
+  for (let i = 0; i < code.length; i++) {
+    hash = code.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return SUBJECT_COLORS[Math.abs(hash) % SUBJECT_COLORS.length];
+}
 
 export default function HomePage() {
   const { profile } = useAuthStore();
@@ -47,57 +65,61 @@ export default function HomePage() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      {/* Welcome Section */}
+      {/* Welcome Section - Bold hero treatment */}
       <Card className="glass-card relative overflow-hidden text-[var(--ink-1)]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_20%,rgba(59,130,246,0.2),transparent_40%),radial-gradient(circle_at_80%_18%,rgba(14,165,233,0.15),transparent_45%)]" />
-        <CardBody className="gap-4 p-4 sm:p-6">
-          <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        {/* Left accent bar - bolder width */}
+        <div className="absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b from-blue-400 via-blue-500 to-blue-600" />
+        {/* Subtle gradient overlay */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-transparent" />
+        <CardBody className="gap-5 p-5 pl-7 sm:p-8 sm:pl-10">
+          <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <h1 className="text-xl font-bold sm:text-2xl">
-                Hello, {profile?.full_name || 'Student'} 👋
-              </h1>
-              <p className="text-sm text-[var(--ink-2)] sm:text-base">
-                {profile?.year_level ? getYearLevelLabel(profile.year_level) : 'Welcome to Medical Learning Portal'}
+              <div className="flex flex-wrap items-center gap-3 mb-2">
+                <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                  Hello, {profile?.full_name || 'Student'}
+                </h1>
+                {profile?.year_level && (
+                  <Chip size="sm" color="primary" variant="solid" className="text-xs font-semibold px-3">
+                    {getYearLevelLabel(profile.year_level)}
+                  </Chip>
+                )}
+              </div>
+              <p className="text-base text-[var(--ink-2)]">
+                Ready to continue your medical education journey?
               </p>
             </div>
-            <div className="flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row sm:gap-3">
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:gap-4">
               <Link href="/subjects" className="flex-1 sm:flex-none">
-                <Button
-                  color="primary"
-                  variant="solid"
-                  className="btn-precise w-full justify-center font-semibold sm:w-auto"
-                  startContent={<span className="icon-with-text"><FiBook className="h-4 w-4" /></span>}
-                >
+                <button className="flex w-full items-center justify-center gap-2 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-all duration-200 shadow-lg shadow-blue-900/50 hover:shadow-xl hover:shadow-blue-900/60 sm:w-auto">
+                  <FiBook className="h-4 w-4" />
                   Start Learning
-                </Button>
+                </button>
               </Link>
               <Link href="/calendar" className="flex-1 sm:flex-none">
-                <Button
-                  variant="bordered"
-                  className="btn-precise card-flat w-full justify-center text-[var(--ink-1)] font-semibold sm:w-auto"
-                  startContent={<span className="icon-with-text"><FiCalendar className="h-4 w-4" /></span>}
-                >
-                  Calendar
-                </Button>
+                <button className="flex w-full items-center justify-center gap-2 px-6 py-3 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium text-sm transition-all duration-200 hover:border-slate-300 sm:w-auto dark:border-white/20 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 dark:hover:border-white/30">
+                  <FiCalendar className="h-4 w-4" />
+                  View Calendar
+                </button>
               </Link>
             </div>
           </div>
         </CardBody>
       </Card>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        {/* Subjects Section */}
-        <section className="space-y-3 lg:col-span-2">
+      {/* 55/45 Layout */}
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-[55fr_45fr]">
+        {/* Subjects Section - 55% */}
+        <section className="space-y-3">
           <SectionHeader
             title="Your Subjects"
             description="Select subjects you want to study"
             actions={
               <Link
                 href="/subjects"
-                className="group inline-flex items-center gap-1 text-sm font-semibold text-primary"
+                className="group inline-flex items-center gap-1.5 text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors"
               >
                 View All
-                <FiArrowRight className="group-hover:translate-x-0.5 transition-transform" />
+                <FiArrowRight className="transition-transform group-hover:translate-x-1" />
               </Link>
             }
           />
@@ -105,8 +127,8 @@ export default function HomePage() {
           {isSubjectsError ? (
             <Card className="glass-surface">
               <CardBody className="gap-3 p-6">
-                <h3 className="text-base font-semibold text-danger-600">Unable to load subjects</h3>
-                <p className="text-sm text-default-600">Please retry to fetch your subject list.</p>
+                <h3 className="text-base font-semibold text-danger-600">Couldn&apos;t load subjects</h3>
+                <p className="text-sm text-default-600">Check your connection and try again.</p>
                 <Button
                   color="primary"
                   variant="flat"
@@ -114,7 +136,7 @@ export default function HomePage() {
                   startContent={<span className="icon-with-text"><FiRefreshCw className="h-4 w-4" /></span>}
                   onPress={() => void refetchSubjects()}
                 >
-                  Retry
+                  Try Again
                 </Button>
               </CardBody>
             </Card>
@@ -127,24 +149,35 @@ export default function HomePage() {
                   <Card
                     isPressable
                     isBlurred
-                    className="glass-surface h-full hover:scale-[1.02] transition-transform"
+                    className="glass-surface h-full max-h-[160px] overflow-hidden transition-all duration-200 hover:scale-[1.02] hover:shadow-lg group"
                   >
-                    <CardBody className="gap-3">
+                    {/* Colored accent bar - 4px */}
+                    <div className={`h-1 w-full bg-gradient-to-r ${getSubjectColor(subject.code)}`} />
+                    <CardBody className="gap-2 p-3">
                       <div className="flex items-start gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50">
-                          <FiBook className="text-primary text-lg" />
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                          <FiBook className="text-primary text-base" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <Chip size="sm" color="primary" variant="flat">
-                            {subject.code}
-                          </Chip>
-                          <h3 className="font-semibold text-foreground line-clamp-2">
+                          <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                            <Chip size="sm" color="primary" variant="flat" className="h-5 text-[10px] font-medium px-2">
+                              {subject.code}
+                            </Chip>
+                            <span className="text-[10px] text-slate-500 dark:text-white/50">Year {subject.year_level}</span>
+                          </div>
+                          <h3 className="font-semibold text-foreground text-sm mb-0.5 line-clamp-1">
                             {subject.name}
                           </h3>
-                          <p className="text-sm text-default-500 line-clamp-2">
-                            {subject.description || 'No description'}
+                          <p className="text-xs text-default-500 line-clamp-2">
+                            {subject.description || 'No description available'}
                           </p>
                         </div>
+                      </div>
+                      {/* Hover indicator */}
+                      <div className="flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity mt-auto">
+                        <span className="text-xs font-medium text-primary flex items-center gap-1">
+                          Open <FiArrowRight className="h-3 w-3" />
+                        </span>
                       </div>
                     </CardBody>
                   </Card>
@@ -156,17 +189,17 @@ export default function HomePage() {
           {!isSubjectsLoading && subjects.length === 0 && (
             <Card className="glass-surface">
               <CardBody className="text-center py-12">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-default-100">
-                  <FiBook className="text-default-400 text-2xl" />
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 dark:bg-default-100/50">
+                  <FiBook className="h-6 w-6 text-slate-400 dark:text-default-400 opacity-50" />
                 </div>
-                <h3 className="font-semibold text-lg mb-1">No Subjects</h3>
-                <p className="text-default-500 text-sm">No subjects available for your year level</p>
+                <h3 className="text-lg font-semibold text-slate-700 dark:text-white/80 mb-1">No Subjects Available</h3>
+                <p className="text-sm text-slate-500 dark:text-white/50">No subjects found for your year level</p>
               </CardBody>
             </Card>
           )}
         </section>
 
-        {/* Upcoming Events Section */}
+        {/* Upcoming Events Section - 45% */}
         <section className="space-y-3">
           <SectionHeader
             title="Upcoming Events"
@@ -176,8 +209,8 @@ export default function HomePage() {
           {isEventsError ? (
             <Card className="glass-surface">
               <CardBody className="gap-3 p-6">
-                <h3 className="text-base font-semibold text-danger-600">Unable to load upcoming events</h3>
-                <p className="text-sm text-default-600">Please retry to fetch your schedule.</p>
+                <h3 className="text-base font-semibold text-danger-600">Couldn&apos;t load events</h3>
+                <p className="text-sm text-default-600">Check your connection and try again.</p>
                 <Button
                   color="primary"
                   variant="flat"
@@ -185,13 +218,13 @@ export default function HomePage() {
                   startContent={<span className="icon-with-text"><FiRefreshCw className="h-4 w-4" /></span>}
                   onPress={() => void refetchEvents()}
                 >
-                  Retry
+                  Try Again
                 </Button>
               </CardBody>
             </Card>
           ) : isEventsLoading ? (
             <EventListSkeleton count={4} />
-          ) : (
+          ) : upcomingEvents.length > 0 ? (
             <Card className="card-flat border divider-y-0">
               {upcomingEvents.map((event: CalendarEvent & { subjects?: { name: string } }) => (
                 <div
@@ -206,47 +239,48 @@ export default function HomePage() {
                     <p className="font-medium text-foreground mb-1 line-clamp-2">
                       {event.title}
                     </p>
-                    <div className="flex items-center gap-2 text-sm text-default-500 mb-2">
+                    <div className="flex items-center gap-2 text-sm text-default-500">
                       <FiClock className="h-3.5 w-3.5 shrink-0" />
                       <span className="truncate">{formatDateThai(event.start_time)}</span>
                     </div>
-                    <Chip
-                      size="sm"
-                      variant="flat"
-                      style={{
-                        backgroundColor: `${getEventTypeColor(event.type)}15`,
-                        color: getEventTypeColor(event.type),
-                      }}
-                    >
-                      {getEventTypeLabel(event.type)}
-                    </Chip>
                   </div>
                 </div>
               ))}
-
-              {upcomingEvents.length === 0 && (
-                <div className="p-12 text-center">
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-default-100">
-                    <FiCalendar className="text-default-400 text-2xl" />
-                  </div>
-                  <h3 className="font-semibold text-lg mb-1">No Events</h3>
-                  <p className="text-default-500 text-sm">No upcoming events</p>
+            </Card>
+          ) : (
+            <Card className="glass-surface">
+              <CardBody className="text-center py-10">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 dark:bg-default-100/50">
+                  <FiCalendar className="h-6 w-6 text-slate-400 dark:text-default-400 opacity-50" />
                 </div>
-              )}
+                <h3 className="text-lg font-semibold text-slate-700 dark:text-white/80 mb-1">You&apos;re all caught up!</h3>
+                <p className="text-sm text-slate-500 dark:text-white/50 mb-4">No upcoming events in the next 7 days.</p>
+                <Link href="/calendar">
+                  <Button
+                    variant="ghost"
+                    className="btn-precise text-primary hover:text-primary-600"
+                    startContent={<span className="icon-with-text"><FiCalendar className="h-4 w-4" /></span>}
+                  >
+                    View Full Calendar
+                  </Button>
+                </Link>
+              </CardBody>
             </Card>
           )}
 
-          <Link href="/calendar">
-            <Button
-              variant="flat"
-              color="primary"
-              className="btn-precise w-full justify-center font-semibold"
-              startContent={<span className="icon-with-text"><FiCalendar className="h-4 w-4" /></span>}
-              endContent={<span className="icon-with-text"><FiArrowRight className="h-4 w-4" /></span>}
-            >
-              View Full Calendar
-            </Button>
-          </Link>
+          {upcomingEvents.length > 0 && (
+            <Link href="/calendar">
+              <Button
+                variant="flat"
+                color="primary"
+                className="btn-precise w-full justify-center font-semibold"
+                startContent={<span className="icon-with-text"><FiCalendar className="h-4 w-4" /></span>}
+                endContent={<span className="icon-with-text"><FiArrowRight className="h-4 w-4" /></span>}
+              >
+                View Full Calendar
+              </Button>
+            </Link>
+          )}
         </section>
       </div>
     </div>

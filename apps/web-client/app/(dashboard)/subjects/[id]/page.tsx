@@ -5,6 +5,7 @@
  * Next.js adapted version
  */
 
+import React from 'react';
 import Link from 'next/link';
 import {
   Card,
@@ -50,42 +51,25 @@ function ResourceButton({
     switch (resource.type) {
       case ResourceType.YOUTUBE:
       case ResourceType.GDRIVE_VIDEO:
-        return <FiPlay className="h-4 w-4" />;
+        return <FiPlay className="h-3.5 w-3.5" />;
       case ResourceType.GDRIVE_PDF:
-        return <FiFileText className="h-4 w-4" />;
+        return <FiFileText className="h-3.5 w-3.5" />;
       case ResourceType.EXTERNAL:
-        return <FiExternalLink className="h-4 w-4" />;
+        return <FiExternalLink className="h-3.5 w-3.5" />;
       default:
-        return <FiFileText className="h-4 w-4" />;
-    }
-  };
-
-  const getColor = (): 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'default' => {
-    switch (resource.type) {
-      case ResourceType.YOUTUBE:
-        return 'danger';
-      case ResourceType.GDRIVE_VIDEO:
-        return 'primary';
-      case ResourceType.GDRIVE_PDF:
-        return 'success';
-      case ResourceType.EXTERNAL:
-        return 'secondary';
-      default:
-        return 'default';
+        return <FiFileText className="h-3.5 w-3.5" />;
     }
   };
 
   return (
-    <Button
-      size="sm"
-      variant="flat"
-      color={getColor()}
-      startContent={<span className="icon-with-text">{getIcon()}</span>}
-      onPress={onClick}
-      className="btn-precise max-w-full"
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-100 hover:text-blue-700 dark:border-blue-500/30 dark:bg-blue-600/20 dark:text-blue-400 dark:hover:bg-blue-600/40 dark:hover:text-blue-300"
     >
+      {getIcon()}
       <span className="max-w-[10rem] truncate">{resource.label}</span>
-    </Button>
+    </button>
   );
 }
 
@@ -104,49 +88,47 @@ function LectureCard({ lecture }: { lecture: LectureWithResources }) {
 
   return (
     <>
-      <Card isBlurred className="glass-surface hover:scale-[1.01] transition-transform">
-        <CardBody className="gap-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex-1 min-w-0 space-y-2">
-              <h4 className="font-semibold text-[var(--ink-1)] line-clamp-1">
-                {lecture.title}
-              </h4>
-              {lecture.description && (
-                <p className="text-sm text-[var(--ink-2)] line-clamp-2">
-                  {lecture.description}
-                </p>
+      <div className="mb-2 rounded-xl border border-slate-200 bg-white px-4 py-4 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-white/8 dark:bg-[#0d1b2e] dark:hover:border-white/15 dark:hover:bg-white/5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex-1 min-w-0 space-y-2">
+            <h4 className="text-sm font-medium text-slate-900 dark:text-white line-clamp-1">
+              {lecture.title}
+            </h4>
+            {lecture.description && (
+              <p className="text-sm text-[var(--ink-2)] line-clamp-2">
+                {lecture.description}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2 text-sm">
+              {lecture.lecture_date && (
+                <Chip size="sm" variant="flat" startContent={<span className="icon-with-text"><FiCalendar className="h-3 w-3" /></span>}>
+                  {formatDateThai(lecture.lecture_date)}
+                </Chip>
               )}
-              <div className="flex flex-wrap gap-2 text-sm">
-                {lecture.lecture_date && (
-                  <Chip size="sm" variant="flat" startContent={<span className="icon-with-text"><FiCalendar className="h-3 w-3" /></span>}>
-                    {formatDateThai(lecture.lecture_date)}
-                  </Chip>
-                )}
-                {lecture.lecturer_name && (
-                  <Chip size="sm" variant="flat" startContent={<span className="icon-with-text"><FiUser className="h-3 w-3" /></span>}>
-                    {lecture.lecturer_name}
-                  </Chip>
-                )}
-              </div>
-            </div>
-
-            <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
-              {lecture.resources?.map((resource) => (
-                <ResourceButton
-                  key={resource.id}
-                  resource={resource}
-                  onClick={() => handleResourceClick(resource)}
-                />
-              ))}
-              {(!lecture.resources || lecture.resources.length === 0) && (
-                <Chip size="sm" variant="flat">
-                  No Files
+              {lecture.lecturer_name && (
+                <Chip size="sm" variant="flat" startContent={<span className="icon-with-text"><FiUser className="h-3 w-3" /></span>}>
+                  {lecture.lecturer_name}
                 </Chip>
               )}
             </div>
           </div>
-        </CardBody>
-      </Card>
+
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+            {lecture.resources?.map((resource) => (
+              <ResourceButton
+                key={resource.id}
+                resource={resource}
+                onClick={() => handleResourceClick(resource)}
+              />
+            ))}
+            {(!lecture.resources || lecture.resources.length === 0) && (
+              <Chip size="sm" variant="flat">
+                No Files
+              </Chip>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Video Player Modal */}
       <Modal
@@ -179,9 +161,10 @@ function LectureCard({ lecture }: { lecture: LectureWithResources }) {
 export default function SubjectDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const id = params.id;
+  // Next.js 15: params is a Promise and must be unwrapped
+  const { id } = React.use(params);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['subject', id],
@@ -225,42 +208,41 @@ export default function SubjectDetailPage({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6 px-6">
       {/* Back button */}
-      <Link href="/subjects" className="inline-block w-full sm:w-auto">
-        <Button
-          variant="flat"
-          size="sm"
-          className="glass-soft w-full sm:w-auto"
-          startContent={<span className="icon-with-text"><FiArrowLeft className="h-4 w-4" /></span>}
+      <Link href="/subjects" className="inline-block">
+        <button
+          type="button"
+          className="mb-5 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
         >
+          <FiArrowLeft className="h-4 w-4" />
           Back to Subjects
-        </Button>
+        </button>
       </Link>
 
       {/* Subject Header */}
-      <Card className="glass-card relative overflow-hidden text-[var(--ink-1)]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_15%,rgba(59,130,246,0.2),transparent_36%),radial-gradient(circle_at_82%_20%,rgba(14,165,233,0.16),transparent_42%)]" />
-        <CardBody className="gap-4 p-6 sm:p-8 lg:p-12">
-          <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
-            <div className="glass-soft flex h-16 w-16 shrink-0 items-center justify-center rounded-xl shadow-lg sm:h-20 sm:w-20">
-              <FiVideo className="h-8 w-8 sm:h-10 sm:w-10" />
+      <Card className="glass-card relative overflow-hidden border-l-[3px] border-l-blue-500 text-[var(--ink-1)]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_15%,rgba(59,130,246,0.08),transparent_36%),radial-gradient(circle_at_82%_20%,rgba(14,165,233,0.06),transparent_42%)] dark:bg-[radial-gradient(circle_at_12%_15%,rgba(59,130,246,0.2),transparent_36%),radial-gradient(circle_at_82%_20%,rgba(14,165,233,0.16),transparent_42%)]" />
+        <CardBody className="gap-4 p-6">
+          <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-5">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-blue-200 bg-blue-100 dark:border-blue-500/30 dark:bg-blue-600/20">
+              <FiVideo className="h-7 w-7 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="flex-1 min-w-0 space-y-2">
-              <Chip size="sm" variant="flat" className="glass-soft w-fit text-[var(--ink-1)] border-white/20">
+              <span className="inline-block rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600 dark:bg-white/10 dark:text-white/60">
                 {subject.code}
-              </Chip>
-              <h1 className="text-[clamp(1.5rem,4.8vw,2.6rem)] font-bold leading-tight line-clamp-2">
+              </span>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
                 {subject.name}
               </h1>
-              <p className="line-clamp-3 text-sm text-[var(--ink-2)] sm:text-base">{subject.description}</p>
+              <p className="line-clamp-3 text-sm text-slate-600 dark:text-[var(--ink-2)] sm:text-base">{subject.description}</p>
               <div className="flex flex-wrap gap-2">
-                <Chip size="sm" variant="flat" className="glass-soft text-[var(--ink-1)]">
+                <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs text-blue-600 dark:border-blue-500/20 dark:bg-blue-500/15 dark:text-blue-300">
                   Year {subject.year_level}
-                </Chip>
-                <Chip size="sm" variant="flat" className="glass-soft text-[var(--ink-1)]">
+                </span>
+                <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs text-blue-600 dark:border-blue-500/20 dark:bg-blue-500/15 dark:text-blue-300">
                   {subject.sections?.length || 0} Sections
-                </Chip>
+                </span>
               </div>
             </div>
           </div>
@@ -280,30 +262,30 @@ export default function SubjectDetailPage({
               key={section.id}
               aria-label={section.name}
               title={
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary font-bold">
+                <div className="flex items-center gap-3 px-2 py-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-100 text-sm font-bold text-blue-600 dark:border-blue-500/30 dark:bg-blue-600/25 dark:text-blue-300">
                     {index + 1}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="font-semibold text-foreground line-clamp-1">
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white line-clamp-1">
                       {section.name}
                     </span>
-                    <p className="text-xs text-default-500">
+                    <p className="text-xs text-slate-500 dark:text-white/40">
                       {section.lectures?.length || 0} Lectures
                     </p>
                   </div>
                 </div>
               }
             >
-              <div className="space-y-4 pt-2">
+              <div className="mb-3 mt-2">
                 {section.lectures?.map((lecture) => (
                   <LectureCard key={lecture.id} lecture={lecture} />
                 ))}
                 {(!section.lectures || section.lectures.length === 0) && (
                   <Card className="glass-surface">
                     <CardBody className="text-center py-16">
-                      <FiVideo className="mx-auto mb-4 h-12 w-12 text-default-300" />
-                      <p className="font-medium">No lectures in this section yet</p>
+                      <FiVideo className="mx-auto mb-4 h-12 w-12 text-slate-300 dark:text-default-300" />
+                      <p className="font-medium text-slate-600 dark:text-white">No lectures in this section yet</p>
                     </CardBody>
                   </Card>
                 )}
@@ -314,9 +296,9 @@ export default function SubjectDetailPage({
       ) : (
         <Card className="glass-surface">
           <CardBody className="text-center py-16">
-            <FiVideo className="mx-auto mb-4 h-16 w-16 text-default-300" />
-            <h3 className="font-semibold text-lg mb-2">No Content Available</h3>
-            <p className="text-default-500">
+            <FiVideo className="mx-auto mb-4 h-16 w-16 text-slate-300 dark:text-default-300" />
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Content Available</h3>
+            <p className="text-slate-500 dark:text-default-500">
               This subject doesn&apos;t have content yet. Please check back later.
             </p>
           </CardBody>
