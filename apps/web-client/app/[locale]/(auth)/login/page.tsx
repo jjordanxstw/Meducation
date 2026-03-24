@@ -3,6 +3,7 @@
 /**
  * Login Page using NextAuth Google OAuth
  * Supports both light and dark themes
+ * Uses locale-aware routing
  */
 
 import { useEffect, useRef, useState, useSyncExternalStore, Suspense } from 'react';
@@ -15,6 +16,7 @@ import {
   FiShield,
 } from 'react-icons/fi';
 import { useAppTheme } from '@/app/providers';
+import { useLocale } from 'next-intl';
 
 // Google SVG icon component
 function GoogleIcon({ className }: { className?: string }) {
@@ -45,6 +47,7 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { theme, toggleTheme, isReady } = useAppTheme();
+  const locale = useLocale();
   const authError = searchParams.get('error');
   const handledAuthErrorRef = useRef(false);
   const mounted = useSyncExternalStore(
@@ -89,13 +92,14 @@ function LoginContent() {
 
     if (status === 'authenticated') {
       const to = searchParams.get('to') || '/';
-      router.replace(`/auth/sync?to=${encodeURIComponent(to)}`);
+      router.replace(`/${locale}/auth/sync?to=${encodeURIComponent(to)}`);
     }
-  }, [status, router, searchParams, effectiveAuthError]);
+  }, [status, router, searchParams, effectiveAuthError, locale]);
 
   const handleSignInClick = async () => {
     const to = searchParams.get('to') || '/';
-    await signIn('google', { callbackUrl: `/auth/sync?to=${encodeURIComponent(to)}` });
+    // Note: callbackUrl must be the full path including locale for the auth flow
+    await signIn('google', { callbackUrl: `/${locale}/auth/sync?to=${encodeURIComponent(to)}` });
   };
 
   return (

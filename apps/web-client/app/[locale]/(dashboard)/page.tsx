@@ -3,9 +3,10 @@
 /**
  * Home Page - Redesigned
  * MedPi Portal main dashboard
+ * Uses locale-aware routing
  */
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/routing';
 import { Card, CardBody } from '@nextui-org/react';
 import {
   FiVolume2,
@@ -245,14 +246,6 @@ export default function HomePage() {
 
       {/* SECTION D — Full Calendar */}
       <section className="mt-10">
-        <div className="flex flex-col gap-1 mb-2">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-            Academic Calendar
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-white/50">
-            Exam schedules, lectures, and events
-          </p>
-        </div>
         <CalendarSection />
       </section>
     </div>

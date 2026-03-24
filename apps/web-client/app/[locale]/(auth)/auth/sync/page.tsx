@@ -7,6 +7,7 @@ import { Button } from '@nextui-org/react';
 import { FiRefreshCw } from 'react-icons/fi';
 import axios from 'axios';
 import { api } from '@/lib/api';
+import { useLocale } from 'next-intl';
 
 const SAFE_EXACT_PATHS = new Set([
   '/',
@@ -38,6 +39,7 @@ function AuthSyncContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
+  const locale = useLocale();
   const hasStartedSync = useRef(false);
   const isHandlingAuthFailure = useRef(false);
   const [syncError, setSyncError] = useState<'network_unreachable' | null>(null);
@@ -72,8 +74,8 @@ function AuthSyncContent() {
       // Ignore storage failures.
     }
 
-    router.replace(`/login?error=${errorCode}`);
-  }, [router]);
+    router.replace(`/${locale}/login?error=${errorCode}`);
+  }, [router, locale]);
 
   useEffect(() => {
     const syncBackendSession = async () => {
@@ -83,7 +85,7 @@ function AuthSyncContent() {
 
       if (status !== 'authenticated') {
         if (status === 'unauthenticated') {
-          router.replace('/login');
+          router.replace(`/${locale}/login`);
         }
         return;
       }
@@ -104,7 +106,7 @@ function AuthSyncContent() {
         await api.auth.verify(idToken);
 
         const to = sanitizeTargetPath(searchParams.get('to'));
-        router.replace(to);
+        router.replace(`/${locale}${to}`);
       } catch (error) {
         if (axios.isAxiosError(error)) {
           const statusCode = error.response?.status;
@@ -129,7 +131,7 @@ function AuthSyncContent() {
     };
 
     void syncBackendSession();
-  }, [status, session, router, searchParams, syncError, handleAuthFailure]);
+  }, [status, session, router, searchParams, syncError, handleAuthFailure, locale]);
 
   if (syncError) {
     return (

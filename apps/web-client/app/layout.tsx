@@ -35,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html suppressHydrationWarning>
       <body className={`${kanit.variable} ${prompt.variable} font-sans antialiased`}>
         <Script id="theme-bootstrap" strategy="beforeInteractive">
           {`
