@@ -46,24 +46,25 @@ function YearFilterTab({
   );
 }
 
-// Skeleton loader for subject cards
+// Skeleton loader for subject cards - 1:1 aspect ratio
 function SubjectSkeletonGrid() {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-      {[...Array(8)].map((_, i) => (
-        <Card key={i} className="glass-surface overflow-hidden h-[200px]">
-          <CardBody className="p-0">
-            <Skeleton className="h-24 w-full rounded-none" />
-            <div className="space-y-2 p-3">
-              <div className="flex gap-2">
-                <Skeleton className="h-5 w-14 rounded-full" />
-                <Skeleton className="h-5 w-12 rounded-full" />
-              </div>
-              <Skeleton className="h-4 w-3/4 rounded-lg" />
-              <Skeleton className="h-3 w-full rounded-lg" />
+    <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      {[...Array(10)].map((_, i) => (
+        <div key={i} className="aspect-square rounded-2xl bg-white dark:bg-[#0d1b2e] border border-slate-200 dark:border-white/10 overflow-hidden">
+          <div className="h-1.5 w-full bg-slate-200 dark:bg-white/10" />
+          <div className="flex-1 flex items-center justify-center bg-slate-50 dark:bg-white/[0.03] p-4" style={{ height: 'calc(50% - 1.5px)' }}>
+            <Skeleton className="w-14 h-14 rounded-2xl" />
+          </div>
+          <div className="p-4 space-y-2">
+            <div className="flex gap-2">
+              <Skeleton className="h-5 w-14 rounded-md" />
+              <Skeleton className="h-5 w-16 rounded-full" />
             </div>
-          </CardBody>
-        </Card>
+            <Skeleton className="h-4 w-3/4 rounded-lg" />
+            <Skeleton className="h-3 w-full rounded-lg" />
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -72,9 +73,9 @@ function SubjectSkeletonGrid() {
 // Placeholder card for when there's only 1 subject
 function PlaceholderCard() {
   return (
-    <div className="border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl flex flex-col items-center justify-center h-[200px] opacity-30">
-      <FiBook className="h-8 w-8 text-slate-300 dark:text-white/30 mb-2" />
-      <p className="text-slate-500 text-sm">More subjects available soon</p>
+    <div className="aspect-square border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl flex flex-col items-center justify-center opacity-30">
+      <FiBook className="h-10 w-10 text-slate-300 dark:text-white/30 mb-2" />
+      <p className="text-slate-500 text-sm">More subjects soon</p>
     </div>
   );
 }
@@ -91,7 +92,7 @@ function SubjectsLoading() {
         <div className="h-10 w-72 bg-slate-200 dark:bg-white/10 rounded-lg animate-pulse" />
       </div>
       <div className="flex flex-wrap gap-1">
-        {[1, 2, 3, 4, 5].map((i) => (
+        {[1, 2, 3, 4].map((i) => (
           <div key={i} className="h-11 w-20 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
         ))}
       </div>
@@ -106,11 +107,10 @@ function SubjectsContent() {
   const searchParams = useSearchParams();
   const yearParam = searchParams.get('year');
 
-  // Map URL param to filter value
+  // Map URL param to filter value (removed fasttrack)
   const getInitialFilter = (): string => {
     if (!yearParam) return profile?.year_level?.toString() || 'all';
-    if (yearParam === 'fasttrack') return 'fasttrack';
-    if (['1', '2', '3'].includes(yearParam)) return yearParam;
+    if (['1', '2', '3', '4', '5', '6'].includes(yearParam)) return yearParam;
     return 'all';
   };
 
@@ -119,12 +119,8 @@ function SubjectsContent() {
 
   // Update filter when URL param changes
   useEffect(() => {
-    if (yearParam) {
-      if (yearParam === 'fasttrack') {
-        setSelectedYear('fasttrack');
-      } else if (['1', '2', '3'].includes(yearParam)) {
-        setSelectedYear(yearParam);
-      }
+    if (yearParam && ['1', '2', '3', '4', '5', '6'].includes(yearParam)) {
+      setSelectedYear(yearParam);
     }
   }, [yearParam]);
 
@@ -134,29 +130,23 @@ function SubjectsContent() {
       if (selectedYear === 'all') {
         return api.subjects.list(undefined);
       }
-      if (selectedYear === 'fasttrack') {
-        // For fast track, we might need a different API call or filter
-        // For now, return all subjects and filter client-side
-        return api.subjects.list(undefined);
-      }
       return api.subjects.list(parseInt(selectedYear));
     },
   });
 
   const subjects: Subject[] = data?.data?.data || [];
 
-  // Filter subjects by search query and fast track if needed
+  // Filter subjects by search query
   const filteredSubjects = subjects.filter((subject) => {
     const matchesSearch =
       subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       subject.code.toLowerCase().includes(searchQuery.toLowerCase());
-    // For fast track, you might want to add additional filtering logic here
     return matchesSearch;
   });
 
+  // Year options (removed Fast Track)
   const yearOptions = [
     { key: 'all', label: 'All' },
-    { key: 'fasttrack', label: 'Fast Track' },
     { key: '1', label: 'Year 1' },
     { key: '2', label: 'Year 2' },
     { key: '3', label: 'Year 3' },
@@ -209,7 +199,7 @@ function SubjectsContent() {
       {isLoading ? (
         <SubjectSkeletonGrid />
       ) : filteredSubjects.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {filteredSubjects.map((subject) => (
             <SubjectCard
               key={subject.id}

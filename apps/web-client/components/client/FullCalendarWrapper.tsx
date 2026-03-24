@@ -5,14 +5,18 @@
  * Uses dynamic import with SSR disabled to avoid class constructor issues
  */
 
+import { forwardRef } from 'react';
 import dynamic from 'next/dynamic';
-import type { EventClickArg } from '@fullcalendar/core';
+import type { EventClickArg, DatesSetArg } from '@fullcalendar/core';
+import type { EventContentArg } from '@fullcalendar/core/index.js';
 
 interface FullCalendarWrapperProps {
   events: Record<string, unknown>[];
   onEventClick: (clickInfo: EventClickArg) => void;
   initialView?: string;
   onViewChange?: (view: string) => void;
+  onDatesSet?: (dateInfo: DatesSetArg) => void;
+  eventContent?: (eventInfo: EventContentArg) => React.ReactNode;
 }
 
 // Loading component
@@ -34,6 +38,8 @@ const FullCalendarComponent = dynamic(
   }
 );
 
-export function FullCalendarWrapper(props: FullCalendarWrapperProps) {
-  return <FullCalendarComponent {...props} />;
-}
+export const FullCalendarWrapper = /* @__PURE__ */ forwardRef<unknown, FullCalendarWrapperProps>((props, ref) => (
+  <FullCalendarComponent {...props} ref={ref} />
+));
+
+FullCalendarWrapper.displayName = 'FullCalendarWrapper';

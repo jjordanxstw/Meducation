@@ -3,67 +3,40 @@
 /**
  * FullCalendar Inner Component
  * Imports plugins statically as required
+ * Uses forwardRef to expose the calendar API
  */
 
+import { forwardRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import type { EventClickArg, ViewMountArg } from '@fullcalendar/core';
+import type { EventClickArg, DatesSetArg } from '@fullcalendar/core';
+import type { EventContentArg } from '@fullcalendar/core/index.js';
 
 interface FullCalendarInnerProps {
   events: Record<string, unknown>[];
   onEventClick: (clickInfo: EventClickArg) => void;
   initialView?: string;
   onViewChange?: (view: string) => void;
+  onDatesSet?: (dateInfo: DatesSetArg) => void;
+  eventContent?: (eventInfo: EventContentArg) => React.ReactNode;
 }
 
-export function FullCalendarInner({
-  events,
-  onEventClick,
-  initialView = 'dayGridMonth',
-  onViewChange,
-}: FullCalendarInnerProps) {
+export const FullCalendarInner = forwardRef<unknown, FullCalendarInnerProps>((props, ref) => {
   return (
-    <div className="fc-custom overflow-x-auto">
-      <div className="min-w-[680px] sm:min-w-0">
-        <FullCalendar
-          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView={initialView}
-          headerToolbar={false}
-          height="auto"
-          aspectRatio={1.4}
-          locale="en"
-          events={events}
-          eventClick={onEventClick}
-          dayMaxEvents={3}
-          moreLinkText={(n: number) => `+${n}`}
-          nowIndicator
-          selectable={false}
-          eventDisplay="block"
-          eventTimeFormat={{
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-          }}
-          views={{
-            dayGridMonth: {
-              dayMaxEvents: 3,
-            },
-            timeGridWeek: {
-              slotMinTime: '06:00:00',
-              slotMaxTime: '22:00:00',
-            },
-            timeGridDay: {
-              slotMinTime: '06:00:00',
-              slotMaxTime: '22:00:00',
-            },
-          }}
-          viewDidMount={(mountArg: ViewMountArg) => {
-            onViewChange?.(mountArg.view.type);
-          }}
-        />
-      </div>
-    </div>
+    <FullCalendar
+      ref={ref as React.RefObject<FullCalendar> | null}
+      plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+      initialView={props.initialView || 'dayGridMonth'}
+      events={props.events}
+      eventClick={props.onEventClick}
+      datesSet={props.onDatesSet}
+      eventContent={props.eventContent}
+      headerToolbar={false}
+      height="auto"
+    />
   );
-}
+});
+
+FullCalendarInner.displayName = 'FullCalendarInner';
