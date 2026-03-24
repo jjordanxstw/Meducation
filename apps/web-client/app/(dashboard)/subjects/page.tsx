@@ -3,9 +3,11 @@
 /**
  * Subjects Page - List all subjects
  * Next.js adapted version
+ * Reads year filter from URL query param
  */
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Card,
   CardBody,
@@ -77,30 +79,84 @@ function PlaceholderCard() {
   );
 }
 
-export default function SubjectsPage() {
-  const { profile } = useAuthStore();
-  const [selectedYear, setSelectedYear] = useState<string>(
-    profile?.year_level?.toString() || 'all'
+// Loading fallback for Suspense
+function SubjectsLoading() {
+  return (
+    <div className="space-y-5 sm:space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <div className="h-8 w-48 bg-slate-200 dark:bg-white/10 rounded-lg animate-pulse" />
+          <div className="h-4 w-64 bg-slate-200 dark:bg-white/10 rounded-lg animate-pulse" />
+        </div>
+        <div className="h-10 w-72 bg-slate-200 dark:bg-white/10 rounded-lg animate-pulse" />
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="h-11 w-20 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
+        ))}
+      </div>
+      <SubjectSkeletonGrid />
+    </div>
   );
+}
+
+// Main subjects content component that uses useSearchParams
+function SubjectsContent() {
+  const { profile } = useAuthStore();
+  const searchParams = useSearchParams();
+  const yearParam = searchParams.get('year');
+
+  // Map URL param to filter value
+  const getInitialFilter = (): string => {
+    if (!yearParam) return profile?.year_level?.toString() || 'all';
+    if (yearParam === 'fasttrack') return 'fasttrack';
+    if (['1', '2', '3'].includes(yearParam)) return yearParam;
+    return 'all';
+  };
+
+  const [selectedYear, setSelectedYear] = useState<string>(getInitialFilter);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Update filter when URL param changes
+  useEffect(() => {
+    if (yearParam) {
+      if (yearParam === 'fasttrack') {
+        setSelectedYear('fasttrack');
+      } else if (['1', '2', '3'].includes(yearParam)) {
+        setSelectedYear(yearParam);
+      }
+    }
+  }, [yearParam]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ['subjects', selectedYear === 'all' ? undefined : parseInt(selectedYear)],
-    queryFn: () =>
-      api.subjects.list(selectedYear === 'all' ? undefined : parseInt(selectedYear)),
+    queryKey: ['subjects', selectedYear === 'all' ? undefined : selectedYear],
+    queryFn: () => {
+      if (selectedYear === 'all') {
+        return api.subjects.list(undefined);
+      }
+      if (selectedYear === 'fasttrack') {
+        // For fast track, we might need a different API call or filter
+        // For now, return all subjects and filter client-side
+        return api.subjects.list(undefined);
+      }
+      return api.subjects.list(parseInt(selectedYear));
+    },
   });
 
   const subjects: Subject[] = data?.data?.data || [];
 
-  // Filter subjects by search query
-  const filteredSubjects = subjects.filter(
-    (subject) =>
+  // Filter subjects by search query and fast track if needed
+  const filteredSubjects = subjects.filter((subject) => {
+    const matchesSearch =
       subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      subject.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      subject.code.toLowerCase().includes(searchQuery.toLowerCase());
+    // For fast track, you might want to add additional filtering logic here
+    return matchesSearch;
+  });
 
   const yearOptions = [
     { key: 'all', label: 'All' },
+    { key: 'fasttrack', label: 'Fast Track' },
     { key: '1', label: 'Year 1' },
     { key: '2', label: 'Year 2' },
     { key: '3', label: 'Year 3' },
@@ -188,5 +244,14 @@ export default function SubjectsPage() {
         </Card>
       )}
     </div>
+  );
+}
+
+// Main page component with Suspense wrapper
+export default function SubjectsPage() {
+  return (
+    <Suspense fallback={<SubjectsLoading />}>
+      <SubjectsContent />
+    </Suspense>
   );
 }

@@ -21,15 +21,15 @@ import {
 } from '@nextui-org/react';
 import { useSyncExternalStore, useState, useCallback } from 'react';
 import { signOut, useSession } from 'next-auth/react';
-import { FiHome, FiLayers, FiBookOpen, FiUser, FiLogOut, FiMoon, FiSun, FiMail, FiMenu, FiX } from 'react-icons/fi';
+import { FiHome, FiLayers, FiBookOpen, FiUser, FiUsers, FiLogOut, FiMoon, FiSun, FiMail, FiMenu, FiX } from 'react-icons/fi';
 import { api } from '@/lib/api';
 import { useAppTheme } from '@/app/providers';
 
 const menuItems = [
   { name: 'Home', href: '/', icon: FiHome },
-  { name: 'ACDM', href: '/acdm', icon: FiLayers },
+  { name: 'ACDM', href: '/subjects', icon: FiLayers },
   { name: 'Learning Hub', href: '/learning-hub', icon: FiBookOpen },
-  { name: 'About Me', href: '/about-me', icon: FiUser },
+  { name: 'About Us', href: '/about-us', icon: FiUsers },
 ];
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
