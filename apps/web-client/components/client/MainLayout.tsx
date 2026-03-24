@@ -3,10 +3,10 @@
 /**
  * MainLayout - Protected app shell with clean navbar
  * Redesigned with improved mobile drawer and user dropdown
+ * Uses next-intl for locale-aware routing
  */
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter, Link } from '@/i18n/routing';
 import {
   Navbar,
   NavbarBrand,
@@ -20,7 +20,7 @@ import { signOut, useSession } from 'next-auth/react';
 import { FiHome, FiLayers, FiBookOpen, FiUser, FiUsers, FiLogOut, FiMoon, FiSun, FiMenu, FiX } from 'react-icons/fi';
 import { api } from '@/lib/api';
 import { useAppTheme } from '@/app/providers';
-import { useLocale, useTranslations } from '@/lib/i18n-context';
+import { useLocale, useTranslations } from 'next-intl';
 
 const menuItems = [
   { nameKey: 'home', href: '/', icon: FiHome },
@@ -34,9 +34,10 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session } = useSession();
   const { theme, toggleTheme, isReady: isThemeReady } = useAppTheme();
-  const { locale, setLocale } = useLocale();
+  const locale = useLocale();
   const t = useTranslations();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mounted = useSyncExternalStore(
@@ -78,7 +79,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     setIsLoggingOut(true);
     try {
       await api.auth.logout();
-      await signOut({ callbackUrl: '/login' });
+      await signOut({ callbackUrl: '/en/login' });
     } catch {
       setIsLoggingOut(false);
     }
@@ -88,6 +89,11 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     setIsDrawerOpen(false);
     await handleLogout();
   }, [handleLogout]);
+
+  // Switch locale while staying on the same page
+  const handleLocaleChange = useCallback((newLocale: string) => {
+    router.replace(pathname, { locale: newLocale });
+  }, [router, pathname]);
 
   // Get initials from name
   const getInitials = (name: string | undefined | null): string => {
@@ -170,7 +176,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                   }`}
                 >
                   <item.icon className={`h-4 w-4 ${isActive ? 'text-blue-500 dark:text-blue-400' : ''}`} />
-                  <span className="whitespace-nowrap">{t.nav[item.nameKey as keyof typeof t.nav]}</span>
+                  <span className="whitespace-nowrap">{t(`nav.${item.nameKey}`)}</span>
                 </Link>
               </NavbarItem>
             );
@@ -183,7 +189,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             {(['en', 'th'] as const).map((loc) => (
               <button
                 key={loc}
-                onClick={() => setLocale(loc)}
+                onClick={() => handleLocaleChange(loc)}
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150 ${
                   locale === loc
                     ? 'bg-white dark:bg-[#0d1b2e] text-slate-900 dark:text-white shadow-sm'
@@ -341,7 +347,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                   }`}
                 >
                   <item.icon className="h-5 w-5" />
-                  <span>{t.nav[item.nameKey as keyof typeof t.nav]}</span>
+                  <span>{t(`nav.${item.nameKey}`)}</span>
                 </Link>
               );
             })}
@@ -356,7 +362,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 {(['en', 'th'] as const).map((loc) => (
                   <button
                     key={loc}
-                    onClick={() => setLocale(loc)}
+                    onClick={() => handleLocaleChange(loc)}
                     className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150 ${
                       locale === loc
                         ? 'bg-white dark:bg-[#0d1b2e] text-slate-900 dark:text-white shadow-sm'
@@ -419,7 +425,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       <footer className="relative z-10 mx-auto mb-6 mt-2 w-[calc(100vw-(var(--app-shell-gutter)*2))] max-w-[var(--app-shell-max)] rounded-[var(--radius-xl)] py-3 card-flat border-slate-200/50 dark:border-white/5">
         <div className="text-center">
           <p className="text-xs text-slate-400 dark:text-white/30">
-            {t.footer}
+            {t('footer')}
           </p>
         </div>
       </footer>

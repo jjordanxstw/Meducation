@@ -3,12 +3,13 @@
 /**
  * Error Boundary for Dashboard
  * Catches runtime errors and provides a recovery UI
+ * Uses locale-aware routing
  */
 
 import { useEffect } from 'react';
 import { Card, CardBody, Button } from '@nextui-org/react';
 import { FiAlertTriangle, FiRefreshCw, FiHome } from 'react-icons/fi';
-import Link from 'next/link';
+import { Link } from '@/i18n/routing';
 
 export default function DashboardError({
   error,

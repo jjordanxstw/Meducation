@@ -6,7 +6,7 @@
  */
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/routing';
 import { Card, CardBody } from '@nextui-org/react';
 import { useQuery } from '@tanstack/react-query';
 import type { EventClickArg, DatesSetArg } from '@fullcalendar/core';

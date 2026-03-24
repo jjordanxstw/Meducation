@@ -3,7 +3,7 @@
 import { FiBook, FiArrowRight } from 'react-icons/fi';
 import Image from 'next/image';
 import { useState } from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/routing';
 
 interface SubjectCardProps {
   id: string;
