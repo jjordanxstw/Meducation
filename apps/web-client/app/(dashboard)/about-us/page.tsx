@@ -135,7 +135,7 @@ export default function AboutUsPage() {
           </h3>
           <p className="text-sm text-slate-600 dark:text-white/70">
             Have questions or feedback? We&apos;d love to hear from you. Reach out to us through
-            the Learning Portal team.
+            the MedPi Portal team.
           </p>
         </div>
       </Card>

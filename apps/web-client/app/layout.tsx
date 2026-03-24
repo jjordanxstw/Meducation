@@ -19,7 +19,7 @@ const prompt = Prompt({
 });
 
 export const metadata: Metadata = {
-  title: 'Medical Learning Portal',
+  title: 'MedPi Portal',
   description: 'Learning system for medical students',
 };
 

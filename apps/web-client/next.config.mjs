@@ -1,6 +1,9 @@
 import { existsSync } from 'node:fs';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import createNextIntlPlugin from 'next-intl/plugin';
+
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 function loadSimpleEnvFile(filePath) {
   const raw = readFileSync(filePath, 'utf8');
@@ -53,9 +56,6 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
     optimizePackageImports: ['@nextui-org/react', 'react-icons', '@fullcalendar/react', '@fullcalendar/daygrid', '@fullcalendar/timegrid', '@fullcalendar/interaction'],
-    turbo: {
-      resolveExtensions: ['.tsx', '.ts', '.jsx', '.js', '.json'],
-    },
   },
   // Proxy only backend v1 API requests to NestJS backend.
   // Keep /api/auth/* for NextAuth route handlers inside Next.js.
@@ -74,4 +74,4 @@ const nextConfig = {
   devIndicators:false,
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

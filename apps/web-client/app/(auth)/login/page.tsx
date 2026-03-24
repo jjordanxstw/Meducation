@@ -150,7 +150,7 @@ function LoginContent() {
             <span className="text-xl font-bold text-white">L</span>
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Learning Portal</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">MedPi Portal</h1>
             <p className="mt-1.5 text-sm text-slate-500 dark:text-white/50">Secure sign-in for medical students</p>
           </div>
         </div>

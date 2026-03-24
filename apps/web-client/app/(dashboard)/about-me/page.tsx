@@ -191,7 +191,7 @@ export default function AboutMePage() {
         ) : (
           <FiLogOut size={15} />
         )}
-        <span>{isLoggingOut ? 'Signing out...' : 'Sign out of Learning Portal'}</span>
+        <span>{isLoggingOut ? 'Signing out...' : 'Sign out of MedPi Portal'}</span>
       </button>
     </section>
   );

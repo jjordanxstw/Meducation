@@ -9,6 +9,7 @@ import { useSession } from 'next-auth/react';
 import { createQueryClient } from '../lib/queryClient';
 import { useAuthStore } from '@/stores/auth.store';
 import { TopLoadingBar } from '@/components/global/TopLoadingBar';
+import { I18nProvider } from '@/lib/i18n-context';
 
 type AppTheme = 'light' | 'dark';
 
@@ -111,12 +112,14 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <SessionProvider>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <NextUIProvider>
-            <TopLoadingBar />
-            <AuthStoreBridge>{children}</AuthStoreBridge>
-          </NextUIProvider>
-        </ThemeProvider>
+        <I18nProvider>
+          <ThemeProvider>
+            <NextUIProvider>
+              <TopLoadingBar />
+              <AuthStoreBridge>{children}</AuthStoreBridge>
+            </NextUIProvider>
+          </ThemeProvider>
+        </I18nProvider>
       </QueryClientProvider>
     </SessionProvider>
   );
