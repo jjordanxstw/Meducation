@@ -7,7 +7,7 @@
 
 import { useRef } from 'react';
 import { Card } from '@nextui-org/react';
-import { FiChevronLeft, FiChevronRight, FiUsers } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
 // Team member data - customize with actual team members
 const teamMembers = [
