@@ -91,6 +91,18 @@ function FeatureCard({
   );
 }
 
+// Marquee items
+const MARQUEE_ITEMS = [
+  'Anatomy I',
+  'SCID01',
+  'Year 1 · 2 Lectures',
+  'Academic Calendar',
+  'New Announcements',
+  'Learning Hub Coming Soon',
+  'Check Your Schedule',
+  'Fast Track Available',
+];
+
 // Loading skeleton for announcement items
 function AnnouncementSkeleton() {
   return (
@@ -193,6 +205,21 @@ export default function HomePage() {
           >
             {t('year3')}
           </YearFilterButton>
+        </div>
+      </div>
+
+      {/* SECTION B — Infinite Horizontal Scrolling Banner */}
+      <div className="my-8 relative w-full overflow-hidden py-3">
+        <div className="flex gap-8 animate-marquee whitespace-nowrap">
+          {/* Duplicate items twice for seamless loop */}
+          {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, index) => (
+            <span
+              key={index}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-100 dark:bg-yellow-400/10 border border-yellow-300 dark:border-yellow-400/30 text-yellow-700 dark:text-yellow-300 text-sm font-medium shrink-0"
+            >
+              <FiStar size={14} /> {item}
+            </span>
+          ))}
         </div>
       </div>
 
