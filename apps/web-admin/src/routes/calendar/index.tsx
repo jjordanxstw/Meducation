@@ -1,10 +1,10 @@
 /**
  * Calendar Events List Page
- * Migrated from src/app/calendar/page.tsx
+ * Displays date-only calendar events
  */
 
 import { List, useTable, EditButton, DeleteButton } from '@refinedev/antd';
-import { useGetLocale, useList, useTranslate } from '@refinedev/core';
+import { useList, useTranslate } from '@refinedev/core';
 import { Button, DatePicker, Input, Select, Space, Table, Tag } from 'antd';
 import dayjs from 'dayjs';
 import { EventType } from '@medical-portal/shared';
@@ -22,8 +22,6 @@ const eventTypeColors: Record<string, string> = {
 
 const CalendarList = () => {
   const t = useTranslate();
-  const getLocale = useGetLocale();
-  const locale = getLocale() || 'th';
   const { tableProps, setFilters, filters } = useTable<CalendarEvent>({
     syncWithLocation: true,
   });
@@ -150,7 +148,7 @@ const CalendarList = () => {
               setDateRange(undefined);
               return;
             }
-            setDateRange([values[0].startOf('day').toISOString(), values[1].endOf('day').toISOString()]);
+            setDateRange([values[0].format('YYYY-MM-DD'), values[1].format('YYYY-MM-DD')]);
           }}
         />
         <Button className="resource-filter-button" onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
@@ -175,35 +173,22 @@ const CalendarList = () => {
           )}
         />
         <Table.Column
-          dataIndex="start_time"
-          title={t('pages.calendar.fields.start', {}, 'Start')}
-          width={160}
+          dataIndex="start_date"
+          title={t('pages.calendar.fields.startDate', {}, 'Start Date')}
+          width={130}
           sorter
           render={(value) =>
-            new Date(value).toLocaleString(locale === 'th' ? 'th-TH' : 'en-US', {
-              dateStyle: 'short',
-              timeStyle: 'short',
-            })
+            value ? dayjs(value).format('DD/MM/YYYY') : '-'
           }
         />
         <Table.Column
-          dataIndex="end_time"
-          title={t('pages.calendar.fields.end', {}, 'End')}
-          width={160}
+          dataIndex="end_date"
+          title={t('pages.calendar.fields.endDate', {}, 'End Date')}
+          width={130}
           sorter
           render={(value) =>
-            new Date(value).toLocaleString(locale === 'th' ? 'th-TH' : 'en-US', {
-              dateStyle: 'short',
-              timeStyle: 'short',
-            })
+            value ? dayjs(value).format('DD/MM/YYYY') : '-'
           }
-        />
-        <Table.Column
-          dataIndex="is_all_day"
-          title={t('pages.calendar.fields.allDay', {}, 'All Day')}
-          width={80}
-          sorter
-          render={(value) => (value ? '✓' : t('common.notAvailable', {}, '-'))}
         />
         <Table.Column
           title={t('pages.calendar.fields.actions', {}, 'Actions')}

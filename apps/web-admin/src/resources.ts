@@ -8,6 +8,7 @@ import {
   DashboardOutlined,
   FileTextOutlined,
   CalendarOutlined,
+  BellOutlined,
   UserOutlined,
   AuditOutlined,
 } from '@ant-design/icons';
@@ -39,6 +40,16 @@ export const buildResources = (label: (key: string, fallback: string) => string)
     meta: {
       label: label('menu.calendar', 'Calendar'),
       icon: React.createElement(CalendarOutlined),
+    },
+  },
+  {
+    name: 'announcements',
+    list: '/announcements',
+    create: '/announcements/create',
+    edit: '/announcements/edit/:id',
+    meta: {
+      label: label('menu.announcements', 'Announcements'),
+      icon: React.createElement(BellOutlined),
     },
   },
   {

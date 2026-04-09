@@ -165,19 +165,33 @@ export const ERROR_DEFINITIONS: Record<ErrorCode, ErrorDefinition> = {
     category: 'RESOURCE',
     httpStatus: 409,
   },
-  [ErrorCode.CALENDAR_TIME_RANGE_INVALID]: {
-    code: ErrorCode.CALENDAR_TIME_RANGE_INVALID,
-    i18nKey: 'errors.calendar.timeRangeInvalid',
-    defaultMessage: 'Calendar event time range is invalid',
+  [ErrorCode.CALENDAR_DATE_RANGE_INVALID]: {
+    code: ErrorCode.CALENDAR_DATE_RANGE_INVALID,
+    i18nKey: 'errors.calendar.dateRangeInvalid',
+    defaultMessage: 'Calendar event date range is invalid',
     category: 'VALIDATION',
     httpStatus: 400,
   },
-  [ErrorCode.CALENDAR_EVENT_TIME_CONFLICT]: {
-    code: ErrorCode.CALENDAR_EVENT_TIME_CONFLICT,
-    i18nKey: 'errors.calendar.timeConflict',
-    defaultMessage: 'Calendar event time conflicts with an existing event',
+  [ErrorCode.CALENDAR_EVENT_DATE_CONFLICT]: {
+    code: ErrorCode.CALENDAR_EVENT_DATE_CONFLICT,
+    i18nKey: 'errors.calendar.dateConflict',
+    defaultMessage: 'Calendar event date conflicts with an existing event',
     category: 'RESOURCE',
     httpStatus: 409,
+  },
+  [ErrorCode.ANNOUNCEMENT_NOT_FOUND]: {
+    code: ErrorCode.ANNOUNCEMENT_NOT_FOUND,
+    i18nKey: 'errors.announcement.notFound',
+    defaultMessage: 'Announcement not found',
+    category: 'RESOURCE',
+    httpStatus: 404,
+  },
+  [ErrorCode.ANNOUNCEMENT_OPERATION_FAILED]: {
+    code: ErrorCode.ANNOUNCEMENT_OPERATION_FAILED,
+    i18nKey: 'errors.announcement.operationFailed',
+    defaultMessage: 'Announcement operation failed',
+    category: 'RESOURCE',
+    httpStatus: 400,
   },
   [ErrorCode.SYSTEM_INTERNAL_ERROR]: {
     code: ErrorCode.SYSTEM_INTERNAL_ERROR,

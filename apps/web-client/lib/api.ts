@@ -215,6 +215,14 @@ export const api = {
       apiClient.get('/calendar/upcoming', { params: { limit } }),
   },
 
+  // Announcements
+  announcements: {
+    list: (params?: { page?: number; pageSize?: number }) =>
+      apiClient.get('/announcements', { params }),
+    get: (id: string) =>
+      apiClient.get(`/announcements/${id}`),
+  },
+
   // Profile
   profile: {
     get: (id: string) => apiClient.get(`/profiles/${id}`),

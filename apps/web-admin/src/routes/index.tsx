@@ -17,6 +17,9 @@ import ResourcesList from './resources';
 import CalendarList from './calendar';
 import CalendarCreate from './calendar/create';
 import CalendarEdit from './calendar/edit';
+import AnnouncementsList from './announcements';
+import AnnouncementsCreate from './announcements/create';
+import AnnouncementsEdit from './announcements/edit';
 import ProfilesList from './profiles';
 import ProfilesEdit from './profiles/edit';
 import ProfilesShow from './profiles/show';
@@ -77,6 +80,9 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
       { path: 'calendar', element: <CalendarList /> },
       { path: 'calendar/create', element: <CalendarCreate /> },
       { path: 'calendar/edit/:id', element: <CalendarEdit /> },
+      { path: 'announcements', element: <AnnouncementsList /> },
+      { path: 'announcements/create', element: <AnnouncementsCreate /> },
+      { path: 'announcements/edit/:id', element: <AnnouncementsEdit /> },
       { path: 'profiles', element: <ProfilesList /> },
       { path: 'profiles/edit/:id', element: <ProfilesEdit /> },
       { path: 'profiles/show/:id', element: <ProfilesShow /> },

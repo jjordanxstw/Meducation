@@ -1,6 +1,6 @@
 /**
  * Calendar Service
- * Handles calendar event business logic
+ * Handles calendar event business logic with date-only fields
  */
 
 import { Injectable, Logger } from '@nestjs/common';
@@ -25,58 +25,78 @@ export class CalendarService {
     });
   }
 
-  private parseIsoDate(value: unknown, field: string): Date {
+  private parseDateOnly(value: unknown, field: string): string {
     if (typeof value !== 'string' || !value.trim()) {
       throw new AppException(
-        ErrorCode.CALENDAR_TIME_RANGE_INVALID,
+        ErrorCode.CALENDAR_DATE_RANGE_INVALID,
         { field, reason: 'missing_or_invalid' },
-        'Calendar event time range is invalid',
+        'Calendar event date range is invalid',
       );
     }
 
-    const parsed = new Date(value);
+    // Validate YYYY-MM-DD format
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(value.trim())) {
+      throw new AppException(
+        ErrorCode.CALENDAR_DATE_RANGE_INVALID,
+        { field, reason: 'invalid_date_format' },
+        'Calendar event date range is invalid',
+      );
+    }
+
+    const parsed = new Date(value + 'T00:00:00Z');
     if (Number.isNaN(parsed.getTime())) {
       throw new AppException(
-        ErrorCode.CALENDAR_TIME_RANGE_INVALID,
+        ErrorCode.CALENDAR_DATE_RANGE_INVALID,
         { field, reason: 'invalid_date' },
-        'Calendar event time range is invalid',
+        'Calendar event date range is invalid',
       );
     }
 
-    return parsed;
+    return value.trim();
   }
 
-  private async ensureValidEventTimeWindow(
+  private async ensureValidDateRange(
     payload: Record<string, unknown>,
     options?: { excludeId?: string },
   ): Promise<void> {
-    const start = this.parseIsoDate(payload.start_time, 'start_time');
-    const end = this.parseIsoDate(payload.end_time, 'end_time');
+    const startDate = this.parseDateOnly(payload.start_date, 'start_date');
+    const endDate = payload.end_date ? this.parseDateOnly(payload.end_date, 'end_date') : null;
 
-    if (end <= start) {
+    if (endDate && endDate < startDate) {
       throw new AppException(
-        ErrorCode.CALENDAR_TIME_RANGE_INVALID,
-        { field: 'end_time', reason: 'must_be_after_start_time' },
-        'Calendar event time range is invalid',
+        ErrorCode.CALENDAR_DATE_RANGE_INVALID,
+        { field: 'end_date', reason: 'must_be_on_or_after_start_date' },
+        'Calendar event date range is invalid',
       );
+    }
+
+    // Check for overlapping events with the same subject
+    const subjectId = payload.subject_id as string | null | undefined;
+    if (subjectId === null || subjectId === undefined || subjectId === '') {
+      // No overlap check for events without a subject
+      return;
     }
 
     const overlapQuery = this.supabaseAdmin
       .from('calendar_events')
       .select('id')
-      .lt('start_time', end.toISOString())
-      .gt('end_time', start.toISOString())
+      .eq('subject_id', subjectId)
       .limit(1);
+
+    // Event overlaps if: existing start_date <= our end_date AND existing end_date >= our start_date
+    if (endDate) {
+      overlapQuery.lte('start_date', endDate);
+      // existing end_date >= startDate: handle NULL end_date (treat as same-day)
+      overlapQuery.or(`end_date.gte.${startDate},end_date.is.null`);
+    } else {
+      // Single-day event: check if it falls within any existing event range or same day
+      overlapQuery.lte('start_date', startDate);
+      overlapQuery.or(`end_date.gte.${startDate},end_date.is.null`);
+    }
 
     if (options?.excludeId) {
       overlapQuery.neq('id', options.excludeId);
-    }
-
-    const subjectId = payload.subject_id as string | null | undefined;
-    if (subjectId === null || subjectId === undefined || subjectId === '') {
-      overlapQuery.is('subject_id', null);
-    } else {
-      overlapQuery.eq('subject_id', subjectId);
     }
 
     const { data: overlapRows, error: overlapError } = await overlapQuery;
@@ -92,7 +112,7 @@ export class CalendarService {
 
     if (overlapRows && overlapRows.length > 0) {
       throw new AppException(
-        ErrorCode.CALENDAR_EVENT_TIME_CONFLICT,
+        ErrorCode.CALENDAR_EVENT_DATE_CONFLICT,
         { conflictingEventId: overlapRows[0].id },
       );
     }
@@ -102,8 +122,8 @@ export class CalendarService {
     sortBy?: string,
     sortOrder?: string,
   ): { field: string; ascending: boolean } {
-    const allowed = new Set(['title', 'type', 'start_time', 'end_time', 'is_all_day', 'created_at', 'updated_at']);
-    const field = sortBy && allowed.has(sortBy) ? sortBy : 'start_time';
+    const allowed = new Set(['title', 'type', 'start_date', 'end_date', 'created_at', 'updated_at']);
+    const field = sortBy && allowed.has(sortBy) ? sortBy : 'start_date';
     const normalizedOrder = (sortOrder || '').toLowerCase();
     const ascending = normalizedOrder === 'asc' || normalizedOrder === 'ascend';
     return { field, ascending };
@@ -129,10 +149,10 @@ export class CalendarService {
       .select('*, subjects:subject_id(name, code)', shouldPaginate ? { count: 'exact' } : undefined);
 
     if (startDate) {
-      query = query.gte('start_time', startDate);
+      query = query.gte('start_date', startDate);
     }
     if (endDate) {
-      query = query.lte('end_time', endDate);
+      query = query.lte('start_date', endDate);
     }
     if (type) {
       query = query.eq('type', type);
@@ -176,15 +196,16 @@ export class CalendarService {
   }
 
   async getByMonth(year: number, month: number) {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59);
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
     const { data, error } = await this.supabaseAdmin
       .from('calendar_events')
       .select('*, subjects:subject_id(name, code)')
-      .gte('start_time', startDate.toISOString())
-      .lte('start_time', endDate.toISOString())
-      .order('start_time');
+      .lte('start_date', endDate)
+      .or(`end_date.gte.${startDate},end_date.is.null`)
+      .order('start_date');
 
     if (error) {
       this.logger.warn(`Failed to fetch calendar events (code=${error.code ?? 'unknown'})`);
@@ -195,13 +216,13 @@ export class CalendarService {
   }
 
   async getUpcoming(limit: number = 10) {
-    const now = new Date().toISOString();
+    const today = new Date().toISOString().split('T')[0];
 
     const { data, error } = await this.supabaseAdmin
       .from('calendar_events')
       .select('*, subjects:subject_id(name, code)')
-      .gte('start_time', now)
-      .order('start_time')
+      .gte('start_date', today)
+      .order('start_date')
       .limit(limit);
 
     if (error) {
@@ -234,7 +255,7 @@ export class CalendarService {
       eventData.created_by_admin = createdBy;
     }
 
-    await this.ensureValidEventTimeWindow(eventData);
+    await this.ensureValidDateRange(eventData);
 
     const { data: result, error } = await this.supabaseAdmin
       .from('calendar_events')
@@ -262,7 +283,7 @@ export class CalendarService {
     }
 
     const mergedPayload = { ...oldData, ...(data || {}) };
-    await this.ensureValidEventTimeWindow(mergedPayload, { excludeId: id });
+    await this.ensureValidDateRange(mergedPayload, { excludeId: id });
 
     const { data: result, error } = await this.supabaseAdmin
       .from('calendar_events')
