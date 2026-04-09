@@ -177,7 +177,11 @@ export function CalendarSection() {
     const year = selectedYear ? Number(selectedYear) : now.getFullYear();
     const month = selectedMonth !== '' ? Number(selectedMonth) : now.getMonth();
 
-    api.gotoDate(new Date(year, month, 1));
+    // Defer to avoid flushSync error during React rendering
+    const id = requestAnimationFrame(() => {
+      api.gotoDate(new Date(year, month, 1));
+    });
+    return () => cancelAnimationFrame(id);
   }, [selectedMonth, selectedYear]);
 
   // Navigation handlers
@@ -389,24 +393,24 @@ export function CalendarSection() {
 
             /* Day number styling */
             .fc .fc-daygrid-day-number {
-              font-size: 13px;
-              font-weight: 500;
-              color: #64748b;
-              padding: 6px 8px;
+              font-size: 13px !important;
+              font-weight: 500 !important;
+              color: #64748b !important;
+              padding: 6px 8px !important;
             }
 
             /* Today's date - blue circle */
             .fc .fc-day-today .fc-daygrid-day-number {
-              background: #2563eb;
-              color: white;
-              border-radius: 50%;
-              width: 26px;
-              height: 26px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              padding: 0;
-              margin: 4px;
+              background: #2563eb !important;
+              color: white !important;
+              border-radius: 50% !important;
+              width: 26px !important;
+              height: 26px !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              padding: 0 !important;
+              margin: 4px !important;
             }
 
             /* Today cell background - very subtle */
@@ -421,26 +425,20 @@ export function CalendarSection() {
             .fc .fc-col-header-cell {
               background: transparent !important;
               border-color: transparent !important;
-              padding: 8px 0;
+              padding: 8px 0 !important;
             }
             .fc .fc-col-header-cell-cushion {
-              font-size: 11px;
-              font-weight: 600;
-              letter-spacing: 0.08em;
-              text-transform: uppercase;
-              color: #94a3b8;
+              font-size: 11px !important;
+              font-weight: 600 !important;
+              letter-spacing: 0.08em !important;
+              text-transform: uppercase !important;
+              color: #94a3b8 !important;
               text-decoration: none !important;
             }
-            .dark .fc .fc-col-header-cell-cushion {
-              color: rgba(255,255,255,0.5);
-            }
 
-            /* Cell borders - very subtle */
+            /* Cell borders */
             .fc .fc-daygrid-day {
               border-color: #e2e8f0 !important;
-            }
-            .dark .fc .fc-daygrid-day {
-              border-color: rgba(255,255,255,0.06) !important;
             }
 
             /* Remove blue background on events - use our custom style */
@@ -453,21 +451,18 @@ export function CalendarSection() {
 
             /* "+X more" link */
             .fc .fc-daygrid-more-link {
-              font-size: 10px;
-              color: #3b82f6;
-              font-weight: 500;
-              padding: 0 4px;
+              font-size: 10px !important;
+              color: #3b82f6 !important;
+              font-weight: 500 !important;
+              padding: 0 4px !important;
             }
             .fc .fc-daygrid-more-link:hover {
-              text-decoration: underline;
+              text-decoration: underline !important;
             }
 
             /* Out-of-month dates - muted */
             .fc .fc-day-other .fc-daygrid-day-number {
-              color: #cbd5e1;
-            }
-            .dark .fc .fc-day-other .fc-daygrid-day-number {
-              color: rgba(255,255,255,0.15);
+              color: #cbd5e1 !important;
             }
 
             /* Remove FullCalendar toolbar (we use our own) */
