@@ -6,6 +6,7 @@ import { SectionsModule } from './sections/sections.module';
 import { LecturesModule } from './lectures/lectures.module';
 import { ResourcesModule } from './resources/resources.module';
 import { CalendarModule } from './calendar/calendar.module';
+import { AnnouncementsModule } from './announcements/announcements.module';
 import { ProfilesModule } from './profiles/profiles.module';
 import { AuditModule } from './audit/audit.module';
 import { StatisticsModule } from './statistics/statistics.module';
@@ -19,6 +20,7 @@ import { StatisticsModule } from './statistics/statistics.module';
     LecturesModule,
     ResourcesModule,
     CalendarModule,
+    AnnouncementsModule,
     ProfilesModule,
     AuditModule,
     StatisticsModule,

@@ -45,6 +45,8 @@
     "noSubjects": "ไม่พบวิชา"
   },
   "calendar": {
+    "title": "ปฏิทินวิชาการ",
+    "subtitle": "ตารางสอบ บรรยาย และกิจกรรม",
     "allMonths": "ทุกเดือน",
     "allYears": "ทุกปี",
     "reset": "รีเซ็ต",
@@ -53,7 +55,17 @@
     "exam": "สอบ",
     "lecture": "บรรยาย",
     "holiday": "วันหยุด",
-    "event": "กิจกรรม"
+    "event": "กิจกรรม",
+    "retry": "ลองอีกครั้ง",
+    "unableToLoad": "ไม่สามารถโหลดปฏิทินได้",
+    "pleaseRetry": "กรุณาลองโหลดปฏิทินอีกครั้ง",
+    "date": "วันที่",
+    "until": "ถึง",
+    "location": "สถานที่",
+    "relatedSubject": "รายวิชาที่เกี่ยวข้อง",
+    "viewSubject": "ดูรายวิชา →",
+    "description": "รายละเอียด",
+    "today": "วันนี้"
   },
   "aboutUs": {
     "title": "เกี่ยวกับเรา",

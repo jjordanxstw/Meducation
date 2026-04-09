@@ -1,17 +1,16 @@
 /**
  * Calendar Events Create Page
- * Migrated from src/app/calendar/create/page.tsx
+ * Date-only event creation
  */
 
 import { useList, useTranslate } from '@refinedev/core';
 import { Create, useForm } from '@refinedev/antd';
-import { Form, Input, Switch, Select, DatePicker } from 'antd';
+import { Form, Input, Select, DatePicker } from 'antd';
 import dayjs from 'dayjs';
 import { EventType } from '@medical-portal/shared';
 import type { CalendarEvent, Subject } from '@medical-portal/shared';
 
 const { TextArea } = Input;
-const { RangePicker } = DatePicker;
 
 const CalendarCreate = () => {
   const t = useTranslate();
@@ -31,12 +30,10 @@ const CalendarCreate = () => {
   const subjects = subjectsData?.data || [];
 
   const handleFinish = (values: Record<string, unknown>) => {
-    const dateRange = values.dateRange as [dayjs.Dayjs, dayjs.Dayjs];
     return {
       ...values,
-      start_time: dateRange[0].toISOString(),
-      end_time: dateRange[1].toISOString(),
-      dateRange: undefined,
+      start_date: (values.start_date as dayjs.Dayjs)?.format('YYYY-MM-DD'),
+      end_date: (values.end_date as dayjs.Dayjs)?.format('YYYY-MM-DD') || null,
     };
   };
 
@@ -60,19 +57,19 @@ const CalendarCreate = () => {
         </Form.Item>
 
         <Form.Item
-          label={t('pages.calendar.fields.timeRange', {}, 'Time Range')}
-          name="dateRange"
-          rules={[{ required: true, message: t('pages.calendar.validation.timeRangeRequired', {}, 'Please select time range') }]}
+          label={t('pages.calendar.fields.startDate', {}, 'Start Date')}
+          name="start_date"
+          rules={[{ required: true, message: t('pages.calendar.validation.startDateRequired', {}, 'Please select start date') }]}
         >
-          <RangePicker
-            showTime={{ format: 'HH:mm' }}
-            format="DD/MM/YYYY HH:mm"
-            style={{ width: '100%' }}
-          />
+          <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
         </Form.Item>
 
-        <Form.Item label={t('pages.calendar.fields.allDay', {}, 'All Day')} name="is_all_day" valuePropName="checked">
-          <Switch />
+        <Form.Item
+          label={t('pages.calendar.fields.endDate', {}, 'End Date')}
+          name="end_date"
+          extra={t('pages.calendar.hints.endDate', {}, 'Leave empty for single-day events')}
+        >
+          <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
         </Form.Item>
 
         <Form.Item label={t('pages.calendar.fields.subject', {}, 'Related Subject')} name="subject_id">

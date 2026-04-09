@@ -24,7 +24,7 @@ const teamMembers = [
 // Team member card component
 function TeamMemberCard({ member }: { member: typeof teamMembers[0] }) {
   return (
-    <div className="snap-center shrink-0 w-[220px] rounded-2xl bg-white dark:bg-[#0d1b2e] border border-slate-200 dark:border-white/10 p-5 cursor-pointer transition-all duration-300 ease-out hover:scale-110 hover:shadow-2xl hover:z-10 hover:border-blue-300 dark:hover:border-blue-500/50 group relative">
+    <div className="snap-center shrink-0 w-[220px] rounded-2xl bg-white dark:bg-[#0d1b2e] border border-slate-200 dark:border-white/10 p-5 cursor-pointer transition-all duration-300 ease-out hover:scale-110 hover:z-1 group relative">
       {/* Profile Image */}
       <div className="w-full aspect-square rounded-xl bg-slate-100 dark:bg-white/5 mb-4 overflow-hidden">
         {member.image ? (
@@ -70,17 +70,6 @@ export default function AboutUsPage() {
         </p>
       </section>
 
-      {/* Family Tree Subheading */}
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-semibold text-slate-800 dark:text-white/80 flex items-center justify-center gap-2">
-          <FiUsers className="text-blue-500" />
-          Family Tree
-        </h2>
-        <p className="text-sm text-slate-500 dark:text-white/40 mt-1">
-          รวมหน้าทุกๆคนไว้เป็นแขนง ใครชื่อไรตำแหน่งไร
-        </p>
-      </div>
-
       {/* Team Member Slider */}
       <div className="relative">
         {/* Left Arrow Button */}
@@ -95,7 +84,7 @@ export default function AboutUsPage() {
         {/* Scrollable Cards Container */}
         <div
           ref={scrollRef}
-          className="flex gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory px-12 pb-4 scrollbar-hide"
+          className="flex gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory px-12 py-4 scrollbar-hide"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {teamMembers.map((member, index) => (

@@ -45,6 +45,8 @@
     "noSubjects": "No subjects found."
   },
   "calendar": {
+    "title": "Academic Calendar",
+    "subtitle": "Exam schedules, lectures, and events",
     "allMonths": "All Months",
     "allYears": "All Years",
     "reset": "Reset",
@@ -53,7 +55,17 @@
     "exam": "Exam",
     "lecture": "Lecture",
     "holiday": "Holiday",
-    "event": "Event"
+    "event": "Event",
+    "retry": "Retry",
+    "unableToLoad": "Unable to load calendar events",
+    "pleaseRetry": "Please retry to load your calendar.",
+    "date": "Date",
+    "until": "Until",
+    "location": "Location",
+    "relatedSubject": "Related Subject",
+    "viewSubject": "View Subject →",
+    "description": "Description",
+    "today": "Today"
   },
   "aboutUs": {
     "title": "About Us",

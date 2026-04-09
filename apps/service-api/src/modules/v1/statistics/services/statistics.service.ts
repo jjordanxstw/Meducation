@@ -123,9 +123,9 @@ export class StatisticsService {
       this.getStudentsByYear(),
       this.supabaseAdmin
         .from('calendar_events')
-        .select('id, title, type, start_time, end_time, location, subject_id')
-        .gte('start_time', new Date().toISOString())
-        .order('start_time', { ascending: true })
+        .select('id, title, type, start_date, end_date, location, subject_id')
+        .gte('start_date', new Date().toISOString().split('T')[0])
+        .order('start_date', { ascending: true })
         .limit(8),
       this.getRecentAuditLogs(),
     ]);

@@ -228,11 +228,10 @@ export interface ResourceFullCreateResponse {
 export interface CalendarEvent extends BaseEntity {
   title: string;
   description: string | null;
-  start_time: string;
-  end_time: string;
+  start_date: string;
+  end_date: string | null;
   type: EventType;
   subject_id: string | null;
-  is_all_day: boolean;
   location: string | null;
   color: string | null;
   created_by: string | null;
@@ -241,16 +240,36 @@ export interface CalendarEvent extends BaseEntity {
 export interface CreateCalendarEventDto {
   title: string;
   description?: string;
-  start_time: string;
-  end_time: string;
+  start_date: string;
+  end_date?: string;
   type: EventType;
   subject_id?: string;
-  is_all_day?: boolean;
   location?: string;
   color?: string;
 }
 
 export interface UpdateCalendarEventDto extends Partial<CreateCalendarEventDto> {}
+
+// =====================================================
+// ANNOUNCEMENT
+// =====================================================
+
+export interface Announcement extends BaseEntity {
+  title: string;
+  content: string;
+  is_pinned: boolean;
+  is_published: boolean;
+  created_by_admin: string | null;
+}
+
+export interface CreateAnnouncementDto {
+  title: string;
+  content: string;
+  is_pinned?: boolean;
+  is_published?: boolean;
+}
+
+export interface UpdateAnnouncementDto extends Partial<CreateAnnouncementDto> {}
 
 // =====================================================
 // AUDIT LOG

@@ -7,13 +7,14 @@
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from '@/i18n/routing';
+import { useTranslations } from 'next-intl';
 import { Card, CardBody } from '@nextui-org/react';
 import { useQuery } from '@tanstack/react-query';
 import type { EventClickArg, DatesSetArg } from '@fullcalendar/core';
 import type { EventContentArg } from '@fullcalendar/core/index.js';
 import { api } from '@/lib/api';
 import {
-  formatDateTime,
+  formatDateThai,
   getEventTypeLabel,
   EventType,
 } from '@medical-portal/shared';
@@ -21,28 +22,6 @@ import type { CalendarEvent } from '@medical-portal/shared';
 import { FiRefreshCw, FiX, FiBookOpen, FiCalendar, FiChevronLeft, FiChevronRight, FiChevronDown, FiSliders } from 'react-icons/fi';
 import { FullCalendarWrapper } from '@/components/client/FullCalendarWrapper';
 import { CalendarCardSkeleton } from '@/components/skeletons/DashboardSkeletons';
-
-// Static month options (all 12 months)
-const ALL_MONTHS = [
-  { value: '0', label: 'January' },
-  { value: '1', label: 'February' },
-  { value: '2', label: 'March' },
-  { value: '3', label: 'April' },
-  { value: '4', label: 'May' },
-  { value: '5', label: 'June' },
-  { value: '6', label: 'July' },
-  { value: '7', label: 'August' },
-  { value: '8', label: 'September' },
-  { value: '9', label: 'October' },
-  { value: '10', label: 'November' },
-  { value: '11', label: 'December' },
-];
-
-// Static year options
-const YEARS = ['2026', '2027', '2028', '2029', '2030'];
-
-// Weekday labels
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 // Event type colors for bars
 const EVENT_TYPE_COLORS: Record<string, string> = {
@@ -69,6 +48,7 @@ const EVENT_TYPE_BADGE: Record<string, string> = {
 };
 
 export function CalendarSection() {
+  const t = useTranslations('calendar');
   const router = useRouter();
   const calendarRef = useRef<React.ComponentRef<typeof FullCalendarWrapper> | null>(null);
 
@@ -76,11 +56,20 @@ export function CalendarSection() {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState<string>(String(now.getMonth()));
   const [selectedYear, setSelectedYear] = useState<string>(String(now.getFullYear()));
-  const [activeWeekdays, setActiveWeekdays] = useState<number[]>([]);
   const [filterType, setFilterType] = useState<string>('all');
   const [showFilter, setShowFilter] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Month options using locale-aware formatting
+  const ALL_MONTHS = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => ({
+      value: String(i),
+      label: new Date(2000, i).toLocaleString(undefined, { month: 'long' }),
+    }));
+  }, []);
+
+  const YEARS = ['2026', '2027', '2028', '2029', '2030'];
 
   // Get current date range for the calendar (expanded range for navigation)
   const dateRange = useMemo(() => {
@@ -105,45 +94,27 @@ export function CalendarSection() {
     [data],
   );
 
-  // Check if any filters are active
-  const hasActiveFilters = activeWeekdays.length > 0 || filterType !== 'all';
-
   // Reset all filters
   const resetFilters = useCallback(() => {
-    setActiveWeekdays([]);
     setFilterType('all');
   }, []);
 
-  // Toggle weekday
-  const toggleWeekday = useCallback((day: number) => {
-    setActiveWeekdays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-    );
-  }, []);
-
-  // Filter events by type and weekday
+  // Filter events by type
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
-      // Type filter
       if (filterType !== 'all' && event.type !== filterType) return false;
-
-      const d = new Date(event.start_time);
-
-      // Weekday filter
-      if (activeWeekdays.length > 0 && !activeWeekdays.includes(d.getDay())) return false;
-
       return true;
     });
-  }, [events, filterType, activeWeekdays]);
+  }, [events, filterType]);
 
   // Convert to FullCalendar format
   const calendarEvents = useMemo(() => {
     return filteredEvents.map((event) => ({
       id: event.id,
       title: event.title,
-      start: event.start_time,
-      end: event.end_time,
-      allDay: event.is_all_day,
+      start: event.start_date,
+      end: event.end_date ?? event.start_date,
+      allDay: true,
       extendedProps: {
         ...event,
       },
@@ -154,7 +125,7 @@ export function CalendarSection() {
   const currentMonthLabel = useMemo(() => {
     const y = selectedYear || String(now.getFullYear());
     const m = selectedMonth !== '' ? Number(selectedMonth) : now.getMonth();
-    return new Date(Number(y), m).toLocaleString('default', {
+    return new Date(Number(y), m).toLocaleString(undefined, {
       month: 'long',
       year: 'numeric',
     });
@@ -162,7 +133,7 @@ export function CalendarSection() {
 
   // Custom event content renderer - Google Calendar style
   const eventContent = useCallback((eventInfo: EventContentArg) => {
-    const { event, timeText } = eventInfo;
+    const { event } = eventInfo;
     const type = (event.extendedProps?.type as string) || 'event';
 
     const barColor = EVENT_TYPE_COLORS[type] ?? 'bg-blue-500';
@@ -170,20 +141,8 @@ export function CalendarSection() {
 
     return (
       <div className="flex items-center gap-1 w-full px-1 py-0.5 rounded overflow-hidden group">
-        {/* Colored left bar (3px wide) */}
         <div className={`w-[3px] h-3.5 rounded-full shrink-0 ${barColor}`} />
-
-        {/* Time */}
-        {timeText && (
-          <span className="text-[10px] text-slate-500 dark:text-white/50 shrink-0 font-medium tabular-nums">
-            {timeText} ·
-          </span>
-        )}
-
-        {/* Emoji */}
         <span className="text-[11px] shrink-0">{emoji}</span>
-
-        {/* Title */}
         <span className="text-[11px] font-medium text-slate-700 dark:text-white/80 truncate leading-tight">
           {event.title}
         </span>
@@ -205,7 +164,6 @@ export function CalendarSection() {
   // Handle dates set - sync with dropdowns when navigating
   const handleDatesSet = useCallback((dateInfo: DatesSetArg) => {
     const d = dateInfo.start;
-    // Add 7 days to land in the correct month (start is often last day of previous month)
     const currentDate = new Date(d.getTime() + 7 * 24 * 60 * 60 * 1000);
     setSelectedMonth(String(currentDate.getMonth()));
     setSelectedYear(String(currentDate.getFullYear()));
@@ -244,21 +202,28 @@ export function CalendarSection() {
     }
   };
 
+  // Filter options with i18n
+  const filterOptions = [
+    { key: 'all', label: t('allEvents') },
+    { key: 'exam', label: t('exam') },
+    { key: 'lecture', label: t('lecture') },
+    { key: 'holiday', label: t('holiday') },
+    { key: 'event', label: t('event') },
+  ];
+
   return (
     <>
       {/* Navigation Row */}
       <div className="flex items-center justify-between mb-4">
-        {/* Left: Title */}
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-            Academic Calendar
+            {t('title', undefined, 'Academic Calendar')}
           </h2>
           <p className="text-sm text-slate-400 dark:text-white/40 mt-0.5">
-            Exam schedules, lectures, and events
+            {t('subtitle', undefined, 'Exam schedules, lectures, and events')}
           </p>
         </div>
 
-        {/* Right: Prev/Current/Next navigation */}
         <div className="flex items-center gap-2">
           <button
             onClick={goToPrev}
@@ -285,7 +250,7 @@ export function CalendarSection() {
         </div>
       </div>
 
-      {/* Filter Bar */}
+      {/* Filter Bar — Month, Year, Type only */}
       <div className="flex flex-wrap items-center gap-2 mb-5">
         {/* Month selector */}
         <div className="relative">
@@ -294,7 +259,7 @@ export function CalendarSection() {
             onChange={(e) => setSelectedMonth(e.target.value)}
             className="appearance-none pl-4 pr-9 py-2 rounded-full text-sm font-medium cursor-pointer bg-white dark:bg-[#0d1b2e] border-2 border-blue-500 text-blue-600 dark:text-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
           >
-            <option value="">All Months</option>
+            <option value="">{t('allMonths')}</option>
             {ALL_MONTHS.map((m) => (
               <option key={m.value} value={m.value}>
                 {m.label}
@@ -314,7 +279,7 @@ export function CalendarSection() {
             onChange={(e) => setSelectedYear(e.target.value)}
             className="appearance-none pl-4 pr-9 py-2 rounded-full text-sm font-medium cursor-pointer bg-white dark:bg-[#0d1b2e] border-2 border-blue-500 text-blue-600 dark:text-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
           >
-            <option value="">All Years</option>
+            <option value="">{t('allYears')}</option>
             {YEARS.map((y) => (
               <option key={y} value={y}>
                 {y}
@@ -327,44 +292,14 @@ export function CalendarSection() {
           />
         </div>
 
-        {/* Weekday filter pills */}
-        <div className="flex gap-1.5 flex-wrap">
-          {WEEKDAY_LABELS.map((day, i) => (
-            <button
-              key={day}
-              onClick={() => toggleWeekday(i)}
-              className={`px-4 py-2 rounded-full text-sm font-medium border-2 transition-all duration-150 cursor-pointer ${
-                activeWeekdays.includes(i)
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/15'
-                  : 'border-slate-200 dark:border-white/15 text-slate-600 dark:text-white/60 bg-white dark:bg-transparent hover:border-blue-400 hover:text-blue-500'
-              }`}
-            >
-              {day}
-            </button>
-          ))}
-        </div>
-
-        {/* Reset filters */}
-        {hasActiveFilters && (
-          <button
-            onClick={resetFilters}
-            className="text-xs text-slate-400 dark:text-white/30 hover:text-red-500 dark:hover:text-red-400 flex items-center gap-1 transition"
-          >
-            <FiX size={12} /> Reset
-          </button>
-        )}
-      </div>
-
-      {/* Event type filter and legend */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-        {/* Event type filter dropdown */}
+        {/* Event type filter and legend */}
         <div className="relative">
           <button
             onClick={() => setShowFilter(!showFilter)}
             className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition border-slate-200 dark:border-white/20 text-slate-600 dark:text-white/70 bg-white dark:bg-white/8 hover:bg-slate-100 dark:hover:bg-white/15"
           >
             <FiSliders size={14} />
-            <span>Filter by type</span>
+            <span>{t('filterByType')}</span>
             {filterType !== 'all' && (
               <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
             )}
@@ -377,13 +312,7 @@ export function CalendarSection() {
                 onClick={() => setShowFilter(false)}
               />
               <div className="absolute left-0 top-full mt-2 z-50 min-w-[160px] bg-white dark:bg-[#0d1b2e] border border-slate-200 dark:border-white/10 rounded-xl shadow-xl shadow-slate-200/50 dark:shadow-black/80 p-2">
-                {[
-                  { key: 'all', label: 'All Events' },
-                  { key: 'exam', label: 'Exam' },
-                  { key: 'lecture', label: 'Lecture' },
-                  { key: 'holiday', label: 'Holiday' },
-                  { key: 'event', label: 'Event' },
-                ].map((option) => (
+                {filterOptions.map((option) => (
                   <button
                     key={option.key}
                     onClick={() => {
@@ -404,8 +333,18 @@ export function CalendarSection() {
           )}
         </div>
 
+        {/* Reset filters */}
+        {filterType !== 'all' && (
+          <button
+            onClick={resetFilters}
+            className="text-xs text-slate-400 dark:text-white/30 hover:text-red-500 dark:hover:text-red-400 flex items-center gap-1 transition"
+          >
+            <FiX size={12} /> {t('reset')}
+          </button>
+        )}
+
         {/* Event legend with colored dots */}
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4 ml-auto">
           {Object.values(EventType).map((type) => (
             <div key={type} className="flex items-center gap-1.5">
               <span className={`w-2.5 h-2.5 rounded-full ${EVENT_TYPE_COLORS[type]}`} />
@@ -424,8 +363,8 @@ export function CalendarSection() {
                 <FiRefreshCw className="text-danger" />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="text-base font-semibold text-danger">Unable to load calendar events</h3>
-                <p className="text-sm text-default-500 mt-1">Please retry to load your calendar.</p>
+                <h3 className="text-base font-semibold text-danger">{t('unableToLoad')}</h3>
+                <p className="text-sm text-default-500 mt-1">{t('pleaseRetry')}</p>
               </div>
             </div>
             <button
@@ -433,7 +372,7 @@ export function CalendarSection() {
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
             >
               <FiRefreshCw className="h-4 w-4" />
-              Retry
+              {t('retry')}
             </button>
           </CardBody>
         </Card>
@@ -493,7 +432,7 @@ export function CalendarSection() {
               text-decoration: none !important;
             }
             .dark .fc .fc-col-header-cell-cushion {
-              color: rgba(255,255,255,0.35);
+              color: rgba(255,255,255,0.5);
             }
 
             /* Cell borders - very subtle */
@@ -584,13 +523,11 @@ export function CalendarSection() {
             <div className="flex items-start gap-3 mt-4 p-3 rounded-xl bg-slate-50 dark:bg-white/5">
               <FiCalendar className="text-blue-500 dark:text-blue-400 mt-0.5 shrink-0" size={16} />
               <div>
-                <p className="text-xs text-blue-600/50 dark:text-blue-200/50 uppercase tracking-wide">Date & Time</p>
-                <p className="text-sm text-slate-900 dark:text-white font-medium">{formatDateTime(selectedEvent.start_time)}</p>
-                {selectedEvent.is_all_day ? (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">All Day Event</p>
-                ) : (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Until {formatDateTime(selectedEvent.end_time)}</p>
-                )}
+                <p className="text-xs text-blue-600/50 dark:text-blue-200/50 uppercase tracking-wide">{t('date')}</p>
+                <p className="text-sm text-slate-900 dark:text-white font-medium">{formatDateThai(selectedEvent.start_date)}</p>
+                {selectedEvent.end_date && selectedEvent.end_date !== selectedEvent.start_date ? (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('until')} {formatDateThai(selectedEvent.end_date)}</p>
+                ) : null}
               </div>
             </div>
 
@@ -598,7 +535,7 @@ export function CalendarSection() {
               <div className="flex items-start gap-3 mt-2 p-3 rounded-xl bg-slate-50 dark:bg-white/5">
                 <span className="text-blue-500 dark:text-blue-400 shrink-0">📍</span>
                 <div>
-                  <p className="text-xs text-blue-600/50 dark:text-blue-200/50 uppercase tracking-wide">Location</p>
+                  <p className="text-xs text-blue-600/50 dark:text-blue-200/50 uppercase tracking-wide">{t('location')}</p>
                   <p className="text-sm text-slate-900 dark:text-white">{selectedEvent.location}</p>
                 </div>
               </div>
@@ -608,12 +545,12 @@ export function CalendarSection() {
               <div className="flex items-start gap-3 mt-2 p-3 rounded-xl bg-slate-50 dark:bg-white/5">
                 <FiBookOpen className="text-blue-500 dark:text-blue-400 shrink-0" size={16} />
                 <div>
-                  <p className="text-xs text-blue-600/50 dark:text-blue-200/50 uppercase tracking-wide">Related Subject</p>
+                  <p className="text-xs text-blue-600/50 dark:text-blue-200/50 uppercase tracking-wide">{t('relatedSubject')}</p>
                   <button
                     onClick={handleGoToSubject}
                     className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium hover:underline flex items-center gap-1"
                   >
-                    View Subject →
+                    {t('viewSubject')}
                   </button>
                 </div>
               </div>
@@ -621,7 +558,7 @@ export function CalendarSection() {
 
             {selectedEvent.description && (
               <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/10">
-                <p className="text-xs text-blue-600/50 dark:text-blue-200/50 uppercase tracking-wide mb-1">Description</p>
+                <p className="text-xs text-blue-600/50 dark:text-blue-200/50 uppercase tracking-wide mb-1">{t('description')}</p>
                 <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{selectedEvent.description}</p>
               </div>
             )}
