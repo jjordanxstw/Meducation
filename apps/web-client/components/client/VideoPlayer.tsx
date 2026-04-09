@@ -16,6 +16,43 @@ interface VideoPlayerProps {
   lectureTitle: string;
 }
 
+const YOUTUBE_ID_PATTERN = /^[a-zA-Z0-9_-]{11}$/;
+
+function normalizeYouTubeVideoId(value: string): string | null {
+  const input = value.trim();
+  if (!input) return null;
+
+  if (YOUTUBE_ID_PATTERN.test(input)) {
+    return input;
+  }
+
+  try {
+    const parsedUrl = new URL(input);
+    const host = parsedUrl.hostname.replace(/^www\./, '').toLowerCase();
+
+    if (host === 'youtu.be') {
+      const shortId = parsedUrl.pathname.split('/').filter(Boolean)[0];
+      return shortId && YOUTUBE_ID_PATTERN.test(shortId) ? shortId : null;
+    }
+
+    if (host.endsWith('youtube.com') || host.endsWith('youtube-nocookie.com')) {
+      const watchId = parsedUrl.searchParams.get('v');
+      if (watchId && YOUTUBE_ID_PATTERN.test(watchId)) {
+        return watchId;
+      }
+
+      const pathParts = parsedUrl.pathname.split('/').filter(Boolean);
+      const markerIndex = pathParts.findIndex((part) => ['embed', 'shorts', 'live', 'v'].includes(part));
+      const pathId = markerIndex >= 0 ? pathParts[markerIndex + 1] : undefined;
+      return pathId && YOUTUBE_ID_PATTERN.test(pathId) ? pathId : null;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
 export function VideoPlayer({ resource, lectureTitle }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [watermarkPosition, setWatermarkPosition] = useState({ x: 30, y: 20 });
@@ -44,7 +81,13 @@ export function VideoPlayer({ resource, lectureTitle }: VideoPlayerProps) {
 
   const getVideoUrl = () => {
     if (resource.type === ResourceType.YOUTUBE) {
-      return getYouTubeEmbedUrl(resource.url);
+      const videoId = normalizeYouTubeVideoId(resource.url);
+      if (videoId) {
+        return getYouTubeEmbedUrl(videoId);
+      }
+
+      // Fallback to the original value for backward compatibility with existing records.
+      return resource.url;
     }
     // For Google Drive videos
     if (resource.type === ResourceType.GDRIVE_VIDEO) {
