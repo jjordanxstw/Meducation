@@ -353,7 +353,7 @@ function buildBucketSkeleton(
 ): Map<string, ActivityBucket> {
   const map = new Map<string, ActivityBucket>();
 
-  let cursor = bucketStart(from, granularity);
+  const cursor = bucketStart(from, granularity);
   const limit = bucketStart(to, granularity);
 
   // Safety cap to prevent runaway loops on bad inputs.
