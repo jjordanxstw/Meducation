@@ -11,14 +11,18 @@ import { StrictMode } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { Refine } from '@refinedev/core';
 
-import '@fontsource/kanit/400.css';
-import '@fontsource/kanit/500.css';
-import '@fontsource/kanit/600.css';
-import '@fontsource/kanit/700.css';
-import '@fontsource/prompt/300.css';
-import '@fontsource/prompt/400.css';
-import '@fontsource/prompt/500.css';
-import '@fontsource/prompt/600.css';
+// Latin (English) primary face. Browser falls through to Sarabun for Thai glyphs.
+import '@fontsource/noto-sans/300.css';
+import '@fontsource/noto-sans/400.css';
+import '@fontsource/noto-sans/500.css';
+import '@fontsource/noto-sans/600.css';
+import '@fontsource/noto-sans/700.css';
+// Thai primary face (Designed by Suppakit Chalermlarp). Includes Thai subset.
+import '@fontsource/sarabun/300.css';
+import '@fontsource/sarabun/400.css';
+import '@fontsource/sarabun/500.css';
+import '@fontsource/sarabun/600.css';
+import '@fontsource/sarabun/700.css';
 
 import { dataProvider } from './providers/data-provider';
 import { authProvider } from './providers/auth-provider';
@@ -81,7 +85,10 @@ const Root: React.FC = () => {
         ...RefineThemes.Blue,
         token: {
           colorPrimary: '#1b2d48',
-          fontFamily: 'Prompt, sans-serif',
+          // Latin first (Noto Sans), Thai second (Sarabun). Browser handles
+          // per-glyph fallback so mixed-language text renders cleanly in both
+          // scripts without manual <span lang="..."> wrappers.
+          fontFamily: "'Noto Sans', 'Sarabun', sans-serif",
           borderRadius: 12,
           wireframe: false,
         },

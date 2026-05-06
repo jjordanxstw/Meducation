@@ -26,9 +26,11 @@ const config: Config = {
         },
       },
       fontFamily: {
-        heading: ['Kanit', 'sans-serif'],
-        body: ['Prompt', 'sans-serif'],
-        sans: ['Prompt', 'sans-serif'],
+        // Latin first, Thai (Sarabun) as automatic fallback for Thai glyphs.
+        heading: ['var(--font-noto-sans)', 'var(--font-sarabun)', 'Noto Sans', 'Sarabun', 'sans-serif'],
+        body: ['var(--font-noto-sans)', 'var(--font-sarabun)', 'Noto Sans', 'Sarabun', 'sans-serif'],
+        sans: ['var(--font-noto-sans)', 'var(--font-sarabun)', 'Noto Sans', 'Sarabun', 'sans-serif'],
+        thai: ['var(--font-sarabun)', 'Sarabun', 'sans-serif'],
       },
       animation: {
         marquee: 'marquee 30s linear infinite',

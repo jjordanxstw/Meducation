@@ -7,7 +7,15 @@
     "aboutUs": "About Us",
     "aboutMe": "About Me",
     "logout": "Log out",
-    "darkMode": "Dark Mode"
+    "loggingOut": "Signing out...",
+    "darkMode": "Dark Mode",
+    "language": "Language",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "toggleTheme": "Toggle theme",
+    "userMenu": "User menu",
+    "openProfile": "Open profile",
+    "skipToContent": "Skip to main content"
   },
   "auth": {
     "title": "MedPi Portal",

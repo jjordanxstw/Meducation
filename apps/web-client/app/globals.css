@@ -353,9 +353,29 @@
   }
 }
 
-/* Base styles */
+/*
+ * Typography
+ * ------------------------------------------------------------
+ * - Latin glyphs (English) use Noto Sans.
+ * - Thai glyphs use Sarabun (designed by Suppakit Chalermlarp).
+ *
+ * We declare both faces in the body font stack and rely on the browser's
+ * per-glyph fallback ordering: Noto Sans (Latin only) is consulted first,
+ * the browser then falls through to Sarabun for any glyphs Noto Sans does
+ * not provide (notably the Thai script). Both fonts are loaded by
+ * `next/font/google` in `app/layout.tsx`, and exposed through the
+ * `--font-noto-sans` and `--font-sarabun` CSS variables.
+ */
 body {
-  font-family: 'Prompt', sans-serif;
+  font-family:
+    var(--font-noto-sans),
+    var(--font-sarabun),
+    'Noto Sans',
+    'Sarabun',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   background:
     radial-gradient(circle at 8% 8%, rgba(125, 211, 252, 0.2), transparent 35%),
@@ -367,8 +387,24 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Kanit', sans-serif;
+  font-family:
+    var(--font-noto-sans),
+    var(--font-sarabun),
+    'Noto Sans',
+    'Sarabun',
+    sans-serif;
   font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Anything explicitly marked as Thai content prefers Sarabun directly. */
+:lang(th),
+[lang='th'] {
+  font-family:
+    var(--font-sarabun),
+    'Sarabun',
+    var(--font-noto-sans),
+    sans-serif;
 }
 
 /* Custom scrollbar */
@@ -393,11 +429,21 @@ h1, h2, h3, h4, h5, h6 {
 
 /* FullCalendar styles */
 .fc {
-  font-family: 'Prompt', sans-serif !important;
+  font-family:
+    var(--font-noto-sans),
+    var(--font-sarabun),
+    'Noto Sans',
+    'Sarabun',
+    sans-serif !important;
 }
 
 .fc .fc-toolbar-title {
-  font-family: 'Kanit', sans-serif !important;
+  font-family:
+    var(--font-noto-sans),
+    var(--font-sarabun),
+    'Noto Sans',
+    'Sarabun',
+    sans-serif !important;
   font-weight: 600;
   font-size: 1.35rem !important;
   color: var(--ink-1);
@@ -509,7 +555,12 @@ h1, h2, h3, h4, h5, h6 {
   pointer-events: none;
   user-select: none;
   z-index: 9999;
-  font-family: 'Prompt', sans-serif;
+  font-family:
+    var(--font-noto-sans),
+    var(--font-sarabun),
+    'Noto Sans',
+    'Sarabun',
+    sans-serif;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
   white-space: nowrap;
 }

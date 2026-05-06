@@ -115,6 +115,43 @@ const translations: Record<string, TranslationMap> = {
     'pages.dashboard.noUpcomingEvents': 'ไม่พบกิจกรรมที่กำลังจะมาถึง',
     'pages.dashboard.recentAuditLogs': 'กิจกรรมล่าสุด',
     'pages.dashboard.noAuditLogs': 'ไม่พบบันทึกกิจกรรมล่าสุด',
+    'pages.dashboard.welcome': 'สวัสดี, {name}',
+    'pages.dashboard.welcomeFallback': 'ยินดีต้อนรับสู่หน้าจัดการระบบ',
+    'pages.dashboard.lastUpdated': 'อัปเดตล่าสุด',
+    'pages.dashboard.activityTitle': 'แนวโน้มกิจกรรม',
+    'pages.dashboard.activitySubtitle': 'ผู้ใช้ใหม่ บทเรียนใหม่ และเหตุการณ์ตรวจสอบในแต่ละช่วงเวลา',
+    'pages.dashboard.activity.newProfiles': 'นักศึกษา/ผู้ใช้ใหม่',
+    'pages.dashboard.activity.newLectures': 'บทเรียนใหม่',
+    'pages.dashboard.activity.newAuditEvents': 'เหตุการณ์ตรวจสอบ',
+    'pages.dashboard.activity.empty': 'ไม่มีข้อมูลกิจกรรมในช่วงที่เลือก',
+    'pages.dashboard.granularity.day': 'รายวัน',
+    'pages.dashboard.granularity.week': 'รายสัปดาห์',
+    'pages.dashboard.granularity.month': 'รายเดือน',
+    'pages.dashboard.range.7d': '7 วันล่าสุด',
+    'pages.dashboard.range.30d': '30 วันล่าสุด',
+    'pages.dashboard.range.90d': '90 วันล่าสุด',
+    'pages.dashboard.range.custom': 'กำหนดเอง',
+    'pages.dashboard.kpi.subjects': 'รายวิชา',
+    'pages.dashboard.kpi.sections': 'หัวข้อเรียน',
+    'pages.dashboard.kpi.lectures': 'บทเรียน',
+    'pages.dashboard.kpi.resources': 'ทรัพยากร',
+    'pages.dashboard.kpi.profiles': 'ผู้ใช้',
+    'pages.dashboard.kpi.calendarEvents': 'กิจกรรมในปฏิทิน',
+    'pages.dashboard.kpi.activeRatio': 'เปิดใช้งาน {active}/{total}',
+    'pages.dashboard.quickActions': 'ทางลัด',
+    'pages.dashboard.quickActions.newSubject': 'เพิ่มรายวิชา',
+    'pages.dashboard.quickActions.newLecture': 'เพิ่มบทเรียน',
+    'pages.dashboard.quickActions.newEvent': 'เพิ่มกิจกรรมปฏิทิน',
+    'pages.dashboard.quickActions.newAnnouncement': 'เพิ่มประกาศ',
+    'pages.dashboard.timeline.relativeIn': 'ในอีก {value}',
+    'pages.dashboard.timeline.relativeAgo': '{value} ที่แล้ว',
+    'pages.dashboard.timeline.now': 'กำลังเกิดขึ้น',
+    'pages.dashboard.audit.actionFilter': 'กรองตามการกระทำ',
+    'pages.dashboard.audit.allActions': 'ทุกการกระทำ',
+    'pages.dashboard.audit.user': 'ผู้ใช้',
+    'pages.dashboard.audit.table': 'ตาราง',
+    'pages.dashboard.audit.action': 'การกระทำ',
+    'pages.dashboard.audit.time': 'เวลา',
     'pages.subjects.detailTitle': 'รายละเอียดรายวิชา',
     'pages.subjects.fields.code': 'รหัสวิชา',
     'pages.subjects.fields.name': 'ชื่อวิชา',
@@ -360,6 +397,43 @@ const translations: Record<string, TranslationMap> = {
     'pages.dashboard.noUpcomingEvents': 'No upcoming events',
     'pages.dashboard.recentAuditLogs': 'Recent Audit Logs',
     'pages.dashboard.noAuditLogs': 'No recent audit logs',
+    'pages.dashboard.welcome': 'Welcome back, {name}',
+    'pages.dashboard.welcomeFallback': 'Welcome to the admin console',
+    'pages.dashboard.lastUpdated': 'Last updated',
+    'pages.dashboard.activityTitle': 'Activity over time',
+    'pages.dashboard.activitySubtitle': 'New users, lectures, and audit events across the selected period',
+    'pages.dashboard.activity.newProfiles': 'New users',
+    'pages.dashboard.activity.newLectures': 'New lectures',
+    'pages.dashboard.activity.newAuditEvents': 'Audit events',
+    'pages.dashboard.activity.empty': 'No activity in the selected range',
+    'pages.dashboard.granularity.day': 'Daily',
+    'pages.dashboard.granularity.week': 'Weekly',
+    'pages.dashboard.granularity.month': 'Monthly',
+    'pages.dashboard.range.7d': 'Last 7 days',
+    'pages.dashboard.range.30d': 'Last 30 days',
+    'pages.dashboard.range.90d': 'Last 90 days',
+    'pages.dashboard.range.custom': 'Custom',
+    'pages.dashboard.kpi.subjects': 'Subjects',
+    'pages.dashboard.kpi.sections': 'Sections',
+    'pages.dashboard.kpi.lectures': 'Lectures',
+    'pages.dashboard.kpi.resources': 'Resources',
+    'pages.dashboard.kpi.profiles': 'Profiles',
+    'pages.dashboard.kpi.calendarEvents': 'Calendar events',
+    'pages.dashboard.kpi.activeRatio': '{active}/{total} active',
+    'pages.dashboard.quickActions': 'Quick actions',
+    'pages.dashboard.quickActions.newSubject': 'New subject',
+    'pages.dashboard.quickActions.newLecture': 'New lecture',
+    'pages.dashboard.quickActions.newEvent': 'New calendar event',
+    'pages.dashboard.quickActions.newAnnouncement': 'New announcement',
+    'pages.dashboard.timeline.relativeIn': 'in {value}',
+    'pages.dashboard.timeline.relativeAgo': '{value} ago',
+    'pages.dashboard.timeline.now': 'happening now',
+    'pages.dashboard.audit.actionFilter': 'Filter by action',
+    'pages.dashboard.audit.allActions': 'All actions',
+    'pages.dashboard.audit.user': 'User',
+    'pages.dashboard.audit.table': 'Table',
+    'pages.dashboard.audit.action': 'Action',
+    'pages.dashboard.audit.time': 'Time',
     'pages.subjects.detailTitle': 'Subject Details',
     'pages.subjects.fields.code': 'Subject Code',
     'pages.subjects.fields.name': 'Subject Name',
@@ -517,9 +591,27 @@ if (typeof document !== 'undefined') {
   document.documentElement.lang = currentLocale;
 }
 
+function interpolate(template: string, params: unknown): string {
+  if (!params || typeof params !== 'object') {
+    return template;
+  }
+
+  // Lightweight {token} interpolation. Tokens that are missing in the
+  // params object are left untouched to make missing keys obvious during
+  // QA without throwing.
+  return template.replace(/\{(\w+)\}/g, (match, token: string) => {
+    const value = (params as Record<string, unknown>)[token];
+    if (value === undefined || value === null) {
+      return match;
+    }
+    return String(value);
+  });
+}
+
 export const i18nProvider: I18nProvider = {
-  translate: (key: string, _params?: unknown, defaultMessage?: string) => {
-    return translations[currentLocale]?.[key] ?? defaultMessage ?? key;
+  translate: (key: string, params?: unknown, defaultMessage?: string) => {
+    const template = translations[currentLocale]?.[key] ?? defaultMessage ?? key;
+    return interpolate(template, params);
   },
   changeLocale: async (lang: string) => {
     currentLocale = translations[lang] ? lang : 'th';

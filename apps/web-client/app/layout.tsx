@@ -1,17 +1,27 @@
 import type { Metadata, Viewport } from 'next';
-import { Kanit, Prompt } from 'next/font/google';
+import { Noto_Sans, Sarabun } from 'next/font/google';
 
-const kanit = Kanit({
-  weight: ['400', '500', '600', '700'],
-  subsets: ['latin'],
-  variable: '--font-kanit',
+/**
+ * Latin (English) primary face. Subsetted to Latin only so that the browser
+ * automatically falls back to Sarabun for Thai glyphs through the CSS
+ * font-family stack defined in globals.css.
+ */
+const notoSans = Noto_Sans({
+  weight: ['300', '400', '500', '600', '700'],
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-noto-sans',
   display: 'swap',
 });
 
-const prompt = Prompt({
-  weight: ['400', '500', '600'],
-  subsets: ['latin'],
-  variable: '--font-prompt',
+/**
+ * Thai primary face. Designed by Suppakit Chalermlarp.
+ * Includes the Thai subset so Thai glyphs render even when the rendered
+ * element only declares the Sarabun family.
+ */
+const sarabun = Sarabun({
+  weight: ['300', '400', '500', '600', '700'],
+  subsets: ['latin', 'thai'],
+  variable: '--font-sarabun',
   display: 'swap',
 });
 
@@ -33,7 +43,7 @@ export default function RootLayout({
 }) {
   return (
     <html suppressHydrationWarning>
-      <body className={`${kanit.variable} ${prompt.variable} font-sans antialiased`}>
+      <body className={`${notoSans.variable} ${sarabun.variable} font-sans antialiased`}>
         {children}
       </body>
     </html>

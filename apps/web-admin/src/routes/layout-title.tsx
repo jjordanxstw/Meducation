@@ -77,9 +77,10 @@ export const AppLayoutTitle = ({ collapsed }: LayoutTitleProps) => {
           <Typography.Text
             strong
             style={{
-              fontFamily: 'Kanit, sans-serif',
+              fontFamily: "'Noto Sans', 'Sarabun', sans-serif",
               fontSize: 16,
               lineHeight: 1.1,
+              letterSpacing: '-0.01em',
               color: '#ffffff',
               whiteSpace: 'nowrap',
             }}

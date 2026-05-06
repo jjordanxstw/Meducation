@@ -17,18 +17,45 @@ const SAFE_EXACT_PATHS = new Set([
   '/acdm',
   '/learning-hub',
   '/about-me',
+  '/about-us',
 ]);
 
+const SAFE_PREFIX_PATHS = ['/subjects/'];
+
+/**
+ * Restricts the post-login `to` parameter to known internal dashboard
+ * routes. We deliberately reject any input that:
+ *  - is empty/null
+ *  - does not begin with a single forward slash (rejects http://, //evil)
+ *  - contains backslashes or control characters
+ *  - resolves to a path outside of {@link SAFE_EXACT_PATHS} / SAFE_PREFIX_PATHS
+ *
+ * This prevents open-redirect abuse where an attacker could craft a link
+ * like `/login?to=//evil.com` to bounce a freshly authenticated user off
+ * to an arbitrary domain.
+ */
 function sanitizeTargetPath(path: string | null): string {
-  if (!path || !path.startsWith('/') || path.startsWith('//')) {
+  if (!path) {
     return '/';
   }
 
-  if (SAFE_EXACT_PATHS.has(path)) {
+  if (!path.startsWith('/') || path.startsWith('//')) {
+    return '/';
+  }
+
+  if (path.includes('\\') || /[\u0000-\u001f\u007f]/.test(path)) {
+    return '/';
+  }
+
+  // Drop any query string before evaluating against the allowlist; we still
+  // pass the original path forward to preserve any legitimate query params.
+  const [pathOnly] = path.split('?');
+
+  if (SAFE_EXACT_PATHS.has(pathOnly)) {
     return path;
   }
 
-  if (path.startsWith('/subjects/')) {
+  if (SAFE_PREFIX_PATHS.some((prefix) => pathOnly.startsWith(prefix))) {
     return path;
   }
 

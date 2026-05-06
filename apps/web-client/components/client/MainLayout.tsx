@@ -79,11 +79,13 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     setIsLoggingOut(true);
     try {
       await api.auth.logout();
-      await signOut({ callbackUrl: '/en/login' });
+      // Preserve the user's chosen language across sign-out so the login
+      // screen they land on speaks their language.
+      await signOut({ callbackUrl: `/${locale}/login` });
     } catch {
       setIsLoggingOut(false);
     }
-  }, [isLoggingOut]);
+  }, [isLoggingOut, locale]);
 
   const handleLogoutFromDrawer = useCallback(async () => {
     setIsDrawerOpen(false);
@@ -127,7 +129,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg focus:font-semibold focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
       >
-        Skip to main content
+        {t('nav.skipToContent')}
       </a>
 
       {/* DESKTOP NAVBAR */}
@@ -144,7 +146,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           <button
             onClick={() => setIsDrawerOpen(!isDrawerOpen)}
             className="md:hidden w-9 h-9 rounded-xl bg-slate-100 dark:bg-white/10 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/15 transition"
-            aria-label={isDrawerOpen ? 'Close menu' : 'Open menu'}
+            aria-label={isDrawerOpen ? t('nav.closeMenu') : t('nav.openMenu')}
           >
             {isDrawerOpen ? <FiX className="h-5 w-5" /> : <FiMenu className="h-5 w-5" />}
           </button>
@@ -202,12 +204,12 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Theme toggle */}
-          <Tooltip content="Toggle theme" placement="bottom">
+          <Tooltip content={t('nav.toggleTheme')} placement="bottom">
             <Button
               isIconOnly
               radius="full"
               variant="light"
-              aria-label="Toggle theme"
+              aria-label={t('nav.toggleTheme')}
               className="icon-circle-btn card-flat text-[var(--ink-1)]"
               onPress={toggleTheme}
             >
@@ -217,7 +219,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
           {/* Mobile profile link */}
           <div className="md:hidden">
-            <Link href="/about-me" aria-label="Open profile">
+            <Link href="/about-me" aria-label={t('nav.openProfile')}>
               <Button
                 isIconOnly
                 radius="full"
@@ -234,7 +236,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm text-white hover:bg-blue-500 transition"
-              aria-label="User menu"
+              aria-label={t('nav.userMenu')}
             >
               {getInitials(session?.user?.name)}
             </button>
@@ -256,7 +258,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                     className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-slate-700 dark:text-white/70 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-colors"
                   >
                     <FiUser size={15} />
-                    About Me
+                    {t('nav.aboutMe')}
                   </Link>
 
                   <div className="h-px bg-slate-100 dark:bg-white/8 mx-1.5 my-1" />
@@ -277,7 +279,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                     ) : (
                       <FiLogOut size={15} />
                     )}
-                    {isLoggingOut ? 'Signing out...' : 'Log out'}
+                    {isLoggingOut ? t('nav.loggingOut') : t('nav.logout')}
                   </button>
                 </div>
               </div>
@@ -312,7 +314,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => setIsDrawerOpen(false)}
               className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/10 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/15 transition"
-              aria-label="Close menu"
+              aria-label={t('nav.closeMenu')}
             >
               <FiX className="h-5 w-5 text-slate-600 dark:text-white/70" />
             </button>
@@ -357,7 +359,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           <div className="p-2 border-t border-slate-100 dark:border-white/10">
             {/* Language switcher row */}
             <div className="flex items-center justify-between w-full px-4 py-3">
-              <span className="text-sm text-slate-700 dark:text-white/70">Language</span>
+              <span className="text-sm text-slate-700 dark:text-white/70">{t('nav.language')}</span>
               <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/10 rounded-xl p-1">
                 {(['en', 'th'] as const).map((loc) => (
                   <button
@@ -382,7 +384,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             >
               <div className="flex items-center gap-3 text-slate-700 dark:text-white/70">
                 {isThemeReady && theme === 'dark' ? <FiSun className="h-5 w-5" /> : <FiMoon className="h-5 w-5" />}
-                <span>Dark Mode</span>
+                <span>{t('nav.darkMode')}</span>
               </div>
               {/* Toggle switch */}
               <div className={`w-10 h-6 rounded-full p-0.5 transition-colors ${isThemeReady && theme === 'dark' ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'}`}>
@@ -408,7 +410,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               ) : (
                 <FiLogOut size={16} />
               )}
-              <span>{isLoggingOut ? 'Signing out...' : 'Log out'}</span>
+              <span>{isLoggingOut ? t('nav.loggingOut') : t('nav.logout')}</span>
             </button>
           </div>
         </div>

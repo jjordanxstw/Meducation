@@ -40,16 +40,20 @@ const AuthLoadingFallback = () => (
   </div>
 );
 
-// Protected layout wrapper - shared across all authenticated routes
+// Protected layout wrapper - shared across all authenticated routes.
+// The `refine-layout` wrapper enables the sticky sider + scrollable content
+// CSS in `index.css` so the logout button stays visible while content scrolls.
 const ProtectedLayout = () => (
   <Authenticated
     key="root-auth"
     redirectOnFail="/login"
     loading={<AuthLoadingFallback />}
   >
-    <ThemedLayout Header={AppLayoutHeader} Title={AppLayoutTitle}>
-      <Outlet />
-    </ThemedLayout>
+    <div className="refine-layout">
+      <ThemedLayout Header={AppLayoutHeader} Title={AppLayoutTitle}>
+        <Outlet />
+      </ThemedLayout>
+    </div>
   </Authenticated>
 );
 

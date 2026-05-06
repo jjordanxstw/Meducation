@@ -5,8 +5,14 @@
 :root {
   --color-primary: #1b2d48;
   --color-primary-dark: #142238;
-  --font-kanit: 'Kanit', sans-serif;
-  --font-prompt: 'Prompt', sans-serif;
+  /*
+   * Typography
+   * - Latin glyphs use Noto Sans (loaded from @fontsource/noto-sans).
+   * - Thai glyphs use Sarabun (loaded from @fontsource/sarabun).
+   * The browser's per-glyph fallback handles mixed-script content.
+   */
+  --font-latin: 'Noto Sans', 'Sarabun', sans-serif;
+  --font-thai: 'Sarabun', 'Noto Sans', sans-serif;
 }
 
 * {
@@ -30,13 +36,19 @@ body,
 }
 
 body {
-  font-family: var(--font-prompt), sans-serif;
+  font-family: var(--font-latin);
   overflow-x: hidden;
   overflow-y: auto;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-kanit), sans-serif;
+  font-family: var(--font-latin);
+  letter-spacing: -0.01em;
+}
+
+:lang(th),
+[lang='th'] {
+  font-family: var(--font-thai);
 }
 
 /* Loading spinner */
@@ -118,6 +130,13 @@ h1, h2, h3, h4, h5, h6 {
 .ant-layout-sider-trigger,
 .sidebar-collapse-trigger {
   display: none !important;
+}
+
+/* Sider gets `ant-layout-sider-has-trigger` from antd when collapsible,
+   which adds `padding-bottom: 48px` to reserve space for the (hidden) trigger.
+   We hide the trigger via the rule above, so reclaim that space too. */
+.ant-layout-sider.ant-layout-sider-has-trigger {
+  padding-bottom: 0 !important;
 }
 
 .ant-layout-sider .ant-layout-sider-zero-width-trigger {
@@ -208,7 +227,7 @@ h1, h2, h3, h4, h5, h6 {
   min-width: 60px;
   margin-left: auto;
   margin-right: auto;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   padding-inline: calc(50% - 12px) !important;
 }
 

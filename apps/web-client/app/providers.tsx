@@ -115,7 +115,10 @@ function AntdThemeProvider({ children }: { children: ReactNode }) {
         algorithm: theme === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
         token: {
           colorPrimary: '#0070F3',
-          fontFamily: 'var(--font-prompt), Prompt, sans-serif',
+          // Stack Latin (Noto Sans) first, then Thai (Sarabun) so that mixed
+          // English/Thai content renders each script with the correct face.
+          fontFamily:
+            'var(--font-noto-sans), var(--font-sarabun), "Noto Sans", "Sarabun", sans-serif',
           borderRadius: 12,
         },
       }}

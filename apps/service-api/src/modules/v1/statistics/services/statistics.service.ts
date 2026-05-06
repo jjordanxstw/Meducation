@@ -14,6 +14,30 @@ export interface CountPair {
   active: number;
 }
 
+export type ActivityGranularity = 'day' | 'week' | 'month';
+
+export interface ActivityBucket {
+  bucket: string; // ISO date (YYYY-MM-DD) of the bucket start
+  newProfiles: number;
+  newLectures: number;
+  newAuditEvents: number;
+}
+
+export interface ActivityResponse {
+  granularity: ActivityGranularity;
+  from: string;
+  to: string;
+  buckets: ActivityBucket[];
+  totals: {
+    newProfiles: number;
+    newLectures: number;
+    newAuditEvents: number;
+  };
+}
+
+const MIN_RANGE_DAYS = 1;
+const MAX_RANGE_DAYS = 366;
+
 @Injectable()
 export class StatisticsService {
   private readonly logger = new Logger(StatisticsService.name);
@@ -154,4 +178,205 @@ export class StatisticsService {
       recentAuditLogs: recentAuditResult.data ?? [],
     };
   }
+
+  /**
+   * Returns activity time-series data for the admin dashboard.
+   * Buckets new profile creations, lecture creations, and audit events by
+   * the requested granularity within the requested ISO date range.
+   */
+  async getActivityOverTime(params: {
+    from?: string;
+    to?: string;
+    granularity?: ActivityGranularity;
+  }): Promise<ActivityResponse> {
+    const granularity: ActivityGranularity = params.granularity ?? 'day';
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const defaultFrom = new Date(today);
+    defaultFrom.setUTCDate(defaultFrom.getUTCDate() - 29);
+
+    const fromDate = parseIsoDate(params.from) ?? defaultFrom;
+    const toDate = parseIsoDate(params.to) ?? today;
+
+    if (toDate.getTime() < fromDate.getTime()) {
+      throw new AppException(
+        ErrorCode.VALIDATION_FAILED,
+        { field: 'to', reason: 'must be after from' },
+        'Invalid date range: "to" must be on or after "from"',
+      );
+    }
+
+    const rangeDays = Math.floor((toDate.getTime() - fromDate.getTime()) / 86400000) + 1;
+    if (rangeDays < MIN_RANGE_DAYS || rangeDays > MAX_RANGE_DAYS) {
+      throw new AppException(
+        ErrorCode.VALIDATION_FAILED,
+        { field: 'range', reason: `must be between ${MIN_RANGE_DAYS} and ${MAX_RANGE_DAYS} days` },
+        `Date range must be between ${MIN_RANGE_DAYS} and ${MAX_RANGE_DAYS} days`,
+      );
+    }
+
+    const fromIso = fromDate.toISOString();
+    const toExclusive = new Date(toDate);
+    toExclusive.setUTCDate(toExclusive.getUTCDate() + 1);
+    const toIso = toExclusive.toISOString();
+
+    const [profilesResult, lecturesResult, auditResult] = await Promise.all([
+      this.supabaseAdmin
+        .from('profiles')
+        .select('created_at')
+        .gte('created_at', fromIso)
+        .lt('created_at', toIso),
+      this.supabaseAdmin
+        .from('lectures')
+        .select('created_at')
+        .gte('created_at', fromIso)
+        .lt('created_at', toIso),
+      this.supabaseAdmin
+        .from('audit_logs')
+        .select('created_at')
+        .gte('created_at', fromIso)
+        .lt('created_at', toIso),
+    ]);
+
+    if (profilesResult.error || lecturesResult.error || auditResult.error) {
+      this.logger.warn(
+        `Failed to fetch activity series (profiles=${profilesResult.error?.code ?? 'ok'}, ` +
+          `lectures=${lecturesResult.error?.code ?? 'ok'}, audit=${auditResult.error?.code ?? 'ok'})`,
+      );
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'activity_stats' });
+    }
+
+    const buckets = buildBucketSkeleton(fromDate, toDate, granularity);
+
+    const accumulate = (
+      rows: Array<{ created_at?: string | null }> | null,
+      field: keyof ActivityBucket,
+    ) => {
+      for (const row of rows ?? []) {
+        if (!row?.created_at) {
+          continue;
+        }
+
+        const ts = new Date(row.created_at);
+        if (Number.isNaN(ts.getTime())) {
+          continue;
+        }
+
+        const key = bucketKey(ts, granularity);
+        const bucket = buckets.get(key);
+        if (bucket) {
+          (bucket[field] as number) += 1;
+        }
+      }
+    };
+
+    accumulate(profilesResult.data, 'newProfiles');
+    accumulate(lecturesResult.data, 'newLectures');
+    accumulate(auditResult.data, 'newAuditEvents');
+
+    const orderedBuckets = Array.from(buckets.values()).sort((a, b) => a.bucket.localeCompare(b.bucket));
+
+    const totals = orderedBuckets.reduce(
+      (acc, b) => {
+        acc.newProfiles += b.newProfiles;
+        acc.newLectures += b.newLectures;
+        acc.newAuditEvents += b.newAuditEvents;
+        return acc;
+      },
+      { newProfiles: 0, newLectures: 0, newAuditEvents: 0 },
+    );
+
+    return {
+      granularity,
+      from: toIsoDate(fromDate),
+      to: toIsoDate(toDate),
+      buckets: orderedBuckets,
+      totals,
+    };
+  }
+}
+
+function parseIsoDate(value?: string | null): Date | null {
+  if (!value) {
+    return null;
+  }
+
+  // Accept either YYYY-MM-DD or full ISO timestamps. We always normalize to UTC midnight
+  // so that bucket boundaries are stable regardless of the caller's timezone.
+  const trimmed = value.trim();
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? `${trimmed}T00:00:00.000Z` : trimmed;
+  const parsed = new Date(dateOnly);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  parsed.setUTCHours(0, 0, 0, 0);
+  return parsed;
+}
+
+function toIsoDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function bucketKey(date: Date, granularity: ActivityGranularity): string {
+  const start = bucketStart(date, granularity);
+  return toIsoDate(start);
+}
+
+function bucketStart(date: Date, granularity: ActivityGranularity): Date {
+  const result = new Date(date);
+  result.setUTCHours(0, 0, 0, 0);
+
+  if (granularity === 'day') {
+    return result;
+  }
+
+  if (granularity === 'week') {
+    // Anchor weeks to Monday (ISO week start)
+    const day = result.getUTCDay();
+    const offset = (day + 6) % 7; // Mon=0, Tue=1 ... Sun=6
+    result.setUTCDate(result.getUTCDate() - offset);
+    return result;
+  }
+
+  // month
+  result.setUTCDate(1);
+  return result;
+}
+
+function buildBucketSkeleton(
+  from: Date,
+  to: Date,
+  granularity: ActivityGranularity,
+): Map<string, ActivityBucket> {
+  const map = new Map<string, ActivityBucket>();
+
+  let cursor = bucketStart(from, granularity);
+  const limit = bucketStart(to, granularity);
+
+  // Safety cap to prevent runaway loops on bad inputs.
+  let iterations = 0;
+  while (cursor.getTime() <= limit.getTime() && iterations < 1024) {
+    const key = toIsoDate(cursor);
+    map.set(key, {
+      bucket: key,
+      newProfiles: 0,
+      newLectures: 0,
+      newAuditEvents: 0,
+    });
+
+    if (granularity === 'day') {
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    } else if (granularity === 'week') {
+      cursor.setUTCDate(cursor.getUTCDate() + 7);
+    } else {
+      cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+    }
+
+    iterations += 1;
+  }
+
+  return map;
 }

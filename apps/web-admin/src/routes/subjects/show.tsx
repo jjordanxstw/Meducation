@@ -21,7 +21,7 @@ const SubjectsShow = () => {
 
   return (
     <Show isLoading={isLoading} recordItemId={id}>
-      <Title level={5} style={{ fontFamily: 'Kanit', fontSize: 'clamp(1rem, 2.5vw, 1.125rem)' }}>
+      <Title level={5} style={{ fontFamily: "'Noto Sans', 'Sarabun', sans-serif", fontSize: 'clamp(1rem, 2.5vw, 1.125rem)' }}>
         {t('pages.subjects.detailTitle', {}, 'Subject Details')}
       </Title>
       <Descriptions bordered column={{ xs: 1, sm: 1, md: 2 }} style={{ marginTop: 16 }}>

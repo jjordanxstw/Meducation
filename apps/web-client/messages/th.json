@@ -7,7 +7,15 @@
     "aboutUs": "เกี่ยวกับเรา",
     "aboutMe": "โปรไฟล์",
     "logout": "ออกจากระบบ",
-    "darkMode": "โหมดมืด"
+    "loggingOut": "กำลังออกจากระบบ...",
+    "darkMode": "โหมดมืด",
+    "language": "ภาษา",
+    "openMenu": "เปิดเมนู",
+    "closeMenu": "ปิดเมนู",
+    "toggleTheme": "สลับธีม",
+    "userMenu": "เมนูผู้ใช้",
+    "openProfile": "เปิดโปรไฟล์",
+    "skipToContent": "ข้ามไปยังเนื้อหาหลัก"
   },
   "auth": {
     "title": "MedPi Portal",

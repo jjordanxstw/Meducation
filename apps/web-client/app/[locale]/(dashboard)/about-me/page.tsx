@@ -7,6 +7,7 @@ import { signOut } from 'next-auth/react';
 import { api } from '@/lib/api';
 import { getYearLevelLabel } from '@medical-portal/shared';
 import { useState, useCallback } from 'react';
+import { useLocale } from 'next-intl';
 
 // Coming Soon badge component - consistent across app
 function ComingSoonBadge() {
@@ -30,17 +31,19 @@ function getInitials(name: string | undefined): string {
 export default function AboutMePage() {
   const { profile } = useAuthStore();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const locale = useLocale();
 
   const handleLogout = useCallback(async () => {
     if (isLoggingOut) return;
     setIsLoggingOut(true);
     try {
       await api.auth.logout();
-      await signOut({ callbackUrl: '/login' });
+      // Preserve the user's chosen locale through the sign-out flow.
+      await signOut({ callbackUrl: `/${locale}/login` });
     } catch {
       setIsLoggingOut(false);
     }
-  }, [isLoggingOut]);
+  }, [isLoggingOut, locale]);
 
   return (
     <section className="mx-auto max-w-3xl space-y-5 sm:space-y-6">

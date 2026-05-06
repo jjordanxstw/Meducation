@@ -1,48 +1,264 @@
 /**
  * Admin Dashboard Page
- * Migrated from src/app/dashboard/page.tsx
+ *
+ * UX goals:
+ * - Show both total and active counts on every KPI card with a progress bar.
+ * - Replace the plain "Students by Year" rows with an interactive bar chart.
+ * - Add an "Activity over time" line chart with a granularity (day/week/month)
+ *   and date-range picker, backed by /admin/statistics/activity.
+ * - Render upcoming events as a colour-coded Timeline with relative times.
+ * - Render audit logs as a filterable, paginated Table with action chips.
+ * - Add a welcome banner, last-updated timestamp + manual refresh, and a
+ *   quick-actions row that deep-links into the most common create flows.
  */
 
-import { useEffect, useMemo, useState } from 'react';
-import { Card, Col, Empty, List, Row, Space, Spin, Statistic, Tag, Typography } from 'antd';
-import { useTranslate } from '@refinedev/core';
-import dayjs from 'dayjs';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Empty,
+  Progress,
+  Radio,
+  Row,
+  Segmented,
+  Skeleton,
+  Space,
+  Table,
+  Tag,
+  Timeline,
+  Tooltip,
+  Typography,
+} from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import { Column, Line } from '@ant-design/charts';
+import {
+  AuditOutlined,
+  BellOutlined,
+  BookOutlined,
+  CalendarOutlined,
+  ClockCircleOutlined,
+  FileTextOutlined,
+  PlusOutlined,
+  ReadOutlined,
+  ReloadOutlined,
+  TeamOutlined,
+  UnorderedListOutlined,
+} from '@ant-design/icons';
+import { useGetIdentity, useGo, useTranslate } from '@refinedev/core';
+import dayjs, { type Dayjs } from 'dayjs';
 import { authAxios } from '../../providers/auth-provider';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
+const { RangePicker } = DatePicker;
+
+type CountPair = { total: number; active: number };
 
 type DashboardOverview = {
   kpis: {
-    subjects: { total: number; active: number };
-    sections: { total: number; active: number };
-    lectures: { total: number; active: number };
-    resources: { total: number; active: number };
-    profiles: { total: number; active: number };
-    calendarEvents: { total: number; active: number };
+    subjects: CountPair;
+    sections: CountPair;
+    lectures: CountPair;
+    resources: CountPair;
+    profiles: CountPair;
+    calendarEvents: CountPair;
   };
   studentsByYear: Array<{ yearLevel: number; count: number }>;
-  upcomingEvents: Array<{ id: string; title: string; type: string; start_time: string }>;
-  recentAuditLogs: Array<{ id: string; action: string; table_name: string; user_email: string | null; created_at: string }>;
+  upcomingEvents: Array<{
+    id: string;
+    title: string;
+    type: string;
+    start_date?: string;
+    end_date?: string | null;
+    start_time?: string;
+    location?: string | null;
+  }>;
+  recentAuditLogs: Array<{
+    id: string;
+    action: string;
+    table_name: string;
+    record_id?: string | null;
+    user_email: string | null;
+    created_at: string;
+  }>;
 };
+
+type ActivityResponse = {
+  granularity: 'day' | 'week' | 'month';
+  from: string;
+  to: string;
+  buckets: Array<{
+    bucket: string;
+    newProfiles: number;
+    newLectures: number;
+    newAuditEvents: number;
+  }>;
+  totals: {
+    newProfiles: number;
+    newLectures: number;
+    newAuditEvents: number;
+  };
+};
+
+type AdminIdentity = {
+  id: string;
+  name?: string;
+  email?: string;
+  username?: string;
+  isSuperAdmin?: boolean;
+};
+
+type RangePreset = '7d' | '30d' | '90d' | 'custom';
+type Granularity = 'day' | 'week' | 'month';
+
+const PRESET_RANGES: Record<Exclude<RangePreset, 'custom'>, number> = {
+  '7d': 6,
+  '30d': 29,
+  '90d': 89,
+};
+
+function defaultRangeFor(preset: Exclude<RangePreset, 'custom'>): [Dayjs, Dayjs] {
+  const end = dayjs().startOf('day');
+  const start = end.subtract(PRESET_RANGES[preset], 'day');
+  return [start, end];
+}
+
+const KPI_DEFINITIONS = [
+  {
+    key: 'subjects' as const,
+    accent: '#1677ff',
+    icon: <BookOutlined />,
+    labelKey: 'pages.dashboard.kpi.subjects',
+    fallback: 'Subjects',
+  },
+  {
+    key: 'sections' as const,
+    accent: '#722ed1',
+    icon: <UnorderedListOutlined />,
+    labelKey: 'pages.dashboard.kpi.sections',
+    fallback: 'Sections',
+  },
+  {
+    key: 'lectures' as const,
+    accent: '#13c2c2',
+    icon: <ReadOutlined />,
+    labelKey: 'pages.dashboard.kpi.lectures',
+    fallback: 'Lectures',
+  },
+  {
+    key: 'resources' as const,
+    accent: '#fa8c16',
+    icon: <FileTextOutlined />,
+    labelKey: 'pages.dashboard.kpi.resources',
+    fallback: 'Resources',
+  },
+  {
+    key: 'profiles' as const,
+    accent: '#52c41a',
+    icon: <TeamOutlined />,
+    labelKey: 'pages.dashboard.kpi.profiles',
+    fallback: 'Profiles',
+  },
+  {
+    key: 'calendarEvents' as const,
+    accent: '#eb2f96',
+    icon: <CalendarOutlined />,
+    labelKey: 'pages.dashboard.kpi.calendarEvents',
+    fallback: 'Calendar events',
+  },
+];
+
+const EVENT_COLORS: Record<string, string> = {
+  exam: '#cf1322',
+  lecture: '#1677ff',
+  holiday: '#faad14',
+  event: '#52c41a',
+};
+
+const ACTION_COLORS: Record<string, string> = {
+  INSERT: 'green',
+  UPDATE: 'blue',
+  DELETE: 'red',
+};
+
+function formatRelativeTime(target: dayjs.Dayjs, now: dayjs.Dayjs, t: ReturnType<typeof useTranslate>): string {
+  const diffMs = target.diff(now);
+  const absMs = Math.abs(diffMs);
+
+  if (absMs < 60_000) {
+    return t('pages.dashboard.timeline.now', {}, 'happening now');
+  }
+
+  const minutes = Math.round(absMs / 60_000);
+  const hours = Math.round(minutes / 60);
+  const days = Math.round(hours / 24);
+
+  let value: string;
+  if (days >= 1) {
+    value = `${days}d`;
+  } else if (hours >= 1) {
+    value = `${hours}h`;
+  } else {
+    value = `${minutes}m`;
+  }
+
+  if (diffMs >= 0) {
+    return t('pages.dashboard.timeline.relativeIn', { value }, `in ${value}`);
+  }
+
+  return t('pages.dashboard.timeline.relativeAgo', { value }, `${value} ago`);
+}
 
 const DashboardPage = () => {
   const t = useTranslate();
-  const [loading, setLoading] = useState(true);
+  const go = useGo();
+  const { data: identity } = useGetIdentity<AdminIdentity>();
+
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState(true);
+  const [overviewError, setOverviewError] = useState<string | null>(null);
+
+  const [activity, setActivity] = useState<ActivityResponse | null>(null);
+  const [activityLoading, setActivityLoading] = useState(true);
+  const [activityError, setActivityError] = useState<string | null>(null);
+
+  const [granularity, setGranularity] = useState<Granularity>('day');
+  const [rangePreset, setRangePreset] = useState<RangePreset>('30d');
+  const [customRange, setCustomRange] = useState<[Dayjs, Dayjs]>(() => defaultRangeFor('30d'));
+  const [actionFilter, setActionFilter] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Dayjs | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  const effectiveRange = useMemo<[Dayjs, Dayjs]>(() => {
+    if (rangePreset === 'custom') {
+      return customRange;
+    }
+    return defaultRangeFor(rangePreset);
+  }, [rangePreset, customRange]);
 
   useEffect(() => {
     let mounted = true;
 
     const loadOverview = async () => {
+      setOverviewLoading(true);
+      setOverviewError(null);
       try {
         const response = await authAxios.get('/api/v1/admin/statistics/overview');
         if (!mounted) {
           return;
         }
         setOverview(response.data?.data ?? null);
+        setLastUpdated(dayjs());
+      } catch (error) {
+        if (!mounted) {
+          return;
+        }
+        setOverviewError(t('pages.dashboard.noData', {}, 'Dashboard data is unavailable'));
       } finally {
         if (mounted) {
-          setLoading(false);
+          setOverviewLoading(false);
         }
       }
     };
@@ -52,121 +268,522 @@ const DashboardPage = () => {
     return () => {
       mounted = false;
     };
+  }, [refreshTick, t]);
+
+  useEffect(() => {
+    let mounted = true;
+    const [from, to] = effectiveRange;
+
+    const loadActivity = async () => {
+      setActivityLoading(true);
+      setActivityError(null);
+      try {
+        const response = await authAxios.get('/api/v1/admin/statistics/activity', {
+          params: {
+            from: from.format('YYYY-MM-DD'),
+            to: to.format('YYYY-MM-DD'),
+            granularity,
+          },
+        });
+        if (!mounted) {
+          return;
+        }
+        setActivity(response.data?.data ?? null);
+      } catch {
+        if (!mounted) {
+          return;
+        }
+        setActivityError(t('pages.dashboard.activity.empty', {}, 'No activity in the selected range'));
+        setActivity(null);
+      } finally {
+        if (mounted) {
+          setActivityLoading(false);
+        }
+      }
+    };
+
+    void loadActivity();
+
+    return () => {
+      mounted = false;
+    };
+  }, [effectiveRange, granularity, refreshTick, t]);
+
+  const handleRefresh = useCallback(() => {
+    setRefreshTick((tick) => tick + 1);
   }, []);
 
-  const cards = useMemo(
+  const handleRangePresetChange = useCallback((value: string | number) => {
+    const preset = value as RangePreset;
+    setRangePreset(preset);
+    if (preset !== 'custom') {
+      setCustomRange(defaultRangeFor(preset));
+    }
+  }, []);
+
+  const handleCustomRangeChange = useCallback((dates: [Dayjs | null, Dayjs | null] | null) => {
+    if (!dates || !dates[0] || !dates[1]) {
+      return;
+    }
+    setRangePreset('custom');
+    setCustomRange([dates[0].startOf('day'), dates[1].startOf('day')]);
+  }, []);
+
+  // Charts use a normalized long-form dataset so that legends, tooltips, and
+  // colour mapping stay consistent.
+  const activityChartData = useMemo(() => {
+    if (!activity) {
+      return [];
+    }
+
+    const series: Array<{ bucket: string; series: string; value: number }> = [];
+    for (const point of activity.buckets) {
+      series.push({
+        bucket: point.bucket,
+        series: t('pages.dashboard.activity.newProfiles', {}, 'New users'),
+        value: point.newProfiles,
+      });
+      series.push({
+        bucket: point.bucket,
+        series: t('pages.dashboard.activity.newLectures', {}, 'New lectures'),
+        value: point.newLectures,
+      });
+      series.push({
+        bucket: point.bucket,
+        series: t('pages.dashboard.activity.newAuditEvents', {}, 'Audit events'),
+        value: point.newAuditEvents,
+      });
+    }
+    return series;
+  }, [activity, t]);
+
+  const studentsChartData = useMemo(() => {
+    if (!overview?.studentsByYear) {
+      return [];
+    }
+    return overview.studentsByYear.map((row) => ({
+      year: `${t('common.yearPrefix', {}, 'Year')} ${row.yearLevel}`,
+      count: row.count,
+      yearLevel: row.yearLevel,
+    }));
+  }, [overview, t]);
+
+  const filteredAuditLogs = useMemo(() => {
+    if (!overview?.recentAuditLogs) {
+      return [];
+    }
+    if (!actionFilter) {
+      return overview.recentAuditLogs;
+    }
+    return overview.recentAuditLogs.filter((log) => log.action === actionFilter);
+  }, [overview, actionFilter]);
+
+  const auditColumns = useMemo<ColumnsType<DashboardOverview['recentAuditLogs'][number]>>(
     () => [
-      { key: 'subjects', label: t('menu.subjects', {}, 'Subjects'), value: overview?.kpis.subjects.total ?? 0 },
-      { key: 'sections', label: t('menu.sections', {}, 'Sections'), value: overview?.kpis.sections.total ?? 0 },
-      { key: 'lectures', label: t('menu.lectures', {}, 'Lectures'), value: overview?.kpis.lectures.total ?? 0 },
-      { key: 'resources', label: t('menu.resources', {}, 'Resources'), value: overview?.kpis.resources.total ?? 0 },
-      { key: 'profiles', label: t('menu.profiles', {}, 'Profiles'), value: overview?.kpis.profiles.total ?? 0 },
-      { key: 'calendar', label: t('menu.calendar', {}, 'Calendar'), value: overview?.kpis.calendarEvents.total ?? 0 },
+      {
+        title: t('pages.dashboard.audit.action', {}, 'Action'),
+        dataIndex: 'action',
+        key: 'action',
+        width: 110,
+        render: (action: string) => (
+          <Tag color={ACTION_COLORS[action] ?? 'default'} style={{ fontWeight: 500 }}>
+            {action}
+          </Tag>
+        ),
+      },
+      {
+        title: t('pages.dashboard.audit.table', {}, 'Table'),
+        dataIndex: 'table_name',
+        key: 'table_name',
+        ellipsis: true,
+      },
+      {
+        title: t('pages.dashboard.audit.user', {}, 'User'),
+        dataIndex: 'user_email',
+        key: 'user_email',
+        ellipsis: true,
+        render: (email: string | null) =>
+          email ? (
+            <Space size={6} align="center">
+              <span
+                aria-hidden
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 26,
+                  height: 26,
+                  borderRadius: '50%',
+                  background: 'rgba(22, 119, 255, 0.12)',
+                  color: '#1677ff',
+                  fontWeight: 600,
+                  fontSize: 12,
+                }}
+              >
+                {email.slice(0, 1).toUpperCase()}
+              </span>
+              <Text>{email}</Text>
+            </Space>
+          ) : (
+            <Text type="secondary">{t('common.notAvailable', {}, '-')}</Text>
+          ),
+      },
+      {
+        title: t('pages.dashboard.audit.time', {}, 'Time'),
+        dataIndex: 'created_at',
+        key: 'created_at',
+        width: 180,
+        render: (createdAt: string) => (
+          <Tooltip title={dayjs(createdAt).format('YYYY-MM-DD HH:mm:ss')}>
+            <Text type="secondary">{dayjs(createdAt).format('DD/MM/YYYY HH:mm')}</Text>
+          </Tooltip>
+        ),
+      },
     ],
-    [overview, t],
+    [t],
   );
 
-  if (loading) {
-    return (
-      <Card>
-        <Space direction="vertical" size="middle" style={{ width: '100%', alignItems: 'center' }}>
-          <Spin size="large" />
-          <Text type="secondary">{t('common.loading', {}, 'Loading dashboard...')}</Text>
-        </Space>
-      </Card>
-    );
-  }
+  const welcomeName = identity?.name ?? identity?.username ?? '';
+  const welcomeMessage = welcomeName
+    ? t('pages.dashboard.welcome', { name: welcomeName }, `Welcome back, ${welcomeName}`)
+    : t('pages.dashboard.welcomeFallback', {}, 'Welcome to the admin console');
 
-  if (!overview) {
-    return (
-      <Card>
-        <Empty description={t('pages.dashboard.noData', {}, 'Dashboard data is unavailable')} />
-      </Card>
-    );
-  }
+  const isLoadingOverview = overviewLoading && !overview;
 
   return (
-    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-      <Card>
-        <Space direction="vertical" size={4}>
-          <Title level={3} style={{ margin: 0 }}>
-            {t('pages.dashboard.title', {}, 'Dashboard')}
-          </Title>
-          <Text type="secondary">{t('pages.dashboard.subtitle', {}, 'Select a menu item to manage the system')}</Text>
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      {/* Welcome / refresh banner */}
+      <Card bordered={false} style={{ background: 'linear-gradient(135deg, #1b2d48 0%, #21385a 100%)', color: '#fff' }}>
+        <Row align="middle" justify="space-between" gutter={[12, 12]} wrap>
+          <Col xs={24} md={16}>
+            <Title level={3} style={{ color: '#fff', marginBottom: 4 }}>
+              {welcomeMessage}
+            </Title>
+            <Paragraph style={{ color: 'rgba(255,255,255,0.78)', margin: 0 }}>
+              {t('pages.dashboard.subtitle', {}, 'Select a menu item to manage the system')}
+            </Paragraph>
+          </Col>
+          <Col xs={24} md="auto">
+            <Space size={8} wrap>
+              {lastUpdated && (
+                <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
+                  {t('pages.dashboard.lastUpdated', {}, 'Last updated')}: {lastUpdated.format('HH:mm:ss')}
+                </Text>
+              )}
+              <Button
+                ghost
+                icon={<ReloadOutlined spin={overviewLoading || activityLoading} />}
+                onClick={handleRefresh}
+                disabled={overviewLoading && activityLoading}
+              >
+                {t('buttons.refresh', {}, 'Refresh')}
+              </Button>
+            </Space>
+          </Col>
+        </Row>
+      </Card>
+
+      {overviewError && (
+        <Alert type="error" showIcon message={overviewError} />
+      )}
+
+      {/* KPI cards */}
+      <Row gutter={[12, 12]}>
+        {KPI_DEFINITIONS.map((definition) => {
+          const pair = overview?.kpis[definition.key];
+          const total = pair?.total ?? 0;
+          const active = pair?.active ?? 0;
+          const ratio = total > 0 ? Math.round((active / total) * 100) : 0;
+
+          return (
+            <Col key={definition.key} xs={12} sm={12} md={8} lg={8} xl={4}>
+              <Card
+                size="small"
+                style={{
+                  borderTop: `3px solid ${definition.accent}`,
+                  height: '100%',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                }}
+                bodyStyle={{ padding: 14 }}
+                hoverable
+              >
+                {isLoadingOverview ? (
+                  <Skeleton active paragraph={{ rows: 2 }} />
+                ) : (
+                  <>
+                    <Row align="middle" justify="space-between" wrap={false}>
+                      <Col flex="auto" style={{ minWidth: 0 }}>
+                        <Text type="secondary" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          {t(definition.labelKey, {}, definition.fallback)}
+                        </Text>
+                        <Title level={3} style={{ margin: '4px 0 0', color: definition.accent }}>
+                          {total.toLocaleString()}
+                        </Title>
+                      </Col>
+                      <Col>
+                        <span
+                          aria-hidden
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 36,
+                            height: 36,
+                            borderRadius: 10,
+                            background: `${definition.accent}1a`,
+                            color: definition.accent,
+                            fontSize: 16,
+                          }}
+                        >
+                          {definition.icon}
+                        </span>
+                      </Col>
+                    </Row>
+                    <div style={{ marginTop: 10 }}>
+                      <Progress
+                        percent={ratio}
+                        size="small"
+                        showInfo={false}
+                        strokeColor={definition.accent}
+                        trailColor="#f0f0f0"
+                      />
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {t('pages.dashboard.kpi.activeRatio', { active, total }, `${active}/${total} active`)}
+                      </Text>
+                    </div>
+                  </>
+                )}
+              </Card>
+            </Col>
+          );
+        })}
+      </Row>
+
+      {/* Quick actions */}
+      <Card title={t('pages.dashboard.quickActions', {}, 'Quick actions')} size="small">
+        <Space wrap>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => go({ to: { resource: 'subjects', action: 'create' } })}
+          >
+            {t('pages.dashboard.quickActions.newSubject', {}, 'New subject')}
+          </Button>
+          <Button
+            icon={<PlusOutlined />}
+            onClick={() => go({ to: { resource: 'lectures', action: 'create' } })}
+          >
+            {t('pages.dashboard.quickActions.newLecture', {}, 'New lecture')}
+          </Button>
+          <Button
+            icon={<PlusOutlined />}
+            onClick={() => go({ to: { resource: 'calendar', action: 'create' } })}
+          >
+            {t('pages.dashboard.quickActions.newEvent', {}, 'New calendar event')}
+          </Button>
+          <Button
+            icon={<PlusOutlined />}
+            onClick={() => go({ to: { resource: 'announcements', action: 'create' } })}
+          >
+            {t('pages.dashboard.quickActions.newAnnouncement', {}, 'New announcement')}
+          </Button>
         </Space>
       </Card>
 
-      <Row gutter={[12, 12]}>
-        {cards.map((card) => (
-          <Col key={card.key} xs={24} sm={12} lg={8} xl={4}>
-            <Card>
-              <Statistic title={card.label} value={card.value} />
-            </Card>
-          </Col>
-        ))}
-      </Row>
+      {/* Activity over time */}
+      <Card
+        title={
+          <Space size={8}>
+            <ClockCircleOutlined />
+            {t('pages.dashboard.activityTitle', {}, 'Activity over time')}
+          </Space>
+        }
+        extra={
+          <Space size={8} wrap>
+            <Segmented
+              value={granularity}
+              onChange={(value) => setGranularity(value as Granularity)}
+              options={[
+                { label: t('pages.dashboard.granularity.day', {}, 'Daily'), value: 'day' },
+                { label: t('pages.dashboard.granularity.week', {}, 'Weekly'), value: 'week' },
+                { label: t('pages.dashboard.granularity.month', {}, 'Monthly'), value: 'month' },
+              ]}
+            />
+            <Radio.Group
+              value={rangePreset}
+              onChange={(event) => handleRangePresetChange(event.target.value)}
+              optionType="button"
+              buttonStyle="solid"
+              size="small"
+            >
+              <Radio.Button value="7d">{t('pages.dashboard.range.7d', {}, 'Last 7 days')}</Radio.Button>
+              <Radio.Button value="30d">{t('pages.dashboard.range.30d', {}, 'Last 30 days')}</Radio.Button>
+              <Radio.Button value="90d">{t('pages.dashboard.range.90d', {}, 'Last 90 days')}</Radio.Button>
+              <Radio.Button value="custom">{t('pages.dashboard.range.custom', {}, 'Custom')}</Radio.Button>
+            </Radio.Group>
+            {rangePreset === 'custom' && (
+              <RangePicker
+                value={customRange}
+                onChange={(dates) => handleCustomRangeChange(dates as [Dayjs | null, Dayjs | null] | null)}
+                allowClear={false}
+                disabledDate={(current) => current && current > dayjs().endOf('day')}
+              />
+            )}
+          </Space>
+        }
+      >
+        <Paragraph type="secondary" style={{ marginTop: -4, marginBottom: 12, fontSize: 12 }}>
+          {t(
+            'pages.dashboard.activitySubtitle',
+            {},
+            'New users, lectures, and audit events across the selected period',
+          )}
+        </Paragraph>
+        {activityLoading ? (
+          <Skeleton active paragraph={{ rows: 6 }} />
+        ) : !activity || activity.buckets.length === 0 || activityError ? (
+          <Empty description={t('pages.dashboard.activity.empty', {}, 'No activity in the selected range')} />
+        ) : (
+          <Line
+            data={activityChartData}
+            xField="bucket"
+            yField="value"
+            seriesField="series"
+            smooth
+            height={260}
+            color={['#1677ff', '#13c2c2', '#fa8c16']}
+            point={{ size: 3, shape: 'circle' }}
+            xAxis={{ tickCount: 6 }}
+            yAxis={{ minInterval: 1 }}
+            legend={{ position: 'top-right' }}
+          />
+        )}
+      </Card>
 
       <Row gutter={[12, 12]}>
+        {/* Students by year (bar chart) */}
         <Col xs={24} lg={10}>
-          <Card title={t('pages.dashboard.studentsByYear', {}, 'Students By Year')}>
-            {overview.studentsByYear.length === 0 ? (
+          <Card title={t('pages.dashboard.studentsByYear', {}, 'Students By Year')} style={{ height: '100%' }}>
+            {isLoadingOverview ? (
+              <Skeleton active paragraph={{ rows: 5 }} />
+            ) : studentsChartData.length === 0 ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
             ) : (
-              <Space direction="vertical" style={{ width: '100%' }}>
-                {overview.studentsByYear.map((item) => (
-                  <Row key={item.yearLevel} justify="space-between">
-                    <Text>{`${t('common.yearPrefix', {}, 'Year')} ${item.yearLevel}`}</Text>
-                    <Text strong>{item.count}</Text>
-                  </Row>
-                ))}
-              </Space>
+              <Column
+                data={studentsChartData}
+                xField="year"
+                yField="count"
+                height={280}
+                color="#1677ff"
+                columnStyle={{ radius: [6, 6, 0, 0] }}
+                label={{
+                  position: 'top',
+                  style: { fill: '#475569', fontSize: 12 },
+                }}
+                tooltip={{
+                  formatter: (datum: { count?: number }) => ({
+                    name: t('pages.dashboard.kpi.profiles', {}, 'Profiles'),
+                    value: datum?.count ?? 0,
+                  }),
+                }}
+                xAxis={{ label: { autoRotate: false } }}
+                yAxis={{ minInterval: 1 }}
+              />
             )}
           </Card>
         </Col>
 
+        {/* Upcoming events (timeline) */}
         <Col xs={24} lg={14}>
-          <Card title={t('pages.dashboard.upcomingEvents', {}, 'Upcoming Events')}>
-            <List
-              size="small"
-              locale={{ emptyText: t('pages.dashboard.noUpcomingEvents', {}, 'No upcoming events') }}
-              dataSource={overview.upcomingEvents}
-              renderItem={(item) => (
-                <List.Item>
-                  <Space direction="vertical" size={0} style={{ width: '100%' }}>
-                    <Space>
-                      <Text strong>{item.title}</Text>
-                      <Tag>{item.type}</Tag>
-                    </Space>
-                    <Text type="secondary">{dayjs(item.start_time).format('DD/MM/YYYY HH:mm')}</Text>
-                  </Space>
-                </List.Item>
-              )}
-            />
+          <Card
+            title={
+              <Space size={8}>
+                <BellOutlined />
+                {t('pages.dashboard.upcomingEvents', {}, 'Upcoming Events')}
+              </Space>
+            }
+            style={{ height: '100%' }}
+          >
+            {isLoadingOverview ? (
+              <Skeleton active paragraph={{ rows: 4 }} />
+            ) : !overview?.upcomingEvents || overview.upcomingEvents.length === 0 ? (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description={t('pages.dashboard.noUpcomingEvents', {}, 'No upcoming events')}
+              />
+            ) : (
+              <Timeline
+                mode="left"
+                items={overview.upcomingEvents.map((event) => {
+                  const startSource = event.start_date ?? event.start_time ?? '';
+                  const start = dayjs(startSource);
+                  const now = dayjs();
+                  const color = EVENT_COLORS[event.type?.toLowerCase()] ?? '#8c8c8c';
+                  return {
+                    color,
+                    label: (
+                      <Space direction="vertical" size={0} style={{ textAlign: 'right' }}>
+                        <Text strong>{start.format('DD MMM')}</Text>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          {start.format('HH:mm')}
+                        </Text>
+                      </Space>
+                    ),
+                    children: (
+                      <Space direction="vertical" size={2}>
+                        <Space size={6} wrap>
+                          <Text strong>{event.title}</Text>
+                          <Tag color={color}>{event.type}</Tag>
+                        </Space>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          {formatRelativeTime(start, now, t)}
+                          {event.location ? ` · ${event.location}` : ''}
+                        </Text>
+                      </Space>
+                    ),
+                  };
+                })}
+              />
+            )}
           </Card>
         </Col>
       </Row>
 
-      <Card title={t('pages.dashboard.recentAuditLogs', {}, 'Recent Audit Logs')}>
-        <List
+      {/* Audit logs table */}
+      <Card
+        title={
+          <Space size={8}>
+            <AuditOutlined />
+            {t('pages.dashboard.recentAuditLogs', {}, 'Recent Audit Logs')}
+          </Space>
+        }
+        extra={
+          <Radio.Group
+            value={actionFilter ?? 'all'}
+            onChange={(event) => setActionFilter(event.target.value === 'all' ? null : event.target.value)}
+            optionType="button"
+            size="small"
+          >
+            <Radio.Button value="all">
+              {t('pages.dashboard.audit.allActions', {}, 'All actions')}
+            </Radio.Button>
+            <Radio.Button value="INSERT">INSERT</Radio.Button>
+            <Radio.Button value="UPDATE">UPDATE</Radio.Button>
+            <Radio.Button value="DELETE">DELETE</Radio.Button>
+          </Radio.Group>
+        }
+      >
+        <Table
+          rowKey="id"
           size="small"
-          locale={{ emptyText: t('pages.dashboard.noAuditLogs', {}, 'No recent audit logs') }}
-          dataSource={overview.recentAuditLogs}
-          renderItem={(item) => (
-            <List.Item>
-              <Row style={{ width: '100%' }} justify="space-between" wrap>
-                <Col>
-                  <Space>
-                    <Tag color={item.action === 'DELETE' ? 'red' : item.action === 'INSERT' ? 'green' : 'blue'}>{item.action}</Tag>
-                    <Text>{item.table_name}</Text>
-                    <Text type="secondary">{item.user_email ?? t('common.notAvailable', {}, '-')}</Text>
-                  </Space>
-                </Col>
-                <Col>
-                  <Text type="secondary">{dayjs(item.created_at).format('DD/MM/YYYY HH:mm')}</Text>
-                </Col>
-              </Row>
-            </List.Item>
-          )}
+          columns={auditColumns}
+          dataSource={filteredAuditLogs}
+          loading={isLoadingOverview}
+          pagination={{ pageSize: 5, showSizeChanger: false }}
+          locale={{
+            emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('pages.dashboard.noAuditLogs', {}, 'No recent audit logs')} />,
+          }}
+          scroll={{ x: 'max-content' }}
         />
       </Card>
     </Space>
