@@ -55,7 +55,7 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '2mb',
     },
-    optimizePackageImports: ['@nextui-org/react', 'react-icons', '@fullcalendar/react', '@fullcalendar/daygrid', '@fullcalendar/timegrid', '@fullcalendar/interaction'],
+    optimizePackageImports: ['@nextui-org/react', 'react-icons', 'antd', '@ant-design/icons'],
   },
   // Proxy only backend v1 API requests to NestJS backend.
   // Keep /api/auth/* for NextAuth route handlers inside Next.js.

@@ -3,6 +3,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { NextUIProvider } from '@nextui-org/react';
 import { SessionProvider } from 'next-auth/react';
+import { ConfigProvider as AntdConfigProvider, theme as antdTheme } from 'antd';
 import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -104,6 +105,26 @@ function AuthStoreBridge({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/** Reads theme from ThemeContext and provides antd ConfigProvider with matching algorithm */
+function AntdThemeProvider({ children }: { children: ReactNode }) {
+  const { theme } = useAppTheme();
+
+  return (
+    <AntdConfigProvider
+      theme={{
+        algorithm: theme === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+        token: {
+          colorPrimary: '#0070F3',
+          fontFamily: 'var(--font-prompt), Prompt, sans-serif',
+          borderRadius: 12,
+        },
+      }}
+    >
+      {children}
+    </AntdConfigProvider>
+  );
+}
+
 export function Providers({ children }: { children: ReactNode }) {
   // Use useState to avoid recreating QueryClient on every render
   const [queryClient] = useState(() => createQueryClient());
@@ -112,10 +133,12 @@ export function Providers({ children }: { children: ReactNode }) {
     <SessionProvider>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <NextUIProvider>
-            <TopLoadingBar />
-            <AuthStoreBridge>{children}</AuthStoreBridge>
-          </NextUIProvider>
+          <AntdThemeProvider>
+            <NextUIProvider>
+              <TopLoadingBar />
+              <AuthStoreBridge>{children}</AuthStoreBridge>
+            </NextUIProvider>
+          </AntdThemeProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </SessionProvider>

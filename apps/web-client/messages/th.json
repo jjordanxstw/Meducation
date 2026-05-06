@@ -47,6 +47,9 @@
   "calendar": {
     "title": "ปฏิทินวิชาการ",
     "subtitle": "ตารางสอบ บรรยาย และกิจกรรม",
+    "previousMonth": "เดือนก่อนหน้า",
+    "nextMonth": "เดือนถัดไป",
+    "currentMonth": "เดือนปัจจุบัน",
     "allMonths": "ทุกเดือน",
     "allYears": "ทุกปี",
     "reset": "รีเซ็ต",
@@ -65,7 +68,32 @@
     "relatedSubject": "รายวิชาที่เกี่ยวข้อง",
     "viewSubject": "ดูรายวิชา →",
     "description": "รายละเอียด",
-    "today": "วันนี้"
+    "today": "วันนี้",
+    "noEvents": "ไม่มีกิจกรรมในวันนี้",
+    "eventsFor": "กิจกรรมวันที่",
+    "months": {
+      "january": "มกราคม",
+      "february": "กุมภาพันธ์",
+      "march": "มีนาคม",
+      "april": "เมษายน",
+      "may": "พฤษภาคม",
+      "june": "มิถุนายน",
+      "july": "กรกฎาคม",
+      "august": "สิงหาคม",
+      "september": "กันยายน",
+      "october": "ตุลาคม",
+      "november": "พฤศจิกายน",
+      "december": "ธันวาคม"
+    },
+    "weekdays": {
+      "sunday": "อาทิตย์",
+      "monday": "จันทร์",
+      "tuesday": "อังคาร",
+      "wednesday": "พุธ",
+      "thursday": "พฤหัสบดี",
+      "friday": "ศุกร์",
+      "saturday": "เสาร์"
+    }
   },
   "aboutUs": {
     "title": "เกี่ยวกับเรา",
