@@ -46,11 +46,6 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     () => false,
   );
 
-  // Close drawer on route change
-  useEffect(() => {
-    setIsDrawerOpen(false);
-  }, [pathname]);
-
   // Lock body scroll when drawer is open
   useEffect(() => {
     if (isDrawerOpen) {
@@ -121,8 +116,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-glass-canvas">
-      <div className="glass-orb-a pointer-events-none left-[-5%] top-[-8%]" />
-      <div className="glass-orb-b pointer-events-none bottom-[-14%] right-[-2%]" />
+      <div className="glass-orb-a pointer-events-none left-[-5%] top-[-8%] opacity-75" />
+      <div className="glass-orb-b pointer-events-none bottom-[-14%] right-[-2%] opacity-70" />
 
       {/* Skip to main content link for keyboard users */}
       <a
@@ -136,7 +131,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       <Navbar
         maxWidth="xl"
         height="auto"
-        className="card-flat fixed left-0 top-0 z-50 w-screen max-w-none overflow-visible rounded-none border-x-0 border-t-0 px-3 py-2 sm:left-1/2 sm:top-4 sm:w-[calc(100vw-(var(--app-shell-gutter)*2))] sm:max-w-[var(--app-shell-max)] sm:-translate-x-1/2 sm:rounded-[var(--radius-xl)] sm:border sm:px-2"
+        className="fixed left-0 top-0 z-50 w-screen max-w-none overflow-visible rounded-none border-x-0 border-t-0 border-b border-slate-200/90 dark:border-white/10 bg-[var(--bg-surface)]/95 backdrop-blur-md px-3 py-2 sm:left-1/2 sm:top-4 sm:w-[calc(100vw-(var(--app-shell-gutter)*2))] sm:max-w-[var(--app-shell-max)] sm:-translate-x-1/2 sm:rounded-[var(--radius-xl)] sm:border sm:px-2 sm:shadow-[var(--shadow-sm)]"
         classNames={{
           wrapper: 'max-w-full px-0 sm:px-3',
         }}
@@ -243,9 +238,9 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
             {/* Dropdown popover */}
             {isDropdownOpen && (
-              <div className="absolute top-full right-0 mt-2 w-[220px] bg-white dark:bg-[#0d1b2e] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl shadow-black/10 dark:shadow-black/60 z-[9999] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute top-full right-0 mt-2 w-[220px] bg-[var(--bg-surface-elevated)] border border-slate-200 dark:border-white/10 rounded-2xl shadow-[var(--shadow-lg)] z-[9999] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                 {/* User info section */}
-                <div className="px-4 py-3 border-b border-slate-100 dark:border-white/8">
+                <div className="px-4 py-3 border-b border-slate-100 dark:border-white/[0.08]">
                   <p className="font-semibold text-sm text-slate-900 dark:text-white truncate">{session?.user?.name || 'Learner'}</p>
                   <p className="text-xs text-slate-400 dark:text-white/40 truncate">{session?.user?.email || '-'}</p>
                 </div>
@@ -261,7 +256,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                     {t('nav.aboutMe')}
                   </Link>
 
-                  <div className="h-px bg-slate-100 dark:bg-white/8 mx-1.5 my-1" />
+                  <div className="h-px bg-slate-100 dark:bg-white/[0.08] mx-1.5 my-1" />
 
                   <button
                     onClick={() => {
@@ -298,7 +293,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
       {/* MOBILE DRAWER PANEL */}
       <div
-        className={`fixed top-0 left-0 h-full w-[280px] z-50 bg-white dark:bg-[#0a1628] border-r border-slate-200 dark:border-white/10 shadow-2xl shadow-black/30 transform transition-transform duration-300 ease-out md:hidden ${
+        className={`fixed top-0 left-0 h-full w-[280px] z-50 bg-[var(--bg-surface)] border-r border-slate-200 dark:border-white/10 shadow-2xl shadow-black/30 transform transition-transform duration-300 ease-out md:hidden ${
           isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -321,7 +316,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* User info card */}
-          <div className="mx-3 mt-4 mb-4 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/8">
+          <div className="mx-3 mt-4 mb-4 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/[0.08]">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm text-white">
                 {getInitials(session?.user?.name)}

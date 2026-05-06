@@ -11,3 +11,6 @@ export * from './utils';
 
 // Export error catalog
 export * from './errors';
+
+// Export design tokens
+export * from './theme/hero';

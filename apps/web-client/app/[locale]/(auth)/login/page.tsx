@@ -110,7 +110,7 @@ function LoginContent() {
         style={{ animation: 'pulse 6s ease-in-out infinite' }}
       />
       <div
-        className="pointer-events-none absolute bottom-[15%] right-[8%] h-80 w-80 rounded-full bg-teal-500/4 blur-3xl dark:bg-teal-500/8"
+        className="pointer-events-none absolute bottom-[15%] right-[8%] h-80 w-80 rounded-full bg-teal-500/5 blur-3xl dark:bg-teal-500/[0.08]"
         style={{ animation: 'pulse 8s ease-in-out infinite', animationDelay: '2s' }}
       />
       <div

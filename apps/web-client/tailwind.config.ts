@@ -1,5 +1,9 @@
 import type { Config } from 'tailwindcss';
 import { nextui } from '@nextui-org/react';
+import { HERO_BRAND, HERO_TOKENS } from '@medical-portal/shared';
+
+const light = HERO_TOKENS.light;
+const dark = HERO_TOKENS.dark;
 
 const config: Config = {
   content: [
@@ -10,20 +14,35 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        surface: light.bg.surface,
+        'surface-elevated': light.bg.surfaceElevated,
+        muted: light.bg.muted,
+        'ink-1': light.text.primary,
+        'ink-2': light.text.secondary,
+        'ink-3': light.text.muted,
+        'border-subtle': light.border.subtle,
+        'border-default': light.border.default,
+        brand: light.brand.primary,
+        'brand-hover': light.brand.primaryHover,
+        'brand-subtle': light.brand.primarySubtle,
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#0070F3',
-          600: '#1d4ed8',
-          700: '#1e40af',
-          800: '#1e3a8a',
-          900: '#1e3a8a',
-          DEFAULT: '#0070F3',
-          foreground: '#FFFFFF',
+          50: HERO_BRAND.blue[50],
+          100: HERO_BRAND.blue[100],
+          200: HERO_BRAND.blue[200],
+          300: HERO_BRAND.blue[300],
+          400: HERO_BRAND.blue[400],
+          500: HERO_BRAND.blue[500],
+          600: HERO_BRAND.blue[600],
+          700: HERO_BRAND.blue[700],
+          800: HERO_BRAND.blue[800],
+          900: HERO_BRAND.blue[900],
+          DEFAULT: HERO_BRAND.blue[500],
+          foreground: light.brand.foreground,
         },
+        success: light.state.success.fg,
+        warning: light.state.warning.fg,
+        danger: light.state.danger.fg,
+        info: light.state.info.fg,
       },
       fontFamily: {
         // Latin first, Thai (Sarabun) as automatic fallback for Thai glyphs.
@@ -50,18 +69,36 @@ const config: Config = {
         light: {
           colors: {
             primary: {
-              50: '#eff6ff',
-              100: '#dbeafe',
-              200: '#bfdbfe',
-              300: '#93c5fd',
-              400: '#60a5fa',
-              500: '#0070F3',
-              600: '#1d4ed8',
-              700: '#1e40af',
-              800: '#1e3a8a',
-              900: '#1e3a8a',
-              DEFAULT: '#0070F3',
-              foreground: '#FFFFFF',
+              50: HERO_BRAND.blue[50],
+              100: HERO_BRAND.blue[100],
+              200: HERO_BRAND.blue[200],
+              300: HERO_BRAND.blue[300],
+              400: HERO_BRAND.blue[400],
+              500: HERO_BRAND.blue[500],
+              600: HERO_BRAND.blue[600],
+              700: HERO_BRAND.blue[700],
+              800: HERO_BRAND.blue[800],
+              900: HERO_BRAND.blue[900],
+              DEFAULT: HERO_BRAND.blue[500],
+              foreground: light.brand.foreground,
+            },
+          },
+        },
+        dark: {
+          colors: {
+            primary: {
+              50: HERO_BRAND.blue[50],
+              100: HERO_BRAND.blue[100],
+              200: HERO_BRAND.blue[200],
+              300: HERO_BRAND.blue[300],
+              400: HERO_BRAND.blue[400],
+              500: HERO_BRAND.blue[500],
+              600: HERO_BRAND.blue[600],
+              700: HERO_BRAND.blue[700],
+              800: HERO_BRAND.blue[800],
+              900: HERO_BRAND.blue[900],
+              DEFAULT: HERO_BRAND.blue[500],
+              foreground: dark.brand.foreground,
             },
           },
         },

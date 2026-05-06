@@ -22,7 +22,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@medical-portal/shared': path.resolve(__dirname, '../../packages/shared/src'),
+      '@medical-portal/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
     },
   },
   server: {
@@ -35,6 +35,6 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['@medical-portal/shared'],
+    exclude: ['@medical-portal/shared'],
   },
 });

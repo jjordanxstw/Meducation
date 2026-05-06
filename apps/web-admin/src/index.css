@@ -3,8 +3,20 @@
 @tailwind utilities;
 
 :root {
-  --color-primary: #1b2d48;
-  --color-primary-dark: #142238;
+  --color-primary: #0070f3;
+  --color-primary-dark: #0050c7;
+  --bg-canvas: #f7f8fa;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #ffffff;
+  --ink-1: #0f172a;
+  --ink-2: #334155;
+  --ink-3: #64748b;
+  --border-subtle: rgba(15, 23, 42, 0.08);
+  --border-default: rgba(15, 23, 42, 0.14);
+  --admin-sider-bg: #12243c;
+  --admin-sider-bg-active: rgba(255, 255, 255, 0.16);
+  --admin-header-bg: #ffffff;
+  --admin-layout-bg: #f7f8fa;
   /*
    * Typography
    * - Latin glyphs use Noto Sans (loaded from @fontsource/noto-sans).
@@ -13,6 +25,21 @@
    */
   --font-latin: 'Noto Sans', 'Sarabun', sans-serif;
   --font-thai: 'Sarabun', 'Noto Sans', sans-serif;
+}
+
+.dark {
+  --bg-canvas: #07101c;
+  --bg-surface: #0d1b2e;
+  --bg-surface-elevated: #122842;
+  --ink-1: #f1f5f9;
+  --ink-2: #94a3b8;
+  --ink-3: #64748b;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-default: rgba(148, 163, 184, 0.36);
+  --admin-sider-bg: #0d1b2e;
+  --admin-sider-bg-active: rgba(99, 179, 255, 0.25);
+  --admin-header-bg: #122842;
+  --admin-layout-bg: #07101c;
 }
 
 * {
@@ -39,6 +66,8 @@ body {
   font-family: var(--font-latin);
   overflow-x: hidden;
   overflow-y: auto;
+  background: var(--admin-layout-bg);
+  color: var(--ink-1);
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -87,7 +116,7 @@ h1, h2, h3, h4, h5, h6 {
 .ant-layout-sider > div:first-child,
 .ant-layout-sider > div:first-child > div,
 .ant-layout-sider .ant-menu {
-  background: #1b2d48 !important;
+  background: var(--admin-sider-bg) !important;
   width: 100% !important;
 }
 
@@ -140,7 +169,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .ant-layout-sider .ant-layout-sider-zero-width-trigger {
-  background: #1b2d48 !important;
+  background: var(--admin-sider-bg) !important;
 }
 
 /* Regular item colors */
@@ -163,7 +192,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .ant-layout-sider .ant-menu-item-selected {
-  background: rgba(255, 255, 255, 0.2) !important;
+  background: var(--admin-sider-bg-active) !important;
   border-radius: 10px;
 }
 

@@ -31,6 +31,7 @@ import { ConfigProvider, App as AntdApp } from 'antd';
 import { RefineThemes, useNotificationProvider } from '@refinedev/antd';
 import routerBindings from '@refinedev/react-router-v6';
 import thTH from 'antd/locale/th_TH';
+import { HERO_TOKENS } from '@medical-portal/shared';
 import './index.css';
 
 // Import router and resources
@@ -58,6 +59,7 @@ assertValidApiUrl(resolvedApiUrl);
 
 const Root: React.FC = () => {
   const [locale, setLocale] = React.useState(i18nProvider.getLocale() ?? 'th');
+  const tokens = HERO_TOKENS.light;
 
   React.useEffect(() => {
     const onLocaleChange = (event: Event) => {
@@ -84,7 +86,22 @@ const Root: React.FC = () => {
       theme={{
         ...RefineThemes.Blue,
         token: {
-          colorPrimary: '#1b2d48',
+          colorPrimary: tokens.brand.primary,
+          colorBgBase: tokens.bg.canvas,
+          colorBgContainer: tokens.bg.surface,
+          colorBgElevated: tokens.bg.surfaceElevated,
+          colorBorder: tokens.border.default,
+          colorBorderSecondary: tokens.border.subtle,
+          colorTextBase: tokens.text.primary,
+          colorText: tokens.text.primary,
+          colorTextSecondary: tokens.text.secondary,
+          colorTextTertiary: tokens.text.muted,
+          colorLink: tokens.text.link,
+          colorLinkHover: tokens.text.linkHover,
+          colorSuccess: tokens.state.success.fg,
+          colorWarning: tokens.state.warning.fg,
+          colorError: tokens.state.danger.fg,
+          colorInfo: tokens.state.info.fg,
           // Latin first (Noto Sans), Thai second (Sarabun). Browser handles
           // per-glyph fallback so mixed-language text renders cleanly in both
           // scripts without manual <span lang="..."> wrappers.
@@ -94,24 +111,24 @@ const Root: React.FC = () => {
         },
         components: {
           Layout: {
-            bodyBg: '#f8fafc',
-            headerBg: '#ffffff',
-            siderBg: '#1b2d48',
+            bodyBg: tokens.admin.layoutBg,
+            headerBg: tokens.admin.headerBg,
+            siderBg: tokens.admin.siderBg,
           },
           Card: {
             borderRadiusLG: 16,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
+            boxShadow: tokens.shadow.md,
             borderRadius: 16,
           },
           Table: {
             borderRadius: 12,
-            headerBg: '#f8fafc',
-            headerColor: '#0f172a',
+            headerBg: tokens.bg.muted,
+            headerColor: tokens.text.primary,
           },
           Button: {
             borderRadius: 12,
             fontWeight: 500,
-            boxShadow: '0 2px 4px rgba(27, 45, 72, 0.22)',
+            boxShadow: tokens.shadow.sm,
           },
           Input: {
             borderRadius: 12,

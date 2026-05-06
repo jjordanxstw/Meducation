@@ -6,7 +6,7 @@
  * Reads year filter from URL query param
  */
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, Suspense, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Card,
@@ -20,6 +20,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { FiSearch, FiBook } from 'react-icons/fi';
 import type { Subject } from '@medical-portal/shared';
 import { SubjectCard } from '@/components/ui/SubjectCard';
+import { usePathname, useRouter } from '@/i18n/routing';
 
 // Year filter tab component - pill only, no underline
 function YearFilterTab({
@@ -35,10 +36,10 @@ function YearFilterTab({
     <button
       type="button"
       onClick={onClick}
-      className={`px-4 py-2.5 text-sm font-medium rounded-full transition-all duration-200 min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-0)] ${
+      className={`px-4 py-2.5 text-sm font-medium rounded-full transition-all duration-200 min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-canvas)] ${
         isActive
-          ? 'bg-blue-600 text-white font-semibold'
-          : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-white/50 dark:hover:text-white/80 dark:hover:bg-white/5'
+          ? 'bg-blue-600 text-white font-semibold shadow-[var(--shadow-sm)] ring-2 ring-blue-200/70 dark:ring-blue-400/35'
+          : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-white/50 dark:hover:text-white/80 dark:hover:bg-white/[0.08]'
       }`}
     >
       {children}
@@ -104,25 +105,32 @@ function SubjectsLoading() {
 // Main subjects content component that uses useSearchParams
 function SubjectsContent() {
   const { profile } = useAuthStore();
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const yearParam = searchParams.get('year');
 
-  // Map URL param to filter value (removed fasttrack)
-  const getInitialFilter = (): string => {
-    if (!yearParam) return profile?.year_level?.toString() || 'all';
-    if (['1', '2', '3', '4', '5', '6'].includes(yearParam)) return yearParam;
-    return 'all';
-  };
-
-  const [selectedYear, setSelectedYear] = useState<string>(getInitialFilter);
+  const selectedYear = useMemo(() => {
+    if (yearParam === 'all') {
+      return 'all';
+    }
+    if (yearParam && ['1', '2', '3', '4', '5', '6'].includes(yearParam)) {
+      return yearParam;
+    }
+    return profile?.year_level?.toString() || 'all';
+  }, [yearParam, profile?.year_level]);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Update filter when URL param changes
-  useEffect(() => {
-    if (yearParam && ['1', '2', '3', '4', '5', '6'].includes(yearParam)) {
-      setSelectedYear(yearParam);
+  const handleYearSelect = useCallback((nextYear: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextYear === 'all') {
+      params.set('year', 'all');
+    } else {
+      params.set('year', nextYear);
     }
-  }, [yearParam]);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
+  }, [pathname, router, searchParams]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['subjects', selectedYear === 'all' ? undefined : selectedYear],
@@ -175,8 +183,8 @@ function SubjectsContent() {
             </span>
           }
           classNames={{
-            inputWrapper: 'card-flat ring-2 ring-transparent focus-within:ring-2 focus-within:ring-blue-500/50 focus-within:border-blue-500 transition-all rounded-xl',
-            input: 'text-sm',
+            inputWrapper: 'bg-[var(--bg-surface)] border border-slate-200 dark:border-white/10 ring-2 ring-transparent focus-within:ring-2 focus-within:ring-brand/40 focus-within:border-brand transition-all rounded-xl shadow-[var(--shadow-subtle)]',
+            input: 'text-sm text-[var(--ink-1)] placeholder:text-[var(--ink-3)]',
           }}
           className="w-full sm:w-72"
         />
@@ -188,7 +196,7 @@ function SubjectsContent() {
           <YearFilterTab
             key={option.key}
             isActive={selectedYear === option.key}
-            onClick={() => setSelectedYear(option.key)}
+            onClick={() => handleYearSelect(option.key)}
           >
             {option.label}
           </YearFilterTab>
@@ -219,13 +227,13 @@ function SubjectsContent() {
           )}
         </div>
       ) : (
-        <Card className="glass-surface">
-          <CardBody className="text-center py-16">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 dark:bg-default-100/50">
-              <FiBook className="h-6 w-6 text-slate-400 dark:text-default-400 opacity-50" />
+        <Card className="card-flat">
+          <CardBody className="empty-state">
+            <div className="empty-state-icon flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/[0.08]">
+              <FiBook className="h-6 w-6 text-slate-400 dark:text-slate-400" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-700 dark:text-white/80 mb-1">No Subjects Found</h3>
-            <p className="text-sm text-slate-500 dark:text-white/50">
+            <h3 className="empty-state-heading text-slate-700 dark:text-slate-200">No Subjects Found</h3>
+            <p className="empty-state-subtext text-slate-500 dark:text-slate-400">
               {searchQuery
                 ? `No subjects found matching "${searchQuery}"`
                 : 'No subjects available in the system'}

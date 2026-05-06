@@ -20,9 +20,10 @@ import {
   EventType,
 } from '@medical-portal/shared';
 import type { CalendarEvent } from '@medical-portal/shared';
-import { FiRefreshCw, FiX, FiBookOpen, FiCalendar, FiChevronLeft, FiChevronRight, FiChevronDown, FiSliders } from 'react-icons/fi';
+import { FiRefreshCw, FiX, FiBookOpen, FiCalendar, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { CalendarCardSkeleton } from '@/components/skeletons/DashboardSkeletons';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { PillDropdown } from '@/components/ui/PillDropdown';
 
 // Event type colors for bars
 const EVENT_TYPE_COLORS: Record<string, string> = {
@@ -56,7 +57,6 @@ export function CalendarSection() {
   // Single state: current calendar date (controls which month is shown)
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs());
   const [filterType, setFilterType] = useState<string>('all');
-  const [showFilter, setShowFilter] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -274,7 +274,7 @@ export function CalendarSection() {
         <div className="flex items-center gap-2">
           <button
             onClick={goToPrev}
-            className="w-9 h-9 rounded-full flex items-center justify-center bg-white dark:bg-white/8 border border-slate-200 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-white/80 transition"
+            className="w-9 h-9 rounded-full flex items-center justify-center bg-white dark:bg-white/[0.08] border border-slate-200 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-white/80 transition"
             aria-label={t('previousMonth')}
           >
             <FiChevronLeft size={17} />
@@ -282,14 +282,14 @@ export function CalendarSection() {
 
           <button
             onClick={goToToday}
-            className="px-4 py-2 rounded-full text-sm font-semibold border hover:bg-slate-100 dark:hover:bg-white/10 transition min-w-[140px] text-center bg-white dark:bg-white/8 border-slate-200 dark:border-white/20 text-slate-800 dark:text-white"
+            className="px-4 py-2 rounded-full text-sm font-semibold border hover:bg-slate-100 dark:hover:bg-white/10 transition min-w-[140px] text-center bg-white dark:bg-white/[0.08] border-slate-200 dark:border-white/20 text-slate-800 dark:text-white"
           >
             {currentMonthLabel}
           </button>
 
           <button
             onClick={goToNext}
-            className="w-9 h-9 rounded-full flex items-center justify-center bg-white dark:bg-white/8 border border-slate-200 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-white/80 transition"
+            className="w-9 h-9 rounded-full flex items-center justify-center bg-white dark:bg-white/[0.08] border border-slate-200 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-white/80 transition"
             aria-label={t('nextMonth')}
           >
             <FiChevronRight size={17} />
@@ -300,83 +300,31 @@ export function CalendarSection() {
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-2 mb-5">
         {/* Month selector */}
-        <div className="relative">
-          <select
-            value={selectedMonth}
-            onChange={(e) => setCurrentDate((d) => d.month(Number(e.target.value)))}
-            className="appearance-none pl-4 pr-9 py-2 rounded-full text-sm font-medium cursor-pointer bg-white dark:bg-[#0d1b2e] border-2 border-blue-500 text-blue-600 dark:text-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-          >
-            {ALL_MONTHS.map((m) => (
-              <option key={m.value} value={m.value}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-          <FiChevronDown
-            size={14}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500 pointer-events-none"
-          />
-        </div>
+        <PillDropdown
+          ariaLabel={t('title')}
+          value={selectedMonth}
+          options={ALL_MONTHS.map((m) => ({ value: m.value, label: m.label }))}
+          onChange={(value) => setCurrentDate((d) => d.month(Number(value)))}
+        />
 
         {/* Year selector */}
-        <div className="relative">
-          <select
-            value={selectedYear}
-            onChange={(e) => setCurrentDate((d) => d.year(Number(e.target.value)))}
-            className="appearance-none pl-4 pr-9 py-2 rounded-full text-sm font-medium cursor-pointer bg-white dark:bg-[#0d1b2e] border-2 border-blue-500 text-blue-600 dark:text-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-          >
-            {YEARS.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-          <FiChevronDown
-            size={14}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500 pointer-events-none"
-          />
-        </div>
+        <PillDropdown
+          ariaLabel={t('title')}
+          value={selectedYear}
+          options={YEARS.map((year) => ({ value: year, label: String(year) }))}
+          onChange={(value) => setCurrentDate((d) => d.year(Number(value)))}
+        />
 
         {/* Event type filter */}
-        <div className="relative">
-          <button
-            onClick={() => setShowFilter(!showFilter)}
-            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition border-slate-200 dark:border-white/20 text-slate-600 dark:text-white/70 bg-white dark:bg-white/8 hover:bg-slate-100 dark:hover:bg-white/15"
-          >
-            <FiSliders size={14} />
-            <span>{t('filterByType')}</span>
-            {filterType !== 'all' && (
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-            )}
-          </button>
-
-          {showFilter && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setShowFilter(false)}
-              />
-              <div className="absolute left-0 top-full mt-2 z-50 min-w-[160px] bg-white dark:bg-[#0d1b2e] border border-slate-200 dark:border-white/10 rounded-xl shadow-xl shadow-slate-200/50 dark:shadow-black/80 p-2">
-                {filterOptions.map((option) => (
-                  <button
-                    key={option.key}
-                    onClick={() => {
-                      setFilterType(option.key);
-                      setShowFilter(false);
-                    }}
-                    className={`flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                      filterType === option.key
-                        ? 'bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400'
-                        : 'text-slate-600 dark:text-white/70 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    <span className={filterType === option.key ? '' : 'ml-6'}>{option.label}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        <PillDropdown
+          ariaLabel={t('filterByType')}
+          value={filterType}
+          options={filterOptions.map((option) => ({
+            value: option.key,
+            label: option.key === 'all' ? t('filterByType') : `${t('filterByType')}: ${option.label}`,
+          }))}
+          onChange={setFilterType}
+        />
 
         {/* Reset filters */}
         {filterType !== 'all' && (
@@ -389,7 +337,7 @@ export function CalendarSection() {
         )}
 
         {/* Event legend with colored dots */}
-        <div className="flex flex-wrap items-center gap-4 ml-auto">
+        <div className="flex flex-wrap items-center gap-3 ml-auto max-w-full sm:max-w-[58%] justify-start sm:justify-end">
           {Object.values(EventType).map((type) => (
             <div key={type} className="flex items-center gap-1.5">
               <span className={`w-2.5 h-2.5 rounded-full ${EVENT_TYPE_COLORS[type]}`} />

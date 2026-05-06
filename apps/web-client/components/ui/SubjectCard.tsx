@@ -35,14 +35,14 @@ function SubjectThumbnail({ src, alt }: { src?: string | null; alt: string }) {
 
   if (!src || failed) {
     return (
-      <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-white/8 flex items-center justify-center">
+      <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-white/[0.08] flex items-center justify-center">
         <FiBook size={28} className="text-slate-400 dark:text-white/30" />
       </div>
     );
   }
 
   return (
-    <div className="w-14 h-14 rounded-2xl overflow-hidden bg-slate-100 dark:bg-white/8">
+    <div className="w-14 h-14 rounded-2xl overflow-hidden bg-slate-100 dark:bg-white/[0.08]">
       <Image
         src={src}
         alt={alt}
@@ -71,10 +71,10 @@ export function SubjectCard({
     <Link href={href} className="block">
       <div
         className="relative aspect-square rounded-2xl overflow-hidden
-        bg-white dark:bg-[#0d1b2e]
+        bg-[var(--bg-surface)] dark:bg-[var(--bg-surface)]
         border border-slate-200 dark:border-white/10
         hover:border-blue-300 dark:hover:border-blue-500/40
-        hover:shadow-lg hover:shadow-blue-100/50 dark:hover:shadow-blue-900/20
+        hover:shadow-[var(--shadow-lg)]
         cursor-pointer transition-all duration-200 group
         flex flex-col"
       >
@@ -90,10 +90,10 @@ export function SubjectCard({
         </div>
 
         {/* Info area — bottom ~55% */}
-        <div className="p-4 flex flex-col gap-1 shrink-0">
+        <div className="p-4 pb-3 flex flex-1 flex-col gap-1.5">
           {/* Code + Year badges */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/8 text-slate-500 dark:text-white/50">
+            <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.08] text-slate-500 dark:text-white/50">
               {code}
             </span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-500/20">
@@ -102,12 +102,12 @@ export function SubjectCard({
           </div>
 
           {/* Subject name */}
-          <h3 className="font-bold text-slate-900 dark:text-white text-sm leading-tight line-clamp-2 mt-1">
+          <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-tight line-clamp-2 mt-1 min-h-[2.4rem]">
             {name}
           </h3>
 
           {/* Description */}
-          <p className="text-xs text-slate-400 dark:text-white/40 line-clamp-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 min-h-[1.05rem]">
             {description || 'No description'}
           </p>
 
@@ -127,10 +127,14 @@ export function SubjectCard({
             </div>
           )}
 
-          {/* Open button — visible on hover */}
-          <div className="flex justify-end mt-2 opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200">
-            <span className="text-xs text-blue-500 dark:text-blue-400 font-medium flex items-center gap-1">
-              Open <FiArrowRight size={12} />
+          {/* Footer affordance — stable height, no layout shift */}
+          <div className="mt-auto pt-2 flex items-center justify-end">
+            <span className="text-xs text-slate-500 dark:text-slate-300 font-medium flex items-center gap-1.5">
+              View subject
+              <FiArrowRight
+                size={12}
+                className="transition-transform duration-200 text-blue-500 dark:text-blue-300 group-hover:translate-x-1"
+              />
             </span>
           </div>
         </div>

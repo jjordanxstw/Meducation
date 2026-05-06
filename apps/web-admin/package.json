@@ -4,7 +4,7 @@
   "description": "Medical Learning Portal - Admin Panel with Refine.dev",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "pnpm --filter @medical-portal/shared build && vite",
     "dev:uat": "vite --mode uat",
     "build": "pnpm --filter @medical-portal/shared build && tsc && vite build",
     "build:uat": "pnpm --filter @medical-portal/shared build && tsc && vite build --mode uat",

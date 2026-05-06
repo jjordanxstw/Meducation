@@ -15,6 +15,7 @@ import {
   FiUsers,
   FiStar,
   FiTrendingUp,
+  FiArrowRight,
 } from 'react-icons/fi';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -34,7 +35,7 @@ function YearFilterButton({
   return (
     <button
       onClick={onClick}
-      className={`min-w-[130px] px-5 py-2.5 rounded-full border-2 font-semibold text-sm cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-md ${colorClass}`}
+      className={`min-w-[122px] px-4 py-2.5 rounded-full border font-semibold text-sm cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-sm)] ${colorClass}`}
     >
       {children}
     </button>
@@ -66,7 +67,7 @@ function FeatureCard({
   return (
     <div
       onClick={onClick}
-      className="rounded-2xl p-5 cursor-pointer border transition-all duration-200 hover:scale-[1.02] hover:shadow-lg bg-white dark:bg-[#0d1b2e] border-slate-200 dark:border-white/10"
+      className="rounded-2xl p-5 cursor-pointer border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] bg-[var(--bg-surface)] border-slate-200 dark:border-white/10"
     >
       <div className="flex items-start gap-4">
         <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center ${iconBg}`}>
@@ -82,8 +83,8 @@ function FeatureCard({
             <h3 className={`font-bold text-base ${titleColor}`}>{title}</h3>
           )}
           <p className="text-sm text-slate-500 dark:text-white/50 mt-0.5">{subtitle}</p>
-          <span className="inline-block mt-2 px-3 py-1 rounded-full text-xs border border-current font-medium text-slate-500 dark:text-white/50">
-            {'>'} {viewMoreText} {'<'}
+          <span className="inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full text-xs border font-medium text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-white/[0.04]">
+            {viewMoreText} <FiArrowRight size={12} />
           </span>
         </div>
       </div>
@@ -137,21 +138,21 @@ export default function HomePage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* SECTION A — Top Two-Column Hero Row */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6 items-start">
         {/* LEFT COLUMN — Announcement Card */}
         <div id="announcement-section">
-          <Card className="rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden">
+          <Card className="rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden shadow-[var(--shadow-sm)]">
             {/* Header bar with gradient */}
-            <div className="bg-gradient-to-r from-yellow-300 to-green-300 dark:from-yellow-400/80 dark:to-green-400/80 px-6 py-3">
+            <div className="bg-gradient-to-r from-blue-500 to-sky-500 dark:from-blue-500/90 dark:to-sky-400/80 px-6 py-3">
               <div className="flex items-center gap-2">
-                <FiVolume2 className="text-slate-800" size={20} />
-                <span className="font-bold text-slate-800 text-lg tracking-wide">{t('announcement')}</span>
+                <FiVolume2 className="text-white" size={20} />
+                <span className="font-bold text-white text-lg tracking-wide">{t('announcement')}</span>
               </div>
             </div>
             {/* Body */}
-            <CardBody className="min-h-[180px] bg-slate-50 dark:bg-[#0d1b2e] p-4">
+            <CardBody className="min-h-[180px] bg-slate-50 dark:bg-[var(--bg-surface)] p-4">
               {announcementsLoading ? (
                 <AnnouncementSkeleton />
               ) : announcements.length > 0 ? (
@@ -180,27 +181,27 @@ export default function HomePage() {
         </div>
 
         {/* RIGHT COLUMN — Year Filter Buttons */}
-        <div className="flex lg:flex-col gap-3 flex-wrap lg:flex-nowrap lg:items-end">
+        <div className="flex lg:flex-col gap-2 flex-wrap lg:flex-nowrap lg:items-end rounded-2xl border border-slate-200/80 dark:border-white/10 bg-[var(--bg-surface)] p-3 shadow-[var(--shadow-subtle)]">
           <YearFilterButton
-            colorClass="border-yellow-400 bg-yellow-50 text-yellow-700 dark:bg-yellow-400/10 dark:text-yellow-300 dark:border-yellow-400/50"
+            colorClass="border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300 dark:border-amber-400/40"
             onClick={() => router.push('/subjects')}
           >
             {t('fastTrack')}
           </YearFilterButton>
           <YearFilterButton
-            colorClass="border-teal-400 bg-teal-50 text-teal-700 dark:bg-teal-400/10 dark:text-teal-300 dark:border-teal-400/50"
+            colorClass="border-sky-300 bg-sky-50 text-sky-700 dark:bg-sky-400/10 dark:text-sky-300 dark:border-sky-400/40"
             onClick={() => router.push('/subjects?year=1')}
           >
             {t('year1')}
           </YearFilterButton>
           <YearFilterButton
-            colorClass="border-teal-400 bg-teal-50 text-teal-700 dark:bg-teal-400/10 dark:text-teal-300 dark:border-teal-400/50"
+            colorClass="border-sky-300 bg-sky-50 text-sky-700 dark:bg-sky-400/10 dark:text-sky-300 dark:border-sky-400/40"
             onClick={() => router.push('/subjects?year=2')}
           >
             {t('year2')}
           </YearFilterButton>
           <YearFilterButton
-            colorClass="border-teal-400 bg-teal-50 text-teal-700 dark:bg-teal-400/10 dark:text-teal-300 dark:border-teal-400/50"
+            colorClass="border-sky-300 bg-sky-50 text-sky-700 dark:bg-sky-400/10 dark:text-sky-300 dark:border-sky-400/40"
             onClick={() => router.push('/subjects?year=3')}
           >
             {t('year3')}
@@ -209,22 +210,22 @@ export default function HomePage() {
       </div>
 
       {/* SECTION B — Infinite Horizontal Scrolling Banner */}
-      <div className="my-8 relative w-full overflow-hidden py-3">
+      <div className="relative w-full overflow-hidden py-2">
         <div className="flex gap-8 animate-marquee whitespace-nowrap">
           {/* Duplicate items twice for seamless loop */}
           {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, index) => (
             <span
               key={index}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-100 dark:bg-yellow-400/10 border border-yellow-300 dark:border-yellow-400/30 text-yellow-700 dark:text-yellow-300 text-sm font-medium shrink-0"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/15 text-slate-700 dark:text-slate-300 text-sm font-medium shrink-0"
             >
-              <FiStar size={14} /> {item}
+              <FiStar size={14} className="text-brand" /> {item}
             </span>
           ))}
         </div>
       </div>
 
       {/* SECTION C — 4 Feature Navigation Cards (2x2 Grid) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <FeatureCard
           title={t('announcementCard')}
           subtitle={t('announcementSubtitle')}

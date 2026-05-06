@@ -88,7 +88,7 @@ function LectureCard({ lecture }: { lecture: LectureWithResources }) {
 
   return (
     <>
-      <div className="mb-2 rounded-xl border border-slate-200 bg-white px-4 py-4 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-white/8 dark:bg-[#0d1b2e] dark:hover:border-white/15 dark:hover:bg-white/5">
+      <div className="mb-2 rounded-xl border border-slate-200 bg-white px-4 py-4 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-white/[0.08] dark:bg-[#0d1b2e] dark:hover:border-white/15 dark:hover:bg-white/5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex-1 min-w-0 space-y-2">
             <h4 className="text-sm font-medium text-slate-900 dark:text-white line-clamp-1">
@@ -213,7 +213,7 @@ export default function SubjectDetailPage({
       <Link href="/subjects" className="inline-block">
         <button
           type="button"
-          className="mb-5 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
+          className="mb-5 flex items-center gap-2 rounded-full border border-slate-200 bg-[var(--bg-surface)] px-4 py-2 text-sm font-medium text-[var(--ink-2)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-sm)] hover:text-[var(--ink-1)] dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300"
         >
           <FiArrowLeft className="h-4 w-4" />
           Back to Subjects
@@ -222,7 +222,7 @@ export default function SubjectDetailPage({
 
       {/* Subject Header */}
       <Card className="glass-card relative overflow-hidden border-l-[3px] border-l-blue-500 text-[var(--ink-1)]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_15%,rgba(59,130,246,0.08),transparent_36%),radial-gradient(circle_at_82%_20%,rgba(14,165,233,0.06),transparent_42%)] dark:bg-[radial-gradient(circle_at_12%_15%,rgba(59,130,246,0.2),transparent_36%),radial-gradient(circle_at_82%_20%,rgba(14,165,233,0.16),transparent_42%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_15%,rgba(59,130,246,0.05),transparent_36%),radial-gradient(circle_at_82%_20%,rgba(14,165,233,0.04),transparent_42%)] dark:bg-[radial-gradient(circle_at_12%_15%,rgba(59,130,246,0.14),transparent_36%),radial-gradient(circle_at_82%_20%,rgba(14,165,233,0.11),transparent_42%)]" />
         <CardBody className="gap-4 p-6">
           <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-5">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-blue-200 bg-blue-100 dark:border-blue-500/30 dark:bg-blue-600/20">
