@@ -9,12 +9,16 @@ import { Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ExecutionContext } from '@nestjs/common';
 import { AdminAuthService } from '../services/admin-auth.service';
+import { AdminRefreshTokenService } from '../services/admin-refresh-token.service';
 import { AppException } from '../../../../common/errors';
 import { ErrorCode } from '@medical-portal/shared';
 
 @Injectable()
 export class AdminJwtAuthGuard extends AuthGuard('jwt') {
-  constructor(private adminAuthService: AdminAuthService) {
+  constructor(
+    private adminAuthService: AdminAuthService,
+    private adminRefreshTokenService: AdminRefreshTokenService,
+  ) {
     super();
   }
 
@@ -42,6 +46,19 @@ export class AdminJwtAuthGuard extends AuthGuard('jwt') {
 
       if (!admin) {
         throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'admin_access' }, 'Invalid or expired token');
+      }
+
+      // Strict admin-only session enforcement:
+      // require the current refresh token cookie to still be active in DB.
+      // This makes max_active_sessions=1 effective immediately across browsers/devices.
+      const refreshToken = request.cookies?.admin_refresh_token;
+      if (!refreshToken) {
+        throw new AppException(ErrorCode.AUTH_REFRESH_TOKEN_MISSING, undefined, 'Missing refresh session');
+      }
+
+      const refreshTokenInfo = await this.adminRefreshTokenService.verifyRefreshToken(refreshToken);
+      if (!refreshTokenInfo || refreshTokenInfo.userId !== admin.id) {
+        throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'admin_refresh' }, 'Session has been revoked');
       }
 
       // Attach admin to request

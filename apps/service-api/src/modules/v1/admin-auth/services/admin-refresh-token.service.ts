@@ -41,6 +41,7 @@ export class AdminRefreshTokenService {
   private readonly logger = new Logger(AdminRefreshTokenService.name);
   private readonly supabaseAdmin: SupabaseClient;
   private readonly refreshExpiresIn: number; // in seconds
+  private readonly maxActiveSessions: number;
 
   constructor(private configService: ConfigService) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
@@ -57,6 +58,14 @@ export class AdminRefreshTokenService {
 
     // Default to 7 days for refresh tokens (can be configured)
     this.refreshExpiresIn = 7 * 24 * 60 * 60;
+    this.maxActiveSessions = Math.max(
+      1,
+      Number(
+        this.configService.get<string>('ADMIN_MAX_ACTIVE_SESSIONS') ??
+        this.configService.get<string>('REFRESH_MAX_ACTIVE_SESSIONS') ??
+        '1'
+      )
+    );
   }
 
   /**
@@ -64,6 +73,8 @@ export class AdminRefreshTokenService {
    * Creates 256-bit random token and stores hash in database
    */
   async generateRefreshToken(metadata: AdminRefreshTokenMetadata): Promise<AdminRefreshTokenResult> {
+    await this.enforceActiveSessionLimit(metadata.userId);
+
     // Generate secure random token (256 bits)
     const token = randomBytes(32).toString('base64url');
 
@@ -98,6 +109,41 @@ export class AdminRefreshTokenService {
       token,
       expiresAt,
     };
+  }
+
+  private async enforceActiveSessionLimit(userId: string): Promise<void> {
+    const { data: activeRows, error } = await this.supabaseAdmin
+      .from('refresh_tokens')
+      .select('id, created_at')
+      .eq('user_id', userId)
+      .eq('user_type', 'admin')
+      .is('revoked_at', null)
+      .gte('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: true });
+
+    if (error || !activeRows || activeRows.length < this.maxActiveSessions) {
+      return;
+    }
+
+    const tokensToRevoke = activeRows
+      .slice(0, activeRows.length - this.maxActiveSessions + 1)
+      .map((row) => row.id);
+
+    if (tokensToRevoke.length === 0) {
+      return;
+    }
+
+    const { error: revokeError } = await this.supabaseAdmin
+      .from('refresh_tokens')
+      .update({ revoked_at: new Date().toISOString() })
+      .in('id', tokensToRevoke);
+
+    if (revokeError) {
+      this.logger.warn(`Failed to enforce max active admin sessions (code=${revokeError.code ?? 'unknown'})`);
+      return;
+    }
+
+    this.logger.log(`Revoked ${tokensToRevoke.length} old admin session(s) to enforce max_active_sessions=${this.maxActiveSessions}`);
   }
 
   /**
@@ -324,9 +370,6 @@ export class AdminRefreshTokenService {
    * Should be run periodically (e.g., daily/weekly)
    */
   async cleanupOldTokens(): Promise<number> {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
     const { data, error } = await this.supabaseAdmin.rpc('cleanup_expired_tokens');
 
     if (error) {
