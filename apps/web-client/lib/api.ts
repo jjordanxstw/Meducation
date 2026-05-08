@@ -30,7 +30,8 @@ function getApiBaseUrl(): string {
 }
 
 const API_BASE_URL = getApiBaseUrl();
-const AUTH_CHECK_TTL_MS = 15000;
+// Keep lightweight session validation, but avoid per-request chatter bursts.
+const AUTH_CHECK_TTL_MS = 60000;
 const SUPPORTED_LOCALES = ['en', 'th'] as const;
 const DEFAULT_LOCALE: (typeof SUPPORTED_LOCALES)[number] = 'en';
 

@@ -116,8 +116,8 @@ export function CalendarSection() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['calendar', dateRange],
     queryFn: () => api.calendar.list(dateRange),
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 60 * 1000,
+    refetchOnMount: false,
   });
 
   const events: (CalendarEvent & { subjects?: { name: string; code: string } })[] = useMemo(
