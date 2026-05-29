@@ -3,6 +3,7 @@ import { NestFactory, Reflector } from '@nestjs/core';
 import { Logger, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -269,6 +270,44 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Request-Id', 'Idempotency-Key'],
     exposedHeaders: ['X-Request-Id', 'Idempotency-Replayed', 'Deprecation'],
   });
+
+  // OpenAPI / Swagger — never exposed in production. Behind HTTP basic auth.
+  const appEnvForDocs = configService.get<string>('APP_ENV')?.trim().toLowerCase();
+  if (appEnvForDocs !== 'prod') {
+    const swaggerPassword = configService.get<string>('SWAGGER_PASSWORD');
+    if (appEnvForDocs === 'uat' && !swaggerPassword) {
+      throw new Error('SWAGGER_PASSWORD must be set when APP_ENV=uat to protect API docs');
+    }
+
+    // Basic-auth gate (username: admin). Skipped only when no password is
+    // configured in local development.
+    if (swaggerPassword) {
+      app.use(['/api/docs', '/api/docs-json'], (req: express.Request, res: express.Response, next: express.NextFunction) => {
+        const header = req.headers.authorization ?? '';
+        const [scheme, encoded] = header.split(' ');
+        if (scheme === 'Basic' && encoded) {
+          const [user, pass] = Buffer.from(encoded, 'base64').toString().split(':');
+          if (user === 'admin' && pass === swaggerPassword) {
+            return next();
+          }
+        }
+        res.setHeader('WWW-Authenticate', 'Basic realm="API Docs"');
+        res.status(401).send('Authentication required');
+      });
+    }
+
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Medical Learning Portal API')
+      .setDescription('Student & admin API for the medical learning portal')
+      .setVersion('1.0.0')
+      .addBearerAuth()
+      .addCookieAuth('admin_access_token')
+      .addCookieAuth('student_access_token')
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/docs', app, document, { jsonDocumentUrl: 'api/docs-json' });
+    logger.log(`API docs available at /api/docs`);
+  }
 
   await app.listen(port);
   logger.log(`Medical Learning Portal API running on port ${port}`);

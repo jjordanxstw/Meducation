@@ -14,10 +14,11 @@ import {
   Query,
   Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { AnnouncementsService } from '../services/announcements.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
-import { SkipEnvelope, ResponseCacheService } from '../../../../common';
+import { SkipEnvelope, ResponseCacheService, IdempotencyInterceptor } from '../../../../common';
 
 const INVALIDATE_ANNOUNCEMENT_PREFIXES = ['v1:announcements:'];
 
@@ -65,6 +66,7 @@ export class AnnouncementsAdminController {
   }
 
   @Post()
+  @UseInterceptors(IdempotencyInterceptor)
   @SkipEnvelope()
   async create(@Body() createDto: any, @Req() req: any) {
     const data = await this.announcementsService.create(createDto, req.admin?.id);

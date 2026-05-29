@@ -14,10 +14,11 @@ import {
   Param,
   Query,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { SubjectsService } from '../services/subjects.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
-import { SkipEnvelope, ResponseCacheService } from '../../../../common';
+import { SkipEnvelope, ResponseCacheService, IdempotencyInterceptor } from '../../../../common';
 
 const INVALIDATE_SUBJECT_GRAPH_PREFIXES = [
   'v1:subjects:',
@@ -82,6 +83,7 @@ export class SubjectsAdminController {
   }
 
   @Post()
+  @UseInterceptors(IdempotencyInterceptor)
   @SkipEnvelope()
   async create(@Body() createDto: any) {
     const data = await this.subjectsService.create(createDto);

@@ -14,10 +14,11 @@ import {
   Query,
   Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { CalendarService } from '../services/calendar.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
-import { SkipEnvelope, ResponseCacheService } from '../../../../common';
+import { SkipEnvelope, ResponseCacheService, IdempotencyInterceptor } from '../../../../common';
 
 const INVALIDATE_CALENDAR_PREFIXES = ['v1:calendar:', 'v1:admin:statistics:'];
 
@@ -93,6 +94,7 @@ export class CalendarAdminController {
   }
 
   @Post()
+  @UseInterceptors(IdempotencyInterceptor)
   @SkipEnvelope()
   async create(@Body() createDto: any, @Req() req: any) {
     const data = await this.calendarService.create(createDto, req.admin?.id);
