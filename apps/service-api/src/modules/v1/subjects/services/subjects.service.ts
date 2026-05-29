@@ -71,7 +71,8 @@ export class SubjectsService {
 
     let query = this.supabaseAdmin
       .from('subjects')
-      .select('*', shouldPaginate ? { count: 'exact' } : undefined);
+      .select('*', shouldPaginate ? { count: 'exact' } : undefined)
+      .is('deleted_at', null);
 
     if (yearLevel !== undefined) {
       query = query.eq('year_level', yearLevel);
@@ -122,6 +123,7 @@ export class SubjectsService {
       .from('subjects')
       .select('*')
       .eq('id', id)
+      .is('deleted_at', null)
       .single();
 
     if (subjectError) {
@@ -140,6 +142,7 @@ export class SubjectsService {
       `)
       .eq('subject_id', id)
       .eq('is_active', true)
+      .is('deleted_at', null)
       .order('order_index');
 
     if (sectionsError) {
@@ -150,7 +153,7 @@ export class SubjectsService {
     const sortedSections = sections?.map(section => ({
       ...section,
       lectures: section.lectures
-        ?.filter((l: { is_active: boolean }) => l.is_active)
+        ?.filter((l: { is_active: boolean; deleted_at: string | null }) => l.is_active && !l.deleted_at)
         .sort((a: { order_index: number }, b: { order_index: number }) => a.order_index - b.order_index)
         .map((lecture: { resources: Array<{ is_active: boolean; order_index: number }> }) => ({
           ...lecture,
@@ -210,12 +213,16 @@ export class SubjectsService {
       .from('subjects')
       .select('*')
       .eq('id', id)
+      .is('deleted_at', null)
       .single();
 
+    // Soft delete: preserve child records (sections/lectures/resources) instead
+    // of CASCADE delete.
     const { error } = await this.supabaseAdmin
       .from('subjects')
-      .delete()
-      .eq('id', id);
+      .update({ deleted_at: new Date().toISOString(), is_active: false })
+      .eq('id', id)
+      .is('deleted_at', null);
 
     if (error) {
       this.logger.warn(`Failed to delete subject (code=${error.code ?? 'unknown'})`);

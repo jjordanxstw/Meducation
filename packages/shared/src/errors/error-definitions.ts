@@ -207,4 +207,11 @@ export const ERROR_DEFINITIONS: Record<ErrorCode, ErrorDefinition> = {
     category: 'SYSTEM',
     httpStatus: 502,
   },
+  [ErrorCode.REQUEST_TIMEOUT]: {
+    code: ErrorCode.REQUEST_TIMEOUT,
+    i18nKey: 'errors.system.requestTimeout',
+    defaultMessage: 'The request took too long to process',
+    category: 'SYSTEM',
+    httpStatus: 503,
+  },
 };

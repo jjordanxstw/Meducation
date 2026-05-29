@@ -11,6 +11,7 @@ import { ServiceApiModule } from './service-api.module';
 import { GlobalValidationPipe } from './common/pipes/validation.pipe';
 import { StructuredLogger } from './common/logger/structured-logger';
 import { ResponseEnvelopeInterceptor } from './common/interceptors/response-envelope.interceptor';
+import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { requestIdMiddleware } from './common/middleware/request-id.middleware';
 import * as express from 'express';
@@ -235,6 +236,9 @@ async function bootstrap() {
 
   // Enable global validation
   app.useGlobalPipes(new GlobalValidationPipe());
+
+  // Global request timeout (503 after 30s; @SkipTimeout() opts out).
+  app.useGlobalInterceptors(new TimeoutInterceptor(reflector));
 
   // Enable global response envelope interceptor
   app.useGlobalInterceptors(new ResponseEnvelopeInterceptor(reflector));
