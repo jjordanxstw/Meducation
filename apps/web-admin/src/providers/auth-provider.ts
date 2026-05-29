@@ -12,6 +12,7 @@ import type { AuthProvider } from '@refinedev/core';
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import DOMPurify from 'dompurify';
 import { resolveApiErrorMessage } from '../utils/api-error';
+import { attachCsrfInterceptor } from '../utils/api';
 
 /**
  * Sanitize error message to prevent XSS attacks
@@ -43,6 +44,10 @@ const authAxios = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Inject the CSRF double-submit header on every mutation (covers both auth
+// calls and the data provider, which reuses this instance).
+attachCsrfInterceptor(authAxios);
 
 const authRequestConfig = {
   withCredentials: true,
