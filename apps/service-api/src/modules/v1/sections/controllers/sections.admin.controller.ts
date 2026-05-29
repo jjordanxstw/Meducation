@@ -13,9 +13,11 @@ import {
   Body,
   Param,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { SectionsService } from '../services/sections.service';
+import { AuditService } from '../../audit/services/audit.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService } from '../../../../common';
 
@@ -33,6 +35,7 @@ export class SectionsAdminController {
   constructor(
     private readonly sectionsService: SectionsService,
     private readonly responseCache: ResponseCacheService,
+    private readonly audit: AuditService,
   ) {}
 
   private invalidateSectionGraphCache(): void {
@@ -98,8 +101,9 @@ export class SectionsAdminController {
 
   @Delete(':id')
   @SkipEnvelope()
-  async delete(@Param('id') id: string) {
-    await this.sectionsService.delete(id);
+  async delete(@Param('id') id: string, @Req() req: any) {
+    const { oldData } = await this.sectionsService.delete(id);
+    await this.audit.logAdminDelete('sections', id, oldData, req.admin, req);
     this.invalidateSectionGraphCache();
     return { success: true, message: 'Section deleted successfully' };
   }

@@ -9,9 +9,10 @@ import { LecturesAdminController } from './controllers/lectures.admin.controller
 import { LecturesService } from './services/lectures.service';
 import { AuthModule } from '../auth/auth.module';
 import { AdminAuthModule } from '../admin-auth/admin-auth.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [AuthModule, AdminAuthModule],
+  imports: [AuthModule, AdminAuthModule, AuditModule],
   controllers: [LecturesPublicController, LecturesAdminController],
   providers: [LecturesService],
   exports: [LecturesService],

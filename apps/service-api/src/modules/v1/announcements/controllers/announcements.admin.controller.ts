@@ -17,6 +17,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { AnnouncementsService } from '../services/announcements.service';
+import { AuditService } from '../../audit/services/audit.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService, IdempotencyInterceptor } from '../../../../common';
 
@@ -28,6 +29,7 @@ export class AnnouncementsAdminController {
   constructor(
     private readonly announcementsService: AnnouncementsService,
     private readonly responseCache: ResponseCacheService,
+    private readonly audit: AuditService,
   ) {}
 
   private invalidateAnnouncementCache(): void {
@@ -84,8 +86,9 @@ export class AnnouncementsAdminController {
 
   @Delete(':id')
   @SkipEnvelope()
-  async delete(@Param('id') id: string) {
-    await this.announcementsService.delete(id);
+  async delete(@Param('id') id: string, @Req() req: any) {
+    const { oldData } = await this.announcementsService.delete(id);
+    await this.audit.logAdminDelete('announcements', id, oldData, req.admin, req);
     this.invalidateAnnouncementCache();
     return { success: true, message: 'Announcement deleted successfully' };
   }

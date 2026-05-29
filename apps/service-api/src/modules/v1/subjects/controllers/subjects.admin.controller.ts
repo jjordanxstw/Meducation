@@ -13,10 +13,12 @@ import {
   Body,
   Param,
   Query,
+  Req,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { SubjectsService } from '../services/subjects.service';
+import { AuditService } from '../../audit/services/audit.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService, IdempotencyInterceptor } from '../../../../common';
 
@@ -35,6 +37,7 @@ export class SubjectsAdminController {
   constructor(
     private readonly subjectsService: SubjectsService,
     private readonly responseCache: ResponseCacheService,
+    private readonly audit: AuditService,
   ) {}
 
   private invalidateSubjectGraphCache(): void {
@@ -101,8 +104,9 @@ export class SubjectsAdminController {
 
   @Delete(':id')
   @SkipEnvelope()
-  async delete(@Param('id') id: string) {
-    await this.subjectsService.delete(id);
+  async delete(@Param('id') id: string, @Req() req: any) {
+    const { oldData } = await this.subjectsService.delete(id);
+    await this.audit.logAdminDelete('subjects', id, oldData, req.admin, req);
     this.invalidateSubjectGraphCache();
     return { success: true, message: 'Subject deleted successfully' };
   }

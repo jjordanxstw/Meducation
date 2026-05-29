@@ -13,9 +13,11 @@ import {
   Body,
   Param,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { LecturesService } from '../services/lectures.service';
+import { AuditService } from '../../audit/services/audit.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService } from '../../../../common';
 
@@ -32,6 +34,7 @@ export class LecturesAdminController {
   constructor(
     private readonly lecturesService: LecturesService,
     private readonly responseCache: ResponseCacheService,
+    private readonly audit: AuditService,
   ) {}
 
   private invalidateLectureGraphCache(): void {
@@ -99,8 +102,9 @@ export class LecturesAdminController {
 
   @Delete(':id')
   @SkipEnvelope()
-  async delete(@Param('id') id: string) {
-    await this.lecturesService.delete(id);
+  async delete(@Param('id') id: string, @Req() req: any) {
+    const { oldData } = await this.lecturesService.delete(id);
+    await this.audit.logAdminDelete('lectures', id, oldData, req.admin, req);
     this.invalidateLectureGraphCache();
     return { success: true, message: 'Lecture deleted successfully' };
   }

@@ -17,6 +17,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { CalendarService } from '../services/calendar.service';
+import { AuditService } from '../../audit/services/audit.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService, IdempotencyInterceptor } from '../../../../common';
 
@@ -28,6 +29,7 @@ export class CalendarAdminController {
   constructor(
     private readonly calendarService: CalendarService,
     private readonly responseCache: ResponseCacheService,
+    private readonly audit: AuditService,
   ) {}
 
   private invalidateCalendarCache(): void {
@@ -112,8 +114,9 @@ export class CalendarAdminController {
 
   @Delete(':id')
   @SkipEnvelope()
-  async delete(@Param('id') id: string) {
-    await this.calendarService.delete(id);
+  async delete(@Param('id') id: string, @Req() req: any) {
+    const { oldData } = await this.calendarService.delete(id);
+    await this.audit.logAdminDelete('calendar_events', id, oldData, req.admin, req);
     this.invalidateCalendarCache();
     return { success: true, message: 'Calendar event deleted successfully' };
   }

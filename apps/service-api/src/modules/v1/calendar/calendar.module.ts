@@ -9,9 +9,10 @@ import { CalendarAdminController } from './controllers/calendar.admin.controller
 import { CalendarService } from './services/calendar.service';
 import { AuthModule } from '../auth/auth.module';
 import { AdminAuthModule } from '../admin-auth/admin-auth.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [AuthModule, AdminAuthModule],
+  imports: [AuthModule, AdminAuthModule, AuditModule],
   controllers: [CalendarPublicController, CalendarAdminController],
   providers: [CalendarService],
   exports: [CalendarService],

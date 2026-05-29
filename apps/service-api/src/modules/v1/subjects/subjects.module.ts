@@ -9,9 +9,10 @@ import { SubjectsAdminController } from './controllers/subjects.admin.controller
 import { SubjectsService } from './services/subjects.service';
 import { AuthModule } from '../auth/auth.module';
 import { AdminAuthModule } from '../admin-auth/admin-auth.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [AuthModule, AdminAuthModule],
+  imports: [AuthModule, AdminAuthModule, AuditModule],
   controllers: [SubjectsPublicController, SubjectsAdminController],
   providers: [SubjectsService],
   exports: [SubjectsService],

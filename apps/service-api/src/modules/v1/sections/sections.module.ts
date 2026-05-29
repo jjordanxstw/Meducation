@@ -9,9 +9,10 @@ import { SectionsAdminController } from './controllers/sections.admin.controller
 import { SectionsService } from './services/sections.service';
 import { AuthModule } from '../auth/auth.module';
 import { AdminAuthModule } from '../admin-auth/admin-auth.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [AuthModule, AdminAuthModule],
+  imports: [AuthModule, AdminAuthModule, AuditModule],
   controllers: [SectionsPublicController, SectionsAdminController],
   providers: [SectionsService],
   exports: [SectionsService],

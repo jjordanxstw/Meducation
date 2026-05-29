@@ -13,9 +13,11 @@ import {
   Body,
   Param,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ResourcesService } from '../services/resources.service';
+import { AuditService } from '../../audit/services/audit.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService } from '../../../../common';
 
@@ -33,6 +35,7 @@ export class ResourcesAdminController {
   constructor(
     private readonly resourcesService: ResourcesService,
     private readonly responseCache: ResponseCacheService,
+    private readonly audit: AuditService,
   ) {}
 
   private invalidateResourceGraphCache(): void {
@@ -120,8 +123,9 @@ export class ResourcesAdminController {
 
   @Delete(':id')
   @SkipEnvelope()
-  async delete(@Param('id') id: string) {
-    await this.resourcesService.delete(id);
+  async delete(@Param('id') id: string, @Req() req: any) {
+    const { oldData } = await this.resourcesService.delete(id);
+    await this.audit.logAdminDelete('resources', id, oldData, req.admin, req);
     this.invalidateResourceGraphCache();
     return { success: true, message: 'Resource deleted successfully' };
   }
