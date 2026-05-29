@@ -322,10 +322,44 @@ export interface SubjectHierarchy {
 // API RESPONSE TYPES
 // =====================================================
 
-export interface ApiResponse<T> {
-  success: boolean;
+// Response metadata attached to every API envelope.
+export interface Meta {
+  requestId: string;
+  timestamp: string;
+  [key: string]: unknown;
+}
+
+export interface ErrorBody {
+  statusCode: number;
+  message: string | string[] | Record<string, unknown>;
+  errorCode?: string;
+  error?: string;
+  i18nKey?: string;
+  context?: Record<string, unknown>;
+  path?: string;
+  method?: string;
+  timestamp?: string;
+}
+
+// Discriminated union response wrappers — narrow on `error === null` before
+// touching `data`.
+export interface ApiSuccess<T> {
   data: T;
-  message?: string;
+  error: null;
+  meta: Meta;
+}
+
+export interface ApiError {
+  data: null;
+  error: ErrorBody;
+  meta: Meta;
+}
+
+export type ApiResponse<T> = ApiSuccess<T> | ApiError;
+
+/** Type guard narrowing an ApiResponse to its success variant. */
+export function isApiSuccess<T>(res: ApiResponse<T>): res is ApiSuccess<T> {
+  return res.error === null;
 }
 
 export interface ApiErrorResponse {

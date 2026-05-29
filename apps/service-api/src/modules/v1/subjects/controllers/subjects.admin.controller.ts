@@ -20,7 +20,8 @@ import {
 import { SubjectsService } from '../services/subjects.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
-import { SkipEnvelope, ResponseCacheService, IdempotencyInterceptor } from '../../../../common';
+import { SkipEnvelope, ResponseCacheService, IdempotencyInterceptor, ZodValidationPipe } from '../../../../common';
+import { createSubjectSchema, CreateSubjectInput } from '@medical-portal/shared';
 
 const INVALIDATE_SUBJECT_GRAPH_PREFIXES = [
   'v1:subjects:',
@@ -88,7 +89,7 @@ export class SubjectsAdminController {
   @Post()
   @UseInterceptors(IdempotencyInterceptor)
   @SkipEnvelope()
-  async create(@Body() createDto: any) {
+  async create(@Body(new ZodValidationPipe(createSubjectSchema)) createDto: CreateSubjectInput) {
     const data = await this.subjectsService.create(createDto);
     this.invalidateSubjectGraphCache();
     return { success: true, data };

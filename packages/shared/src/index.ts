@@ -6,6 +6,9 @@
 // Export all types
 export * from './types';
 
+// Export zod schemas (runtime validation source of truth)
+export * from './schemas';
+
 // Export all utilities
 export * from './utils';
 
