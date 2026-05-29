@@ -29,6 +29,7 @@ import { AdminRefreshTokenService } from '../services/admin-refresh-token.servic
 import { AdminLoginDto, ChangePasswordDto } from '../dto';
 import { AdminJwtAuthGuard } from '../guards/admin-jwt-auth.guard';
 import { SkipEnvelope } from '../../../../common';
+import { CSRF_COOKIE_NAME, generateCsrfToken } from '../../../../common';
 import { AppException } from '../../../../common/errors';
 import { ErrorCode } from '@medical-portal/shared';
 
@@ -174,13 +175,15 @@ export class AdminAuthController {
     @Request() req: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
+    const requestInfo = extractRequestInfo(req);
+
     const result = await this.adminAuthService.login(
       loginDto.username,
       loginDto.password,
+      { ip: requestInfo.ipAddress, userAgent: requestInfo.userAgent },
     );
 
     // Generate refresh token
-    const requestInfo = extractRequestInfo(req);
     const refreshTokenResult = await this.refreshTokenService.generateRefreshToken({
       userId: result.admin.id,
       userType: 'admin',
@@ -199,6 +202,10 @@ export class AdminAuthController {
     // Set refresh token cookie (long-lived, 7 days)
     response.cookie('admin_refresh_token', refreshTokenResult.token, cookieOptions);
 
+    // CSRF double-submit token (non-httpOnly cookie + body echo).
+    const csrfToken = generateCsrfToken();
+    response.cookie(CSRF_COOKIE_NAME, csrfToken, { ...cookieOptions, httpOnly: false });
+
     // Return response data
     return {
       accessToken: result.accessToken,
@@ -206,6 +213,7 @@ export class AdminAuthController {
       refreshToken: refreshTokenResult.token,
       refreshTokenExpiresAt: refreshTokenResult.expiresAt.toISOString(),
       admin: result.admin,
+      csrfToken,
     };
   }
 
@@ -278,11 +286,16 @@ export class AdminAuthController {
 
     response.cookie('admin_refresh_token', rotationResult.token, cookieOptions);
 
+    // Re-issue the CSRF double-submit token alongside the rotated session.
+    const csrfToken = generateCsrfToken();
+    response.cookie(CSRF_COOKIE_NAME, csrfToken, { ...cookieOptions, httpOnly: false });
+
     return {
       accessToken,
       expiresIn: 15 * 60, // 15 minutes
       refreshToken: rotationResult.token,
       refreshTokenExpiresAt: rotationResult.expiresAt.toISOString(),
+      csrfToken,
     };
   }
 

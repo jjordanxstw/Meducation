@@ -130,25 +130,51 @@ async function bootstrap() {
   validateProductionSecrets(configService);
 
   const port = Number(configService.get<number>('PORT')) || 3001;
+  const isProduction = configService.get<string>('NODE_ENV') === 'production';
+
+  // Trust the first proxy hop. In production the API runs behind Render's reverse
+  // proxy, which injects X-Forwarded-For. Without this, express-rate-limit (and
+  // req.ip) would see the proxy's IP and apply limits globally rather than
+  // per-client. This is only safe because Render terminates TLS and sets the
+  // header itself; never enable a broader trust setting on an untrusted edge.
+  app.set('trust proxy', 1);
+
+  // Content-Security-Policy sources. connectSrc must allow the Supabase project
+  // so the browser can reach the backing API/storage.
+  const supabaseUrl = configService.get<string>('SUPABASE_URL');
+  const cspDirectives: Record<string, string[] | null> = {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'"],
+    styleSrc: ["'self'", "'unsafe-inline'"], // Tailwind / Ant Design inline styles
+    imgSrc: ["'self'", 'data:', 'https://lh3.googleusercontent.com'], // Google avatars
+    connectSrc: ["'self'", ...(supabaseUrl ? [supabaseUrl] : [])],
+    fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+    frameSrc: ["'none'"],
+    objectSrc: ["'none'"],
+    frameAncestors: ["'none'"],
+  };
+  if (isProduction) {
+    // Force https for any accidental http subresource in production only.
+    cspDirectives.upgradeInsecureRequests = [];
+  }
 
   // Security headers via Helmet
   app.use(helmet({
     contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", 'data:', 'https:'],
-        fontSrc: ["'self'", 'data:'],
-        connectSrc: ["'self'"],
-        frameAncestors: ["'none'"],
-      },
+      useDefaults: false,
+      directives: cspDirectives,
     },
     crossOriginEmbedderPolicy: false, // Allow embedding external resources if needed
     frameguard: { action: 'deny' }, // Prevent clickjacking
     xssFilter: true,
     noSniff: true,
   }));
+
+  // Permissions-Policy is not configurable through Helmet 7, so set it directly.
+  app.use((_req: express.Request, res: express.Response, next: express.NextFunction) => {
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+  });
 
   // Rate limiting for authentication endpoints (prevent brute force)
   const authLimiter = rateLimit({
@@ -236,6 +262,8 @@ async function bootstrap() {
       }
     },
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Request-Id', 'Idempotency-Key'],
+    exposedHeaders: ['X-Request-Id', 'Idempotency-Replayed', 'Deprecation'],
   });
 
   await app.listen(port);

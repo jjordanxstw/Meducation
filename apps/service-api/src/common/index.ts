@@ -7,4 +7,5 @@ export * from './interceptors';
 export * from './logger';
 export * from './middleware';
 export * from './pipes';
+export * from './security';
 export * from './utils';

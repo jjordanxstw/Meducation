@@ -54,7 +54,11 @@ export class AdminAuthService {
    * Admin Login
    * Validates username and password, returns JWT token
    */
-  async login(username: string, password: string): Promise<{
+  async login(
+    username: string,
+    password: string,
+    context?: { ip?: string; userAgent?: string },
+  ): Promise<{
     admin: AdminResponse;
     accessToken: string;
     expiresIn: number;
@@ -84,10 +88,28 @@ export class AdminAuthService {
       throw new AppException(ErrorCode.AUTH_INVALID_CREDENTIALS);
     }
 
-    // Update last login timestamp
+    // Suspicious-login detection: compare the /24 subnet of the incoming IP with
+    // the last successful login. Logged for alerting only — never blocks login.
+    const incomingIp = context?.ip;
+    if (incomingIp && admin.last_login_ip && this.subnet24(incomingIp) !== this.subnet24(admin.last_login_ip)) {
+      await this.logAuthEvent({
+        userId: admin.id,
+        eventType: 'SUSPICIOUS_LOGIN_NEW_IP',
+        success: true,
+        ip: incomingIp,
+        userAgent: context?.userAgent,
+        metadata: { previous_ip: admin.last_login_ip, current_ip: incomingIp },
+      });
+      this.logger.warn(`Admin "${username}" logged in from a new subnet (${this.subnet24(incomingIp)})`);
+    }
+
+    // Update last login timestamp + IP
     await this.supabaseAdmin
       .from('admins')
-      .update({ last_login_at: new Date().toISOString() })
+      .update({
+        last_login_at: new Date().toISOString(),
+        ...(incomingIp ? { last_login_ip: incomingIp } : {}),
+      })
       .eq('id', admin.id);
 
     // Generate JWT token
@@ -117,6 +139,7 @@ export class AdminAuthService {
     try {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: this.jwtSecret,
+        clockTolerance: 30, // seconds, to tolerate minor clock drift between servers
       });
 
       // Check if this is an admin token
@@ -204,9 +227,24 @@ export class AdminAuthService {
       );
     }
 
+    // Reject reuse of any of the last 3 passwords (newest-first array of hashes).
+    const history: string[] = Array.isArray(admin.password_history) ? admin.password_history : [];
+    for (const previousHash of history.slice(0, 3)) {
+      if (previousHash && (await bcrypt.compare(newPassword, previousHash))) {
+        throw new AppException(
+          ErrorCode.VALIDATION_INVALID_INPUT,
+          { field: 'newPassword', reason: 'reused_password' },
+          'New password must not match any of your last 3 passwords',
+        );
+      }
+    }
+
     // Hash new password
     const saltRounds = 12;
     const newPasswordHash = await bcrypt.hash(newPassword, saltRounds);
+
+    // Push the outgoing password into history, keep only the last 3.
+    const newHistory = [admin.password_hash, ...history].slice(0, 3);
 
     // Update password in database
     const { error: updateError } = await this.supabaseAdmin
@@ -214,6 +252,7 @@ export class AdminAuthService {
       .update({
         password_hash: newPasswordHash,
         password_changed_at: new Date().toISOString(),
+        password_history: newHistory,
       })
       .eq('id', adminId);
 
@@ -245,6 +284,44 @@ export class AdminAuthService {
     }
 
     return sanitizeAdmin(admin);
+  }
+
+  /**
+   * Reduce an IPv4 address to its /24 prefix (e.g. 1.2.3.4 -> 1.2.3). For
+   * non-IPv4 values (IPv6, malformed) the raw value is returned so comparison
+   * still detects change without throwing.
+   */
+  private subnet24(ip: string): string {
+    const parts = ip.trim().split('.');
+    if (parts.length === 4 && parts.every((p) => /^\d{1,3}$/.test(p))) {
+      return parts.slice(0, 3).join('.');
+    }
+    return ip.trim();
+  }
+
+  /**
+   * Append-only write to auth_audit_logs via the service-role client.
+   */
+  private async logAuthEvent(event: {
+    userId: string;
+    eventType: string;
+    success: boolean;
+    ip?: string;
+    userAgent?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    const { error } = await this.supabaseAdmin.from('auth_audit_logs').insert({
+      user_id: event.userId,
+      user_type: 'admin',
+      event_type: event.eventType,
+      ip_address: event.ip ?? null,
+      user_agent: event.userAgent ?? null,
+      success: event.success,
+      metadata: event.metadata ?? {},
+    });
+    if (error) {
+      this.logger.warn(`Failed to write auth audit event ${event.eventType} (code=${error.code ?? 'unknown'})`);
+    }
   }
 
   /**

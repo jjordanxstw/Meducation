@@ -68,18 +68,32 @@ export class AuthService {
    * Verify Google ID Token
    */
   async verifyGoogleToken(idToken: string): Promise<TokenPayload | null> {
+    let payload: TokenPayload | null;
     try {
       const googleClientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
       const ticket = await this.googleClient.verifyIdToken({
         idToken,
+        // Explicitly bind the token to our client ID (defends against token
+        // substitution from another Google OAuth client).
         audience: googleClientId,
       });
-      return ticket.getPayload() || null;
+      payload = ticket.getPayload() || null;
     } catch (error) {
       const e = error as { message?: string };
       this.logger.warn(`Google token verification failed (${e?.message ?? 'unknown_error'})`);
       return null;
     }
+
+    // The library already validates exp, but make staleness explicit and typed.
+    if (payload?.exp && payload.exp <= Math.floor(Date.now() / 1000)) {
+      throw new AppException(
+        ErrorCode.AUTH_TOKEN_EXPIRED,
+        { provider: 'google' },
+        'Google token has expired',
+      );
+    }
+
+    return payload;
   }
 
   /**
@@ -94,7 +108,10 @@ export class AuthService {
    */
   async verifySessionToken(token: string): Promise<Record<string, unknown> | null> {
     try {
-      const payload = await this.jwtService.verifyAsync(token, { secret: this.jwtSecret });
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: this.jwtSecret,
+        clockTolerance: 30, // seconds, to tolerate minor clock drift between servers
+      });
       return payload as Record<string, unknown>;
     } catch (err) {
       const e = err as { message?: string };

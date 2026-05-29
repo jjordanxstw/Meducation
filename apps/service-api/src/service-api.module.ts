@@ -4,7 +4,7 @@ import { ServiceApiController } from './service-api.controller';
 import { ServiceApiService } from './service-api.service';
 import { V1Module } from './modules/v1/v1.module';
 import { HealthModule } from './modules/health/health.module';
-import { CommonModule, LoggerMiddleware } from './common';
+import { CommonModule, LoggerMiddleware, CsrfMiddleware } from './common';
 
 const appEnv = process.env.APP_ENV?.trim();
 const nodeEnv = process.env.NODE_ENV?.trim();
@@ -37,5 +37,9 @@ export class ServiceApiModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
     // Structured request-completion access logging on every route.
     consumer.apply(LoggerMiddleware).forRoutes('*');
+
+    // Double-submit cookie CSRF protection (self-exempts safe methods and the
+    // session-bootstrap endpoints).
+    consumer.apply(CsrfMiddleware).forRoutes('*');
   }
 }

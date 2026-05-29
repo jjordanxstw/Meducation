@@ -26,6 +26,7 @@ import { VerifyTokenDto } from '../dto';
 import { GoogleAuthGuard } from '../guards';
 import { CurrentUser } from '../../../../common';
 import { SkipEnvelope } from '../../../../common';
+import { CSRF_COOKIE_NAME, generateCsrfToken } from '../../../../common';
 import { AppException } from '../../../../common/errors';
 import type { UserWithoutPassword } from '../entities/profile.entity';
 import { ErrorCode } from '@medical-portal/shared';
@@ -142,6 +143,7 @@ export class AuthController {
       expiresIn: number;
       refreshToken: string;
       refreshTokenExpiresAt: string;
+      csrfToken: string;
     };
   }> {
     const { user } = await this.authService.verifyCredential(verifyTokenDto.idToken);
@@ -169,6 +171,11 @@ export class AuthController {
     // Set refresh token cookie (long-lived, 7 days)
     res.cookie('student_refresh_token', refreshTokenResult.token, cookieOptions);
 
+    // CSRF double-submit token: non-httpOnly cookie + echoed in the body so the
+    // (cross-origin) SPA can read it and send it back as the x-csrf-token header.
+    const csrfToken = generateCsrfToken();
+    res.cookie(CSRF_COOKIE_NAME, csrfToken, { ...cookieOptions, httpOnly: false });
+
     return {
       success: true,
       data: {
@@ -177,6 +184,7 @@ export class AuthController {
         expiresIn: tokenResult.expiresIn,
         refreshToken: refreshTokenResult.token,
         refreshTokenExpiresAt: refreshTokenResult.expiresAt.toISOString(),
+        csrfToken,
       },
     };
   }

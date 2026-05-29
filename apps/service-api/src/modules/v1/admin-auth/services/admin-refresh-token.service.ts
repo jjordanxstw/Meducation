@@ -16,6 +16,8 @@ export interface AdminRefreshTokenMetadata {
   ipAddress?: string;
   userAgent?: string;
   deviceInfo?: Record<string, string>;
+  /** When rotating, the child token inherits its parent's family_id. */
+  familyId?: string;
 }
 
 export interface AdminRefreshTokenResult {
@@ -85,7 +87,9 @@ export class AdminRefreshTokenService {
     const expiresAt = new Date();
     expiresAt.setSeconds(expiresAt.getSeconds() + this.refreshExpiresIn);
 
-    // Store in database
+    // Store in database. On the first issue (login) family_id is omitted so the
+    // column default mints a new family; on rotation the caller passes the
+    // parent's family_id so the child inherits it.
     const { error } = await this.supabaseAdmin
       .from('refresh_tokens')
       .insert({
@@ -96,6 +100,7 @@ export class AdminRefreshTokenService {
         ip_address: metadata.ipAddress || null,
         user_agent: metadata.userAgent || null,
         device_info: metadata.deviceInfo || { device: 'unknown', browser: 'unknown' },
+        ...(metadata.familyId ? { family_id: metadata.familyId } : {}),
       });
 
     if (error) {
@@ -169,9 +174,16 @@ export class AdminRefreshTokenService {
       throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'refresh' }, 'Invalid or expired refresh token');
     }
 
-    // Check if token is not revoked and not expired
+    // Reuse detection: a token that was already rotated (revoked) is being
+    // replayed. This is the token-theft signal — invalidate the whole family
+    // and force re-authentication.
     if (existingToken.revoked_at) {
-      throw new AppException(ErrorCode.AUTH_TOKEN_REVOKED, { tokenType: 'refresh' }, 'Refresh token has been revoked');
+      await this.handleReuse(existingToken);
+      throw new AppException(
+        ErrorCode.AUTH_TOKEN_REVOKED,
+        { tokenType: 'refresh', reason: 'reuse_detected' },
+        'Session compromised, please log in again.',
+      );
     }
 
     if (new Date(existingToken.expires_at) < new Date()) {
@@ -188,7 +200,7 @@ export class AdminRefreshTokenService {
       this.logger.warn(`Failed to revoke old admin refresh token (code=${revokeError.code ?? 'unknown'})`);
     }
 
-    // Generate new refresh token
+    // Generate new refresh token inheriting the family for continued lineage.
     const userId = existingToken.user_id;
     return this.generateRefreshToken({
       userId,
@@ -196,7 +208,44 @@ export class AdminRefreshTokenService {
       ipAddress: metadata.ipAddress,
       userAgent: metadata.userAgent,
       deviceInfo: metadata.deviceInfo,
+      familyId: existingToken.family_id,
     });
+  }
+
+  /**
+   * Revoke every token in the compromised family and record the event.
+   */
+  private async handleReuse(existingToken: {
+    id: string;
+    user_id: string;
+    family_id: string;
+    ip_address?: string | null;
+    user_agent?: string | null;
+  }): Promise<void> {
+    const { error: rpcError } = await this.supabaseAdmin.rpc('revoke_token_family', {
+      target_family_id: existingToken.family_id,
+    });
+    if (rpcError) {
+      this.logger.warn(`Failed to revoke token family ${existingToken.family_id} (code=${rpcError.code ?? 'unknown'})`);
+    }
+
+    const { error: auditError } = await this.supabaseAdmin.from('auth_audit_logs').insert({
+      user_id: existingToken.user_id,
+      user_type: 'admin',
+      event_type: 'REFRESH_REUSE_DETECTED',
+      ip_address: existingToken.ip_address ?? null,
+      user_agent: existingToken.user_agent ?? null,
+      success: false,
+      failure_reason: 'refresh_token_reuse',
+      metadata: { family_id: existingToken.family_id, token_id: existingToken.id },
+    });
+    if (auditError) {
+      this.logger.warn(`Failed to log REFRESH_REUSE_DETECTED (code=${auditError.code ?? 'unknown'})`);
+    }
+
+    this.logger.warn(
+      `Refresh token reuse detected for admin ${existingToken.user_id}; family ${existingToken.family_id} revoked`,
+    );
   }
 
   /**
