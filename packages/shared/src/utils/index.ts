@@ -6,6 +6,35 @@
 import { ResourceType, EventType, UserRole } from '../types';
 
 // =====================================================
+// CURSOR PAGINATION UTILITIES
+// =====================================================
+
+export interface CursorPayload {
+  id: string;
+  createdAt: string;
+}
+
+/** Encode a row's id + created_at into an opaque base64 cursor. */
+export function encodeCursor(payload: CursorPayload): string {
+  return Buffer.from(`${payload.id}|${payload.createdAt}`, 'utf-8').toString('base64url');
+}
+
+/** Decode an opaque cursor; returns null if malformed. */
+export function decodeCursor(cursor: string): CursorPayload | null {
+  try {
+    const decoded = Buffer.from(cursor, 'base64url').toString('utf-8');
+    const sep = decoded.indexOf('|');
+    if (sep === -1) return null;
+    const id = decoded.slice(0, sep);
+    const createdAt = decoded.slice(sep + 1);
+    if (!id || !createdAt) return null;
+    return { id, createdAt };
+  } catch {
+    return null;
+  }
+}
+
+// =====================================================
 // DATE UTILITIES
 // =====================================================
 

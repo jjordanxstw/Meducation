@@ -354,6 +354,25 @@ export interface PaginationParams {
   sortOrder?: 'asc' | 'desc';
 }
 
+// Cursor-based pagination for large, append-mostly datasets (audit logs,
+// profiles, resources). The cursor is an opaque base64 token encoding the last
+// row's id + created_at.
+export interface CursorPaginationQuery {
+  cursor?: string;
+  limit: number;
+}
+
+export interface CursorPaginationMeta {
+  nextCursor: string | null;
+  hasMore: boolean;
+  total?: number;
+}
+
+export interface CursorPaginatedResponse<T> {
+  data: T[];
+  meta: CursorPaginationMeta;
+}
+
 // =====================================================
 // AUTH TYPES
 // =====================================================

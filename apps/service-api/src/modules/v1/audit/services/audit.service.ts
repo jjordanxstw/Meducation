@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { AuditAction } from '@medical-portal/shared';
 import { ErrorCode } from '@medical-portal/shared';
+import { CursorPaginationMeta, encodeCursor, decodeCursor } from '@medical-portal/shared';
 import { AppException } from '../../../../common/errors';
 
 export interface AuditContext {
@@ -57,6 +58,76 @@ export class AuditService {
     return { field, ascending };
   }
 
+  // Apply the shared filter set used by both offset and cursor pagination.
+  // Typed as `any` because Supabase's chained builder type is too deep for the
+  // generic to resolve without TS2589.
+  private applyLogFilters(
+    query: any,
+    params: Pick<GetLogsParams, 'userId' | 'tableName' | 'action' | 'startDate' | 'endDate' | 'search'>,
+  ): any {
+    let q = query;
+    if (params.userId) q = q.eq('user_id', params.userId);
+    if (params.tableName) q = q.eq('table_name', params.tableName);
+    if (params.action) q = q.eq('action', params.action);
+    if (params.startDate) q = q.gte('created_at', params.startDate);
+    if (params.endDate) q = q.lte('created_at', params.endDate);
+    if (params.search?.trim()) {
+      const term = `%${params.search.trim()}%`;
+      q = q.or(`table_name.ilike.${term},action.ilike.${term},record_id.ilike.${term},user_email.ilike.${term},ip_address.ilike.${term}`);
+    }
+    return q;
+  }
+
+  /**
+   * Cursor-based pagination over audit logs, keyset-ordered by (created_at, id)
+   * descending. Returns an opaque nextCursor for the following page.
+   */
+  async getLogsByCursor(
+    params: Pick<GetLogsParams, 'userId' | 'tableName' | 'action' | 'startDate' | 'endDate' | 'search'> & {
+      cursor?: string;
+      limit: number;
+    },
+  ): Promise<{ data: unknown[]; meta: CursorPaginationMeta }> {
+    const limit = Math.min(100, Math.max(1, params.limit || 50));
+
+    let query = this.applyLogFilters(
+      this.supabaseAdmin.from('audit_logs').select('*', { count: 'exact' }),
+      params,
+    );
+
+    if (params.cursor) {
+      const decoded = decodeCursor(params.cursor);
+      if (!decoded) {
+        throw new AppException(ErrorCode.VALIDATION_INVALID_INPUT, { field: 'cursor' }, 'Invalid pagination cursor');
+      }
+      // Rows strictly "after" the cursor in (created_at DESC, id DESC) order.
+      query = query.or(
+        `created_at.lt.${decoded.createdAt},and(created_at.eq.${decoded.createdAt},id.lt.${decoded.id})`,
+      );
+    }
+
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(limit + 1);
+
+    if (error) {
+      this.logger.warn(`Failed to fetch audit logs by cursor (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'audit_log' }, 'Failed to fetch audit logs');
+    }
+
+    const rows = (data || []) as Array<Record<string, any>>;
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const last = page[page.length - 1];
+    const nextCursor = hasMore && last ? encodeCursor({ id: last.id, createdAt: last.created_at }) : null;
+
+    return {
+      data: page.map((row) => ({ ...row, old_values: row.old_data, new_values: row.new_data })),
+      meta: { nextCursor, hasMore, total: count ?? undefined },
+    };
+  }
+
   async getLogs(params: GetLogsParams) {
     const {
       userId,
@@ -71,29 +142,10 @@ export class AuditService {
       sortOrder,
     } = params;
 
-    let query = this.supabaseAdmin
-      .from('audit_logs')
-      .select('*', { count: 'exact' });
-
-    if (userId) {
-      query = query.eq('user_id', userId);
-    }
-    if (tableName) {
-      query = query.eq('table_name', tableName);
-    }
-    if (action) {
-      query = query.eq('action', action);
-    }
-    if (startDate) {
-      query = query.gte('created_at', startDate);
-    }
-    if (endDate) {
-      query = query.lte('created_at', endDate);
-    }
-    if (search?.trim()) {
-      const term = `%${search.trim()}%`;
-      query = query.or(`table_name.ilike.${term},action.ilike.${term},record_id.ilike.${term},user_email.ilike.${term},ip_address.ilike.${term}`);
-    }
+    const query = this.applyLogFilters(
+      this.supabaseAdmin.from('audit_logs').select('*', { count: 'exact' }),
+      { userId, tableName, action, startDate, endDate, search },
+    );
 
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;

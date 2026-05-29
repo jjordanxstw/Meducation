@@ -11,8 +11,10 @@ import {
   Param,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { ProfilesService } from '../services/profiles.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope } from '../../../../common';
@@ -25,6 +27,9 @@ export class ProfilesAdminController {
   @Get()
   @SkipEnvelope()
   async findAll(
+    @Res({ passthrough: true }) res: Response,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Query('role') role?: string,
@@ -33,6 +38,20 @@ export class ProfilesAdminController {
     @Query('sortBy') sortBy?: string,
     @Query('sortOrder') sortOrder?: string,
   ) {
+    // Cursor-based pagination (preferred).
+    if (cursor !== undefined || limit !== undefined) {
+      const result = await this.profilesService.findAllByCursor({
+        cursor,
+        limit: limit ? parseInt(limit, 10) : 20,
+        role,
+        yearLevel: yearLevel ? parseInt(yearLevel, 10) : undefined,
+        search,
+      });
+      return { success: true, data: result.data, meta: result.meta };
+    }
+
+    // Legacy offset pagination (deprecated).
+    res.setHeader('Deprecation', 'true');
     const result = await this.profilesService.findAll(
       page ? parseInt(page, 10) : 1,
       pageSize ? parseInt(pageSize, 10) : 20,

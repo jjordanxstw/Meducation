@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { AppException } from '../../../../common/errors';
 import { ErrorCode } from '@medical-portal/shared';
+import { CursorPaginationMeta, encodeCursor, decodeCursor } from '@medical-portal/shared';
 
 @Injectable()
 export class ProfilesService {
@@ -100,6 +101,57 @@ export class ProfilesService {
         totalPages: Math.ceil((count || 0) / pageSize),
       },
     };
+  }
+
+  /**
+   * Cursor-based pagination over profiles, keyset-ordered by (created_at, id)
+   * descending.
+   */
+  async findAllByCursor(params: {
+    cursor?: string;
+    limit: number;
+    role?: string;
+    yearLevel?: number;
+    search?: string;
+  }): Promise<{ data: unknown[]; meta: CursorPaginationMeta }> {
+    const limit = Math.min(100, Math.max(1, params.limit || 20));
+
+    let query = this.supabaseAdmin.from('profiles').select('*', { count: 'exact' });
+
+    if (params.role) query = query.eq('role', params.role);
+    if (params.yearLevel !== undefined) query = query.eq('year_level', params.yearLevel);
+    if (params.search?.trim()) {
+      const term = `%${params.search.trim()}%`;
+      query = query.or(`full_name.ilike.${term},email.ilike.${term},student_id.ilike.${term}`);
+    }
+
+    if (params.cursor) {
+      const decoded = decodeCursor(params.cursor);
+      if (!decoded) {
+        throw new AppException(ErrorCode.VALIDATION_INVALID_INPUT, { field: 'cursor' }, 'Invalid pagination cursor');
+      }
+      query = query.or(
+        `created_at.lt.${decoded.createdAt},and(created_at.eq.${decoded.createdAt},id.lt.${decoded.id})`,
+      );
+    }
+
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(limit + 1);
+
+    if (error) {
+      this.logger.warn(`Failed to fetch profiles by cursor (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'profile' }, 'Failed to fetch profiles');
+    }
+
+    const rows = (data || []) as Array<Record<string, any>>;
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const last = page[page.length - 1];
+    const nextCursor = hasMore && last ? encodeCursor({ id: last.id, createdAt: last.created_at }) : null;
+
+    return { data: page, meta: { nextCursor, hasMore, total: count ?? undefined } };
   }
 
   async findOne(id: string) {
