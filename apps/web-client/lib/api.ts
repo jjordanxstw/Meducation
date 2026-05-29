@@ -176,6 +176,18 @@ function safeRedirect(url: string) {
   window.location.href = url;
 }
 
+/**
+ * Read the non-httpOnly `_csrf` cookie set by the backend on login. Same-origin
+ * (the app proxies /api/v1) so document.cookie can see it.
+ */
+export function readCsrfToken(): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(/(?:^|;\s*)_csrf=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+const CSRF_SAFE_METHODS = new Set(['get', 'head', 'options']);
+
 function isAuthEndpoint(url?: string): boolean {
   if (!url) return false;
   return url.includes('/auth/verify') || url.includes('/auth/refresh') || url.includes('/auth/logout');
@@ -268,6 +280,18 @@ export const apiClient: AxiosInstance = axios.create({
 
 apiClient.interceptors.request.use(async (config) => {
   const requestConfig = config as typeof config & RequestConfig;
+
+  // CSRF double-submit: attach the token on every state-changing request so it
+  // matches the _csrf cookie the backend compares against.
+  const method = (config.method ?? 'get').toLowerCase();
+  if (!CSRF_SAFE_METHODS.has(method)) {
+    const csrf = readCsrfToken();
+    if (csrf) {
+      config.headers = config.headers ?? {};
+      (config.headers as Record<string, string>)['x-csrf-token'] = csrf;
+    }
+  }
+
   if (requestConfig._skipSessionCheck || isAuthEndpoint(config.url)) {
     return config;
   }
