@@ -1,141 +1,91 @@
 # Medical Learning Portal
 
-Production-grade monorepo for a medical education platform with separate student and admin experiences, a modular API, shared domain contracts, and migration-driven database operations.
+Production-minded full-stack system for medical students to share and review study resources (YouTube + document links) before exams, with separate student and admin experiences.
 
-## Portfolio Snapshot
+## Engineer Pitch
 
-- Built as a multi-app monorepo with shared TypeScript contracts across frontend and backend.
-- Uses API-first architecture with standardized responses, centralized error catalog, and request tracing.
-- Supports dual authentication flows: student OAuth session flow and admin JWT + refresh-token flow.
-- Designed for operational reliability: SQL migrations, seed/reset scripts, audit logging, and verification pipelines.
+This repository demonstrates practical software engineering beyond feature delivery:
 
-## Repository Layout
+- Multi-app monorepo with shared contracts (`@medical-portal/shared`) to reduce cross-app drift.
+- Security-first dual auth architecture (student OAuth flow + admin JWT/refresh flow).
+- Migration-first database operations with deterministic SQL history.
+- Performance and reliability hardening for zero-budget infrastructure (Supabase Free + Render Free + Vercel Hobby).
 
-```text
-.
-|- apps/
-|  |- service-api/     # NestJS REST API
-|  |- web-client/      # Next.js 16 student portal
-|  `- web-admin/       # React + Vite + Refine admin portal
-|- packages/
-|  `- shared/          # Shared types, errors, and utilities
-`- database/
-     |- migrations/      # Versioned SQL migrations
-     `- scripts/         # Migration/seed/reset/admin CLI tools
+## Architecture Diagram
+
+```mermaid
+flowchart LR
+  studentClient[Student Web\nNext.js + NextAuth + React Query]
+  adminClient[Admin Web\nVite + Refine + Antd]
+  vercel[Vercel Edge/Hosting]
+  render[Render Service\nNestJS API]
+  supabase[(Supabase Postgres)]
+  sharedPkg[@medical-portal/shared\nTypes + Error Contracts]
+
+  studentClient --> vercel
+  adminClient --> vercel
+  vercel -->|"/api/v1/*"| render
+  render --> supabase
+
+  sharedPkg -.shared contracts.-> studentClient
+  sharedPkg -.shared contracts.-> adminClient
+  sharedPkg -.shared contracts.-> render
 ```
 
-## Stack Matrix
+## System Design Highlights
 
-| Layer | Core Technologies | Notes |
-|---|---|---|
-| Monorepo | pnpm workspaces, TypeScript 5, Makefile | Single workspace for apps and shared package |
-| API | NestJS 11, Express adapter, class-validator, cookie-parser, compression | URI versioning (`/api/v1`), global filters/interceptors/pipes |
-| Student App | Next.js 16 App Router, React 18, NextAuth, Zustand, React Query v5, Tailwind, NextUI | SSR-ready architecture with session-aware API client |
-| Admin App | Vite 5, React 18, Refine, React Router v6, Ant Design, React Query v4 | CRUD-heavy management UI with auth/data providers |
-| Shared Package | tsup, dual CJS/ESM exports | Shared enums, interfaces, error catalog, helpers |
-| Data Layer | PostgreSQL (Supabase), SQL migrations, `pg` scripts | Migration-first schema evolution with indexes and constraints |
+### 1) Monorepo and Contract Governance
 
-## Architecture Overview
+- `apps/service-api`: NestJS API
+- `apps/web-client`: Next.js student portal
+- `apps/web-admin`: Refine-based admin panel
+- `packages/shared`: unified types, DTO-aligned interfaces, error catalog
+- `database/migrations`: ordered SQL migrations with `_schema_migrations` tracking
 
-### 1) Monorepo Contract-Driven Design
+This structure lets frontend and backend evolve without breaking integration contracts silently.
 
-`@medical-portal/shared` is consumed by API and both web apps via `workspace:*`. This keeps domain types and error contracts consistent across boundaries and reduces integration drift.
+### 2) Authentication and Session Security
 
-### 2) API Architecture (NestJS)
+- Student side: OAuth/NextAuth session flow + API refresh path.
+- Admin side: username/password + JWT access token + rotating refresh token.
+- Strict admin session policy now supports **single active session** (`ADMIN_MAX_ACTIVE_SESSIONS=1`) with DB-backed validation in guard path.
+- Session cleanup + retention managed by SQL functions invoked safely from health-driven maintenance.
 
-The API is organized by domain modules under `modules/v1` and shared infrastructure under `common`.
+### 3) API Engineering
 
-- Domain modules include auth, admin-auth, resources, lectures, sections, subjects, profiles, calendar, audit, and statistics.
-- Global request lifecycle includes:
-    - request ID middleware for traceability
-    - validation pipe for DTO input safety
-    - logging interceptor (method/status/duration/request ID)
-    - response envelope interceptor for normalized payload format
-    - exception filter mapping to shared error codes
-- Versioning strategy: URI-based versioning (`/api/v1/*`) with global `/api` prefix.
+- Versioned REST (`/api/v1`) with modular domain boundaries.
+- Global validation, interceptors, and standardized response envelope.
+- Request tracing and centralized exception mapping to shared error codes.
+- Compression + route-level auth rate-limiting on sensitive endpoints.
 
-### 3) Student Web Architecture (Next.js)
+### 4) Database Lifecycle
 
-The student app uses App Router route groups (`(auth)` and `(dashboard)`), with provider composition for session, cache, theme, and loading UX.
+- SQL-first schema evolution (indexes, constraints, RLS, utility functions).
+- Scripted migration apply/status/reset/seed/admin bootstrap flows.
+- Retention cleanup for security artifacts:
+  - `refresh_tokens` (expired/revoked)
+  - `auth_audit_logs` (old events)
 
-- Auth/session strategy:
-    - NextAuth session as primary user session source.
-    - Axios client uses same-origin `/api/v1` in browser for first-party cookie behavior.
-    - Request interceptor validates session; response interceptor applies refresh-first on 401.
-- State and data:
-    - Zustand for lightweight client auth/profile state.
-    - React Query v5 for cache and server-state synchronization.
+## Stack Overview
 
-### 4) Admin Web Architecture (Refine + Vite)
+| Layer | Technologies |
+|---|---|
+| Monorepo | pnpm workspaces, TypeScript 5, Makefile |
+| API | NestJS 11, Express, Supabase JS, class-validator, cookie-parser |
+| Student Web | Next.js 16 (App Router), NextAuth, React Query v5, Zustand, Tailwind, NextUI |
+| Admin Web | Vite 5, React 18, Refine, React Router v6, React Query v4, Ant Design |
+| Data | Supabase PostgreSQL 15, migration SQL scripts, `pg` tooling |
+| Shared Contracts | `@medical-portal/shared` (types/errors/utilities) |
 
-The admin app is built around Refine resource-driven routing and Ant Design layouts.
+## Performance and Reliability Posture
 
-- Auth provider encapsulates login/check/logout/getIdentity/getPermissions behavior.
-- Axios-based refresh flow protects admin UX from token expiry interruptions.
-- Router uses authenticated layout guards and dedicated `/login` route.
-- Vercel rewrite strategy supports:
-    - `/api/v1/*` proxying to API host
-    - SPA fallback rewrite for deep links
+- Designed for low-average traffic with bursty exam-period concurrency.
+- Reduced unnecessary client request churn (session-check/cache tuning).
+- Added retention cleanup to prevent unbounded token/audit table growth.
+- Admin single-session enforcement prevents concurrent privileged sessions.
+- Production-safe defaults while staying compatible with free-tier limits.
 
-### 5) Database and Data Operations
-
-Database changes are managed through ordered SQL migrations (`0001` to `0012`) and script-based tooling.
-
-- Migration runner stores history in `_schema_migrations` and applies each migration in a transaction.
-- Includes integrity/performance hardening such as:
-    - unique constraints (e.g., subject/resource-level dedup rules)
-    - check constraints (e.g., calendar time range)
-    - query indexes for common admin list/filter paths
-    - audit schema improvements (`audit_logs.user_email` + index)
-- Operational scripts cover: status, apply, reset, seed, generate-migration, and interactive admin creation.
-
-## System Flow (Pseudo-Diagram)
-
-```text
-Student Browser / Admin Browser
-                |
-                v
-Web Layer
-- web-client (Next.js App Router)
-- web-admin (Vite + Refine)
-                |
-                |  /api/v1/* (same-origin or rewrite/proxy)
-                v
-service-api (NestJS)
-- Auth guards (student/admin/cookie flows)
-- Validation + logging + response envelope + exception mapping
-- Domain modules (resources/calendar/profiles/audit/...)
-                |
-                v
-PostgreSQL (Supabase)
-- Core domain tables
-- refresh tokens / active sessions
-- audit logs
-- migration history
-```
-
-## Engineering Quality Signals
-
-### Security
-
-- httpOnly cookie-capable authentication flows for both student and admin paths.
-- Environment validation for required secrets at API bootstrap.
-- Sanitized error messaging in admin auth flow.
-- Audit logging support with indexed query paths.
-
-### Reliability
-
-- Shared error contract and global exception mapping.
-- Request-level tracing with request IDs.
-- Centralized migration history table and idempotent SQL migration style.
-
-### Maintainability
-
-- Strong TypeScript baseline across workspace.
-- Shared package for domain model reuse.
-- Scripted operations for build, verify, and database lifecycle.
-
-## Key Commands
+## Local Development
 
 ### Install
 
@@ -143,16 +93,16 @@ PostgreSQL (Supabase)
 pnpm install
 ```
 
-### Development
+### Run
 
 ```bash
-pnpm dev          # run all apps in parallel
-pnpm dev:api      # API only
-pnpm dev:web      # student app only
-pnpm dev:admin    # admin app only
+pnpm dev
+pnpm dev:api
+pnpm dev:web
+pnpm dev:admin
 ```
 
-### Build and Verification
+### Validate
 
 ```bash
 pnpm build
@@ -160,7 +110,7 @@ pnpm verify:apps
 pnpm lint
 ```
 
-### Database Operations
+### Database
 
 ```bash
 pnpm db:status
@@ -170,16 +120,21 @@ pnpm db:reset
 pnpm admin:create
 ```
 
-## Minimal Environment Checklist
+## Environment Notes
 
-Provide environment variables for:
+Minimum runtime configuration:
 
-- `apps/service-api`: Supabase URL/keys, JWT secret, CORS origins, cookie settings, optional APP_ENV/NODE_ENV.
-- `apps/web-client`: `NEXT_PUBLIC_API_URL`, NextAuth-related values, optional APP_ENV-specific env files.
-- `apps/web-admin`: API base/proxy settings and environment mode (`uat`/`prod` when needed).
+- API (`apps/service-api/.env`): Supabase URL/keys, `JWT_SECRET`, cookie/CORS settings.
+- Student web: `NEXT_PUBLIC_API_URL` and NextAuth settings.
+- Admin web: API base URL and deployment mode values.
 
-## Why This Project Is Portfolio-Ready
+Session policy controls:
 
-- Clear separation of concerns across API, student app, and admin app.
-- Demonstrates modern full-stack patterns (SSR-ready frontend, modular backend, migration-first DB).
-- Shows practical production concerns: auth refresh strategy, CORS/proxy routing, auditability, and schema evolution.
+```env
+STUDENT_MAX_ACTIVE_SESSIONS=3
+ADMIN_MAX_ACTIVE_SESSIONS=1
+```
+
+## Portfolio Value
+
+This project showcases end-to-end software engineering capability across architecture, secure auth design, schema governance, operational scripts, and free-tier performance hardening, not just UI implementation.
