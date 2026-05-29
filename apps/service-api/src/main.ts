@@ -9,7 +9,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { ServiceApiModule } from './service-api.module';
 import { GlobalValidationPipe } from './common/pipes/validation.pipe';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { StructuredLogger } from './common/logger/structured-logger';
 import { ResponseEnvelopeInterceptor } from './common/interceptors/response-envelope.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { requestIdMiddleware } from './common/middleware/request-id.middleware';
@@ -119,7 +119,10 @@ function validateProductionSecrets(configService: ConfigService): void {
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(ServiceApiModule, {
     bodyParser: false,
+    bufferLogs: true,
   });
+  // Structured JSON logging in production, pretty output in development.
+  app.useLogger(new StructuredLogger());
   const configService = app.get(ConfigService);
   const reflector = app.get(Reflector);
 
@@ -192,8 +195,11 @@ async function bootstrap() {
   // Add request ID middleware first (before versioning)
   app.use(requestIdMiddleware);
 
-  // Set global API prefix
-  app.setGlobalPrefix('api');
+  // Set global API prefix. Health probe routes are excluded so orchestrators
+  // (Render) can hit stable, unversioned paths.
+  app.setGlobalPrefix('api', {
+    exclude: ['health', 'health/ready', 'health/live'],
+  });
 
   // Enable URI versioning for all endpoints
   app.enableVersioning({
@@ -203,9 +209,6 @@ async function bootstrap() {
 
   // Enable global validation
   app.useGlobalPipes(new GlobalValidationPipe());
-
-  // Enable global logging interceptor (now with request ID)
-  app.useGlobalInterceptors(new LoggingInterceptor());
 
   // Enable global response envelope interceptor
   app.useGlobalInterceptors(new ResponseEnvelopeInterceptor(reflector));

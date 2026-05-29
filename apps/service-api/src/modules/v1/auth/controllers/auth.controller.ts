@@ -15,6 +15,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Logger,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
@@ -98,6 +99,8 @@ function resolveCookieSecure(configService: ConfigService, isDevelopment: boolea
 
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(
     private readonly authService: AuthService,
     private readonly watermarkService: WatermarkService,
@@ -258,7 +261,9 @@ export class AuthController {
       try {
         await this.authService.revokeGoogleToken(providedToken);
       } catch (e) {
-        console.warn('revocation failed', e);
+        this.logger.warn(
+          `Google token revocation failed: ${e instanceof Error ? e.message : 'unknown error'}`,
+        );
       }
     }
 

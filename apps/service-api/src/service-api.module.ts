@@ -1,9 +1,10 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ServiceApiController } from './service-api.controller';
 import { ServiceApiService } from './service-api.service';
 import { V1Module } from './modules/v1/v1.module';
-import { CommonModule } from './common';
+import { HealthModule } from './modules/health/health.module';
+import { CommonModule, LoggerMiddleware } from './common';
 
 const appEnv = process.env.APP_ENV?.trim();
 const nodeEnv = process.env.NODE_ENV?.trim();
@@ -26,9 +27,15 @@ envFilePath.push('.env');
       envFilePath,
     }),
     CommonModule,
+    HealthModule,
     V1Module,
   ],
   controllers: [ServiceApiController],
   providers: [ServiceApiService],
 })
-export class ServiceApiModule {}
+export class ServiceApiModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    // Structured request-completion access logging on every route.
+    consumer.apply(LoggerMiddleware).forRoutes('*');
+  }
+}
