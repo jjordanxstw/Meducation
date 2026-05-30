@@ -56,6 +56,11 @@
       "path-to-regexp@>=8.0.0 <8.4.0": "^8.4.0",
       "picomatch@<2.3.2": "2.3.2",
       "picomatch@>=4.0.0 <4.0.4": "^4.0.4"
+    },
+    "auditConfig": {
+      "ignoreGhsas": [
+        "GHSA-r5fr-rjxr-66jc"
+      ]
     }
   },
   "packageManager": "pnpm@9.0.0",

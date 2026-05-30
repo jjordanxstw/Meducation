@@ -62,3 +62,34 @@ jobs:
 
       - name: Typecheck all
         run: pnpm -r typecheck
+
+      - name: Unit tests (service-api) with coverage
+        run: pnpm --filter service-api test:cov
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: apps/service-api/coverage/lcov.info
+          flags: service-api
+          fail_ci_if_error: false
+
+      - name: Audit dependencies (high+)
+        run: pnpm audit --audit-level=high
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan diff for leaked secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          # Scan only the PR/push diff for speed (not full history).
+          base: ${{ github.event.pull_request.base.sha || github.event.before }}
+          head: ${{ github.sha }}
+          extra_args: --only-verified

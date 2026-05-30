@@ -1,0 +1,14 @@
+{
+  "name": "web-client-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright end-to-end smoke tests for the student web client",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "install:browsers": "playwright install --with-deps chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}

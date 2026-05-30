@@ -1,3 +1,4 @@
+import './tracing';
 import 'reflect-metadata';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { Logger, VersioningType } from '@nestjs/common';
