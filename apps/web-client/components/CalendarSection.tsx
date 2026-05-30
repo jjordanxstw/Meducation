@@ -10,10 +10,10 @@ import { useRouter } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
 import { Card, CardBody } from '@nextui-org/react';
 import { Calendar } from 'antd';
-import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import { api } from '@/lib/api';
+import { useCalendarEvents } from '@/hooks/use-calendar';
+import { DataFreshnessDot } from '@/components/ui/DataFreshnessDot';
 import {
   formatDateThai,
   getEventTypeLabel,
@@ -41,13 +41,26 @@ const EVENT_TYPE_EMOJIS: Record<string, string> = {
   event: '📅',
 };
 
-// Event type badge colors for modal
+// Event type badge colors for modal (exam=red, lecture=blue, holiday=amber, event=emerald)
 const EVENT_TYPE_BADGE: Record<string, string> = {
-  exam: 'bg-red-500/20 text-red-300 border-red-500/30',
-  lecture: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  holiday: 'bg-green-500/20 text-green-300 border-green-500/30',
-  event: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+  exam: 'bg-red-500/15 text-red-300 border-red-500/20',
+  lecture: 'bg-blue-500/15 text-blue-300 border-blue-500/20',
+  holiday: 'bg-amber-500/15 text-amber-300 border-amber-500/20',
+  event: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/20',
 };
+
+// Solid hex per type — used for the modal title accent border.
+const EVENT_TYPE_HEX: Record<string, string> = {
+  exam: '#ef4444',
+  lecture: '#3b82f6',
+  holiday: '#f59e0b',
+  event: '#10b981',
+};
+
+// Detects whether a date string carries a meaningful (non-midnight) time.
+function hasTime(value: string): boolean {
+  return /T\d{2}:\d{2}/.test(value) && !/T00:00(:00)?/.test(value);
+}
 
 export function CalendarSection() {
   const t = useTranslations('calendar');
@@ -57,7 +70,9 @@ export function CalendarSection() {
   // Single state: current calendar date (controls which month is shown)
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs());
   const [filterType, setFilterType] = useState<string>('all');
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<
+    (CalendarEvent & { subjects?: { name: string; code: string } }) | null
+  >(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Day-click modal state (mobile)
@@ -106,24 +121,14 @@ export function CalendarSection() {
     return Array.from({ length: 5 }, (_, i) => y + i);
   }, []);
 
-  // Date range for API (expanded ±1 month for smooth navigation)
-  const dateRange = useMemo(() => ({
-    start_date: currentDate.subtract(1, 'month').startOf('month').format('YYYY-MM-DD'),
-    end_date: currentDate.add(2, 'month').endOf('month').format('YYYY-MM-DD'),
-  }), [currentDate]);
-
-  // Fetch calendar events — always refetch on month change
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['calendar', dateRange],
-    queryFn: () => api.calendar.list(dateRange),
-    staleTime: 60 * 1000,
-    refetchOnMount: false,
-  });
-
-  const events: (CalendarEvent & { subjects?: { name: string; code: string } })[] = useMemo(
-    () => data?.data?.data ?? [],
-    [data],
-  );
+  // Fetch calendar events keyed by month so re-visiting a month is cache-served.
+  const {
+    data: events = [],
+    isLoading,
+    isError,
+    isFetching,
+    refetch,
+  } = useCalendarEvents(currentDate.format('YYYY-MM'));
 
   // Reset all filters
   const resetFilters = useCallback(() => {
@@ -149,6 +154,16 @@ export function CalendarSection() {
 
   // Current month label for navigation
   const currentMonthLabel = `${MONTH_LABELS[currentDate.month()]} ${currentDate.year()}`;
+
+  // Whether the displayed month has any (filtered) events — drives empty state.
+  const monthHasEvents = useMemo(() => {
+    const m = currentDate.format('YYYY-MM');
+    return filteredEvents.some((ev) => {
+      const start = ev.start_date.slice(0, 7);
+      const end = (ev.end_date ?? ev.start_date).slice(0, 7);
+      return start <= m && m <= end;
+    });
+  }, [filteredEvents, currentDate]);
 
   // Navigation — simple state updates, no refs or API calls
   const goToPrev = useCallback(() => setCurrentDate((d) => d.subtract(1, 'month')), []);
@@ -372,7 +387,8 @@ export function CalendarSection() {
       ) : isLoading ? (
         <CalendarCardSkeleton />
       ) : (
-        <div className="rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden shadow-sm bg-white dark:bg-transparent">
+        <div className="relative rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden shadow-sm bg-white dark:bg-transparent">
+          <DataFreshnessDot isFetching={isFetching && !isLoading} />
           <div className="px-4 sm:px-6 pt-4">
             <div className="grid grid-cols-7 gap-0 border-b border-slate-200 dark:border-white/10 pb-3 text-center">
               {WEEKDAY_LABELS.map((label) => (
@@ -512,6 +528,14 @@ export function CalendarSection() {
               cellRender={cellRender}
               headerRender={() => null}
             />
+
+            {/* Empty month state — shown below the grid, not overlapping it */}
+            {!monthHasEvents && (
+              <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
+                <FiCalendar className="h-8 w-8 text-slate-300 opacity-30 dark:text-white/30" />
+                <p className="text-sm text-slate-400 dark:text-white/40">{t('noEventsThisMonth')}</p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -525,31 +549,56 @@ export function CalendarSection() {
           />
           <div className="fixed left-1/2 top-1/2 z-[70] min-w-[300px] max-w-[360px] w-[calc(100%-2rem)] bg-white dark:bg-[#0d1b2e] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl shadow-slate-300/50 dark:shadow-black/70 p-5 -translate-x-1/2 -translate-y-1/2">
             <div className="flex justify-between items-start gap-3">
-              <div className="flex-1 min-w-0">
+              <div
+                className="flex-1 min-w-0 border-l-4 pl-3"
+                style={{ borderColor: selectedEvent.color || EVENT_TYPE_HEX[selectedEvent.type] || '#3b82f6' }}
+              >
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white line-clamp-2">
                   {selectedEvent.title}
                 </h2>
+                <span className={`inline-block mt-2 text-xs px-2 py-0.5 rounded-full border ${EVENT_TYPE_BADGE[selectedEvent.type] || 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-white/10 dark:text-white/70 dark:border-white/20'}`}>
+                  {getEventTypeLabel(selectedEvent.type)}
+                </span>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-white/60 dark:hover:text-white transition-colors shrink-0"
+                aria-label={t('close')}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-white/60 dark:hover:text-white transition-colors shrink-0"
               >
-                ×
+                <FiX size={16} />
               </button>
             </div>
-
-            <span className={`inline-block mt-3 text-xs px-2 py-0.5 rounded-full border ${EVENT_TYPE_BADGE[selectedEvent.type] || 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-white/10 dark:text-white/70 dark:border-white/20'}`}>
-              {getEventTypeLabel(selectedEvent.type)}
-            </span>
 
             <div className="flex items-start gap-3 mt-4 p-3 rounded-xl bg-slate-50 dark:bg-white/5">
               <FiCalendar className="text-blue-500 dark:text-blue-400 mt-0.5 shrink-0" size={16} />
               <div>
                 <p className="text-xs text-blue-600/50 dark:text-blue-200/50 uppercase tracking-wide">{t('date')}</p>
-                <p className="text-sm text-slate-900 dark:text-white font-medium">{formatDateThai(selectedEvent.start_date)}</p>
-                {selectedEvent.end_date && selectedEvent.end_date !== selectedEvent.start_date ? (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('until')} {formatDateThai(selectedEvent.end_date)}</p>
-                ) : null}
+                {(() => {
+                  const start = dayjs(selectedEvent.start_date);
+                  const end = selectedEvent.end_date ? dayjs(selectedEvent.end_date) : null;
+                  const timed = hasTime(selectedEvent.start_date);
+                  const multiDay = end ? !end.isSame(start, 'day') : false;
+
+                  if (multiDay && end) {
+                    return (
+                      <p className="text-sm text-slate-900 dark:text-white font-medium">
+                        {start.format('ddd, D MMM YYYY')} – {end.format('ddd, D MMM YYYY')}
+                      </p>
+                    );
+                  }
+
+                  const timeLabel = !timed
+                    ? t('allDay')
+                    : end && timed
+                      ? `${start.format('HH:mm')} – ${end.format('HH:mm')}`
+                      : start.format('HH:mm');
+
+                  return (
+                    <p className="text-sm text-slate-900 dark:text-white font-medium">
+                      {start.format('dddd, D MMMM YYYY')} · {timeLabel}
+                    </p>
+                  );
+                })()}
               </div>
             </div>
 
@@ -570,9 +619,9 @@ export function CalendarSection() {
                   <p className="text-xs text-blue-600/50 dark:text-blue-200/50 uppercase tracking-wide">{t('relatedSubject')}</p>
                   <button
                     onClick={handleGoToSubject}
-                    className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium hover:underline flex items-center gap-1"
+                    className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-100 hover:underline dark:border-blue-500/20 dark:bg-blue-500/15 dark:text-blue-300 dark:hover:bg-blue-500/25"
                   >
-                    {t('viewSubject')}
+                    {selectedEvent.subjects?.name || t('viewSubject')}
                   </button>
                 </div>
               </div>

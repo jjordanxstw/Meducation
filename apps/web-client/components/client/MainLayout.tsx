@@ -17,7 +17,7 @@ import {
 } from '@nextui-org/react';
 import { useSyncExternalStore, useState, useCallback, useEffect, useRef } from 'react';
 import { signOut, useSession } from 'next-auth/react';
-import { FiHome, FiLayers, FiBookOpen, FiUser, FiUsers, FiLogOut, FiMoon, FiSun, FiMenu, FiX } from 'react-icons/fi';
+import { FiHome, FiLayers, FiBookOpen, FiUser, FiUsers, FiLogOut, FiMoon, FiSun, FiMenu, FiX, FiCalendar } from 'react-icons/fi';
 import { api } from '@/lib/api';
 import { useAppTheme } from '@/app/providers';
 import { useLocale, useTranslations } from 'next-intl';
@@ -28,6 +28,21 @@ const menuItems = [
   { nameKey: 'learningHub', href: '/learning-hub', icon: FiBookOpen },
   { nameKey: 'aboutUs', href: '/about-us', icon: FiUsers },
 ];
+
+// Bottom navigation (mobile) — quick access to the primary destinations.
+const bottomNavItems = [
+  { nameKey: 'home', href: '/', icon: FiHome },
+  { nameKey: 'acdm', href: '/subjects', icon: FiLayers },
+  { nameKey: 'calendar', href: '/calendar', icon: FiCalendar },
+  { nameKey: 'aboutMe', href: '/about-me', icon: FiUser },
+];
+
+// Active when the path matches exactly, or is a child route (e.g. /subjects/123).
+// The home route ('/') only matches exactly.
+function isRouteActive(pathname: string, href: string): boolean {
+  if (href === '/') return pathname === '/';
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -161,19 +176,22 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         {/* Desktop navigation */}
         <NavbarContent className="hidden flex-nowrap gap-1 md:flex" justify="center">
           {menuItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = isRouteActive(pathname, item.href);
             return (
               <NavbarItem key={item.href} isActive={isActive}>
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-2 whitespace-nowrap rounded-full px-3 py-1.5 text-sm transition-all duration-200 lg:px-4 ${
+                  className={`relative flex items-center gap-2 whitespace-nowrap px-3 py-2 text-sm transition-colors duration-200 lg:px-4 ${
                     isActive
-                      ? 'bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 font-semibold'
-                      : 'text-[var(--ink-2)] hover:bg-default-100/50 hover:text-[var(--ink-1)]'
+                      ? 'font-medium text-[var(--ink-1)]'
+                      : 'text-[var(--ink-2)] hover:text-[var(--ink-1)]'
                   }`}
                 >
                   <item.icon className={`h-4 w-4 ${isActive ? 'text-blue-500 dark:text-blue-400' : ''}`} />
                   <span className="whitespace-nowrap">{t(`nav.${item.nameKey}`)}</span>
+                  {isActive && (
+                    <span className="pointer-events-none absolute inset-x-2 -bottom-0.5 h-0.5 origin-left animate-underline-in rounded-full bg-gradient-to-r from-blue-400 to-blue-500" />
+                  )}
                 </Link>
               </NavbarItem>
             );
@@ -285,7 +303,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
       {/* MOBILE DRAWER OVERLAY */}
       <div
-        className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-30 md:hidden transition-opacity duration-200 ${
           isDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setIsDrawerOpen(false)}
@@ -293,7 +311,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
       {/* MOBILE DRAWER PANEL */}
       <div
-        className={`fixed top-0 left-0 h-full w-[280px] z-50 bg-[var(--bg-surface)] border-r border-slate-200 dark:border-white/10 shadow-2xl shadow-black/30 transform transition-transform duration-300 ease-out md:hidden ${
+        className={`fixed top-0 left-0 h-full w-[280px] z-50 bg-[var(--bg-surface)] border-r border-slate-200 dark:border-white/10 shadow-2xl shadow-black/30 transform [will-change:transform] transition-transform duration-[250ms] ease-out md:hidden ${
           isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -308,7 +326,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             </Link>
             <button
               onClick={() => setIsDrawerOpen(false)}
-              className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/10 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/15 transition"
+              className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 transition"
               aria-label={t('nav.closeMenu')}
             >
               <FiX className="h-5 w-5 text-slate-600 dark:text-white/70" />
@@ -331,16 +349,16 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           {/* Navigation links */}
           <div className="flex-1 px-2 space-y-1">
             {menuItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = isRouteActive(pathname, item.href);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setIsDrawerOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition cursor-pointer ${
+                  className={`flex min-h-[52px] items-center gap-3 rounded-xl px-4 py-3 transition cursor-pointer active:bg-slate-200 dark:active:bg-white/[0.1] ${
                     isActive
-                      ? 'bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400 font-medium'
-                      : 'text-slate-700 dark:text-white/70 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
+                      ? 'border-l-2 border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium'
+                      : 'text-slate-700 dark:text-white/70 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <item.icon className="h-5 w-5" />
@@ -418,8 +436,32 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         </div>
       </main>
 
+      {/* MOBILE BOTTOM NAVIGATION */}
+      <nav
+        className="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-slate-200 bg-[var(--bg-surface)]/95 backdrop-blur-xl dark:border-white/10 md:hidden"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        aria-label={t('nav.openMenu')}
+      >
+        {bottomNavItems.map((item) => {
+          const isActive = isRouteActive(pathname, item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex h-16 flex-1 flex-col items-center justify-center gap-1 text-[11px] transition-colors ${
+                isActive ? 'text-blue-500 dark:text-blue-400' : 'text-slate-400 dark:text-white/40'
+              }`}
+              aria-current={isActive ? 'page' : undefined}
+            >
+              <item.icon className="h-5 w-5" />
+              {isActive && <span className="font-medium leading-none">{t(`nav.${item.nameKey}`)}</span>}
+            </Link>
+          );
+        })}
+      </nav>
+
       {/* Footer - reduced visual weight */}
-      <footer className="relative z-10 mx-auto mb-6 mt-2 w-[calc(100vw-(var(--app-shell-gutter)*2))] max-w-[var(--app-shell-max)] rounded-[var(--radius-xl)] py-3 card-flat border-slate-200/50 dark:border-white/5">
+      <footer className="relative z-10 mx-auto mb-24 mt-2 w-[calc(100vw-(var(--app-shell-gutter)*2))] max-w-[var(--app-shell-max)] rounded-[var(--radius-xl)] py-3 card-flat border-slate-200/50 dark:border-white/5 md:mb-6">
         <div className="text-center">
           <p className="text-xs text-slate-400 dark:text-white/30">
             {t('footer')}

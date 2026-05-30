@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { Button } from '@nextui-org/react';
-import { FiRefreshCw } from 'react-icons/fi';
+import { FiRefreshCw, FiBook, FiAlertCircle } from 'react-icons/fi';
 import axios from 'axios';
 import { api } from '@/lib/api';
 import { useLocale } from 'next-intl';
@@ -70,10 +70,35 @@ function AuthSyncContent() {
   const hasStartedSync = useRef(false);
   const isHandlingAuthFailure = useRef(false);
   const [syncError, setSyncError] = useState<'network_unreachable' | null>(null);
+  const [stepIndex, setStepIndex] = useState(0);
+
+  const syncSteps = [
+    'Verifying identity...',
+    'Syncing your profile...',
+    'Almost there...',
+  ];
+
+  // Cycle the reassuring progress copy while the backend session is established.
+  useEffect(() => {
+    if (syncError) {
+      return;
+    }
+    const interval = setInterval(() => {
+      setStepIndex((prev) => (prev + 1) % syncSteps.length);
+    }, 1500);
+    return () => clearInterval(interval);
+    // syncSteps is a stable literal; only re-run when the error state changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [syncError]);
 
   const handleRetry = () => {
     hasStartedSync.current = false;
+    setStepIndex(0);
     setSyncError(null);
+  };
+
+  const handleBackToLogin = () => {
+    router.replace(`/${locale}/login`);
   };
 
   const handleAuthFailure = useCallback(async (errorCode: 'session_expired' | 'domain_restricted' = 'session_expired') => {
@@ -165,16 +190,31 @@ function AuthSyncContent() {
       <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-glass-canvas p-3 sm:p-4">
         <div className="glass-orb-a pointer-events-none left-[-6%] top-[-10%]" />
         <div className="glass-orb-b pointer-events-none bottom-[-12%] right-[-4%]" />
-        <div className="glass-card w-full max-w-lg space-y-4 rounded-2xl p-5 sm:p-6">
-          <h2 className="text-lg font-semibold text-[var(--ink-1)]">We couldn&apos;t reach the server.</h2>
-          <div className="flex">
+        <div className="w-full max-w-md space-y-5 rounded-2xl border border-red-500/20 bg-red-500/10 p-6 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/15">
+            <FiAlertCircle className="h-7 w-7 text-red-400" />
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="text-lg font-semibold text-[var(--ink-1)]">Connection failed</h2>
+            <p className="text-sm text-[var(--ink-2)]">
+              We couldn&apos;t reach the server. Check your internet connection and try again.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               color="primary"
               className="btn-precise w-full justify-center"
               startContent={<span className="icon-with-text"><FiRefreshCw className="h-4 w-4" /></span>}
               onPress={handleRetry}
             >
-              Retry
+              Try Again
+            </Button>
+            <Button
+              variant="light"
+              className="btn-precise w-full justify-center text-[var(--ink-2)]"
+              onPress={handleBackToLogin}
+            >
+              Back to Login
             </Button>
           </div>
         </div>
@@ -186,9 +226,15 @@ function AuthSyncContent() {
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-glass-canvas">
       <div className="glass-orb-a pointer-events-none left-[-6%] top-[-10%]" />
       <div className="glass-orb-b pointer-events-none bottom-[-12%] right-[-4%]" />
-      <div className="glass-card rounded-2xl px-8 py-6 text-center">
-        <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-2 border-sky-300 border-t-sky-600" />
-        <p className="text-sm font-medium text-[var(--ink-2)]">Checking your session...</p>
+      <div className="glass-card rounded-2xl px-10 py-8 text-center">
+        {/* Animated logo with pulse ring */}
+        <div className="relative mx-auto mb-5 flex h-12 w-12 items-center justify-center">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-20" />
+          <FiBook className="relative h-12 w-12 text-blue-500 dark:text-blue-400" />
+        </div>
+        <p className="text-sm font-medium text-[var(--ink-2)] transition-opacity duration-300">
+          {syncSteps[stepIndex]}
+        </p>
       </div>
     </div>
   );

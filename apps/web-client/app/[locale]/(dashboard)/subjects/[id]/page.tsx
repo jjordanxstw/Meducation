@@ -20,10 +20,11 @@ import {
   ModalHeader,
   ModalBody,
   useDisclosure,
+  type Selection,
 } from '@nextui-org/react';
-import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { api } from '@/lib/api';
+import axios from 'axios';
+import { useSubjectDetail } from '@/hooks/use-subjects';
 import {
   FiArrowLeft,
   FiCalendar,
@@ -32,13 +33,31 @@ import {
   FiFileText,
   FiExternalLink,
   FiVideo,
+  FiAlertCircle,
 } from 'react-icons/fi';
 import {
   formatDateThai,
   ResourceType,
 } from '@medical-portal/shared';
-import type { SubjectWithSections, LectureWithResources, Resource } from '@medical-portal/shared';
+import type { LectureWithResources, Resource } from '@medical-portal/shared';
 import { VideoPlayer } from '@/components/client/VideoPlayer';
+import { PageTransition } from '@/components/PageTransition';
+
+// Maps a lecture's primary resource type to a left-side row icon.
+function lectureTypeIcon(lecture: LectureWithResources) {
+  const type = lecture.resources?.[0]?.type;
+  switch (type) {
+    case ResourceType.YOUTUBE:
+    case ResourceType.GDRIVE_VIDEO:
+      return <FiVideo className="h-4 w-4" />;
+    case ResourceType.GDRIVE_PDF:
+      return <FiFileText className="h-4 w-4" />;
+    case ResourceType.EXTERNAL:
+      return <FiExternalLink className="h-4 w-4" />;
+    default:
+      return <FiFileText className="h-4 w-4" />;
+  }
+}
 
 function ResourceButton({
   resource,
@@ -88,12 +107,17 @@ function LectureCard({ lecture }: { lecture: LectureWithResources }) {
 
   return (
     <>
-      <div className="mb-2 rounded-xl border border-slate-200 bg-white px-4 py-4 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-white/[0.08] dark:bg-[#0d1b2e] dark:hover:border-white/15 dark:hover:bg-white/5">
+      <div className="mb-2 rounded-xl border border-slate-200 bg-white px-4 py-4 transition-colors duration-150 hover:border-slate-300 hover:bg-slate-50 dark:border-white/[0.08] dark:bg-[#0d1b2e] dark:hover:border-white/15 dark:hover:bg-white/[0.04]">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex-1 min-w-0 space-y-2">
-            <h4 className="text-sm font-medium text-slate-900 dark:text-white line-clamp-1">
-              {lecture.title}
-            </h4>
+            <div className="flex items-start gap-2.5">
+              <span className="mt-0.5 shrink-0 text-blue-500 dark:text-blue-400" aria-hidden>
+                {lectureTypeIcon(lecture)}
+              </span>
+              <h4 className="text-sm font-medium text-slate-900 dark:text-white line-clamp-1">
+                {lecture.title}
+              </h4>
+            </div>
             {lecture.description && (
               <p className="text-sm text-[var(--ink-2)] line-clamp-2">
                 {lecture.description}
@@ -166,13 +190,14 @@ export default function SubjectDetailPage({
   // Next.js 15: params is a Promise and must be unwrapped
   const { id } = React.use(params);
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['subject', id],
-    queryFn: () => api.subjects.get(id),
-    enabled: !!id,
-  });
+  const { data: subject = null, isLoading, isError, error, refetch } = useSubjectDetail(id);
 
-  const subject: SubjectWithSections | null = data?.data?.data || null;
+  // Track which accordion sections are open so the lecture-count preview can
+  // fade out when its section expands. Defaults to the first section open.
+  const firstSectionId = subject?.sections?.[0]?.id;
+  const [openKeys, setOpenKeys] = useState<Selection | null>(null);
+  const effectiveOpenKeys: Selection =
+    openKeys ?? new Set<string>(firstSectionId ? [firstSectionId] : []);
 
   if (isLoading) {
     return (
@@ -188,27 +213,56 @@ export default function SubjectDetailPage({
     );
   }
 
-  if (error || !subject) {
+  if (isError || !subject) {
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    let title = 'Something went wrong';
+    let message = 'We couldn’t load this subject. Please try again.';
+    if (status === 404 || (!isError && !subject)) {
+      title = 'Subject not found';
+      message = 'This subject may have been moved or removed.';
+    } else if (status === 403) {
+      title = 'Access denied';
+      message = 'You don’t have permission to view this subject.';
+    } else if (isError && status === undefined) {
+      title = 'Connection failed';
+      message = 'Check your internet connection and try again.';
+    }
+
     return (
-      <Card className="glass-surface">
-        <CardBody className="text-center py-16">
-          <p className="text-danger mb-4">Subject not found</p>
-          <Link href="/subjects">
-            <Button
-              variant="flat"
-              className="btn-precise"
-              startContent={<span className="icon-with-text"><FiArrowLeft className="h-4 w-4" /></span>}
-            >
-              Back to Subjects
-            </Button>
-          </Link>
-        </CardBody>
-      </Card>
+      <PageTransition className="mx-auto max-w-2xl px-6">
+        <Card className="glass-surface cursor-default">
+          <CardBody className="flex flex-col items-center gap-4 py-16 text-center">
+            <FiAlertCircle className="h-12 w-12 text-red-400 opacity-50" />
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h3>
+              <p className="text-sm text-slate-500 dark:text-white/50">{message}</p>
+            </div>
+            <div className="mt-2 flex flex-col items-center gap-3 sm:flex-row">
+              <Button
+                color="primary"
+                className="btn-precise"
+                onPress={() => void refetch()}
+              >
+                Try Again
+              </Button>
+              <Link href="/subjects">
+                <Button
+                  variant="light"
+                  className="btn-precise text-[var(--ink-2)]"
+                  startContent={<span className="icon-with-text"><FiArrowLeft className="h-4 w-4" /></span>}
+                >
+                  Back to Subjects
+                </Button>
+              </Link>
+            </div>
+          </CardBody>
+        </Card>
+      </PageTransition>
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-6">
+    <PageTransition className="mx-auto max-w-4xl space-y-6 px-6">
       {/* Back button */}
       <Link href="/subjects" className="inline-block">
         <button
@@ -253,11 +307,14 @@ export default function SubjectDetailPage({
       {subject.sections && subject.sections.length > 0 ? (
         <Accordion
           selectionMode="multiple"
-          defaultExpandedKeys={[subject.sections[0]?.id]}
+          selectedKeys={effectiveOpenKeys}
+          onSelectionChange={(keys) => setOpenKeys(keys)}
           variant="splitted"
           className="gap-3"
         >
-          {subject.sections.map((section, index) => (
+          {subject.sections.map((section, index) => {
+            const isOpen = effectiveOpenKeys === 'all' || effectiveOpenKeys.has(section.id);
+            return (
             <AccordionItem
               key={section.id}
               aria-label={section.name}
@@ -270,7 +327,11 @@ export default function SubjectDetailPage({
                     <span className="text-sm font-semibold text-slate-900 dark:text-white line-clamp-1">
                       {section.name}
                     </span>
-                    <p className="text-xs text-slate-500 dark:text-white/40">
+                    <p
+                      className={`text-xs text-slate-500 transition-opacity duration-200 dark:text-white/40 ${
+                        isOpen ? 'opacity-0' : 'opacity-100'
+                      }`}
+                    >
                       {section.lectures?.length || 0} Lectures
                     </p>
                   </div>
@@ -291,7 +352,8 @@ export default function SubjectDetailPage({
                 )}
               </div>
             </AccordionItem>
-          ))}
+            );
+          })}
         </Accordion>
       ) : (
         <Card className="glass-surface">
@@ -304,6 +366,6 @@ export default function SubjectDetailPage({
           </CardBody>
         </Card>
       )}
-    </div>
+    </PageTransition>
   );
 }

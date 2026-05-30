@@ -46,6 +46,7 @@ import {
   ReloadOutlined,
   TeamOutlined,
   UnorderedListOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { useGetIdentity, useGo, useTranslate } from '@refinedev/core';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -230,6 +231,24 @@ const DashboardPage = () => {
   const [actionFilter, setActionFilter] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Dayjs | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [nowTick, setNowTick] = useState<Dayjs>(() => dayjs());
+
+  // M.10: auto-refresh stats every 60s while the tab is visible so an admin
+  // sees changes made by others without manually refreshing.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        setRefreshTick((tick) => tick + 1);
+      }
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Live "last updated X ago" counter — ticks every 10s.
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(dayjs()), 10_000);
+    return () => clearInterval(id);
+  }, []);
 
   const effectiveRange = useMemo<[Dayjs, Dayjs]>(() => {
     if (rangePreset === 'custom') {
@@ -467,7 +486,8 @@ const DashboardPage = () => {
             <Space size={8} wrap>
               {lastUpdated && (
                 <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
-                  {t('pages.dashboard.lastUpdated', {}, 'Last updated')}: {lastUpdated.format('HH:mm:ss')}
+                  {t('pages.dashboard.lastUpdated', {}, 'Last updated')}:{' '}
+                  {Math.max(0, nowTick.diff(lastUpdated, 'second'))}s {t('pages.dashboard.ago', {}, 'ago')}
                 </Text>
               )}
               <Button
@@ -517,7 +537,7 @@ const DashboardPage = () => {
                           {t(definition.labelKey, {}, definition.fallback)}
                         </Text>
                         <Title level={3} style={{ margin: '4px 0 0', color: definition.accent }}>
-                          {total.toLocaleString()}
+                          {overviewError ? '—' : total.toLocaleString()}
                         </Title>
                       </Col>
                       <Col>
@@ -545,7 +565,7 @@ const DashboardPage = () => {
                         size="small"
                         showInfo={false}
                         strokeColor={definition.accent}
-                        trailColor="#f0f0f0"
+                        trailColor="rgba(255,255,255,0.08)"
                       />
                       <Text type="secondary" style={{ fontSize: 12 }}>
                         {t('pages.dashboard.kpi.activeRatio', { active, total }, `${active}/${total} active`)}
@@ -641,17 +661,27 @@ const DashboardPage = () => {
         </Paragraph>
         {activityLoading ? (
           <Skeleton active paragraph={{ rows: 6 }} />
-        ) : !activity || activity.buckets.length === 0 || activityError ? (
+        ) : activityError ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '32px 0' }}>
+            <WarningOutlined style={{ fontSize: 32, color: '#fbbf24' }} />
+            <Text type="secondary">{t('pages.dashboard.chartUnavailable', {}, 'Chart data unavailable')}</Text>
+            <Button type="link" size="small" onClick={handleRefresh}>
+              {t('buttons.retry', {}, 'Retry')}
+            </Button>
+          </div>
+        ) : !activity || activity.buckets.length === 0 ? (
           <Empty description={t('pages.dashboard.activity.empty', {}, 'No activity in the selected range')} />
         ) : (
           <Line
             data={activityChartData}
+            theme="classicDark"
+            autoFit
             xField="bucket"
             yField="value"
             seriesField="series"
             smooth
             height={260}
-            color={['#1677ff', '#13c2c2', '#fa8c16']}
+            color={['#0070F3', '#7c3aed', '#10b981']}
             point={{ size: 3, shape: 'circle' }}
             xAxis={{ tickCount: 6 }}
             yAxis={{ minInterval: 1 }}
@@ -671,14 +701,16 @@ const DashboardPage = () => {
             ) : (
               <Column
                 data={studentsChartData}
+                theme="classicDark"
+                autoFit
                 xField="year"
                 yField="count"
                 height={280}
-                color="#1677ff"
+                color="#0070F3"
                 columnStyle={{ radius: [6, 6, 0, 0] }}
                 label={{
                   position: 'top',
-                  style: { fill: '#475569', fontSize: 12 },
+                  style: { fill: 'rgba(255,255,255,0.6)', fontSize: 12 },
                 }}
                 tooltip={{
                   formatter: (datum: { count?: number }) => ({
@@ -719,6 +751,13 @@ const DashboardPage = () => {
                   const start = dayjs(startSource);
                   const now = dayjs();
                   const color = EVENT_COLORS[event.type?.toLowerCase()] ?? '#8c8c8c';
+                  const hoursUntil = start.diff(now, 'hour');
+                  const urgencyColor =
+                    hoursUntil < 24
+                      ? '#f87171'
+                      : hoursUntil < 72
+                        ? '#fbbf24'
+                        : 'rgba(255,255,255,0.3)';
                   return {
                     color,
                     label: (
@@ -735,9 +774,13 @@ const DashboardPage = () => {
                           <Text strong>{event.title}</Text>
                           <Tag color={color}>{event.type}</Tag>
                         </Space>
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          {formatRelativeTime(start, now, t)}
-                          {event.location ? ` · ${event.location}` : ''}
+                        <Text style={{ fontSize: 12 }}>
+                          <span style={{ color: urgencyColor, fontWeight: 500 }}>
+                            {formatRelativeTime(start, now, t)}
+                          </span>
+                          {event.location ? (
+                            <span style={{ color: 'rgba(255,255,255,0.4)' }}> · {event.location}</span>
+                          ) : null}
                         </Text>
                       </Space>
                     ),

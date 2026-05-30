@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Noto_Sans, Sarabun } from 'next/font/google';
+import { Toaster } from 'sonner';
+import { NetworkStatus } from '@/components/NetworkStatus';
 
 /**
  * Latin (English) primary face. Subsetted to Latin only so that the browser
@@ -44,7 +46,25 @@ export default function RootLayout({
   return (
     <html suppressHydrationWarning>
       <body className={`${notoSans.variable} ${sarabun.variable} font-sans antialiased`}>
+        <NetworkStatus />
         {children}
+        <Toaster
+          position="bottom-right"
+          theme="dark"
+          toastOptions={{
+            style: {
+              background: '#0d1b2e',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: 'rgba(255,255,255,0.9)',
+              borderRadius: '12px',
+              fontSize: '14px',
+            },
+            classNames: {
+              success: 'border-emerald-500/30',
+              error: 'border-red-500/30',
+            },
+          }}
+        />
       </body>
     </html>
   );

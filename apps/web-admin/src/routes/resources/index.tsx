@@ -27,16 +27,13 @@ import {
 } from 'antd';
 import { ResourceType } from '@medical-portal/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { DatabaseOutlined, LinkOutlined, WarningOutlined } from '@ant-design/icons';
 import type { ResourceWithHierarchy, Section, Subject, Lecture } from '@medical-portal/shared';
 import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
 import { resolveApiErrorMessage } from '../../utils/api-error';
-
-const resourceTypeColors: Record<string, string> = {
-  [ResourceType.YOUTUBE]: 'red',
-  [ResourceType.GDRIVE_VIDEO]: 'blue',
-  [ResourceType.GDRIVE_PDF]: 'green',
-  [ResourceType.EXTERNAL]: 'purple',
-};
+import { ResourceTypeTag } from '../../components/ResourceTypeTag';
+import { AdminEmptyState } from '../../components/AdminEmptyState';
+import { notify } from '../../utils/notify';
 
 const ResourcesList = () => {
   const t = useTranslate();
@@ -45,7 +42,7 @@ const ResourcesList = () => {
   const invalidate = useInvalidate();
   const dataProvider = useDataProvider();
   const { mutateAsync: deleteOne } = useDelete();
-  const { tableProps, setFilters, filters } = useTable<ResourceWithHierarchy>({
+  const { tableProps, setFilters, filters, tableQueryResult } = useTable<ResourceWithHierarchy>({
     syncWithLocation: true,
   });
 
@@ -65,6 +62,7 @@ const ResourcesList = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingResource, setEditingResource] = useState<ResourceWithHierarchy | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formShake, setFormShake] = useState(false);
   const [modalSubjectSearchText, setModalSubjectSearchText] = useState('');
   const [modalSectionSearchText, setModalSectionSearchText] = useState('');
   const [modalLectureSearchText, setModalLectureSearchText] = useState('');
@@ -101,6 +99,14 @@ const ResourcesList = () => {
 
   const modalSubjectId = Form.useWatch('subject_id', form);
   const modalSectionId = Form.useWatch('section_id', form);
+  const modalType = Form.useWatch('type', form);
+
+  const typeAccent: Record<string, string> = {
+    [ResourceType.YOUTUBE]: '#ef4444',
+    [ResourceType.GDRIVE_VIDEO]: '#3b82f6',
+    [ResourceType.GDRIVE_PDF]: '#10b981',
+    [ResourceType.EXTERNAL]: '#a855f7',
+  };
 
   const { data: quickCreateSectionsData } = useList<Section>({
     resource: 'sections',
@@ -110,14 +116,14 @@ const ResourcesList = () => {
     },
   });
 
-  const { data: modalSectionsData } = useList<Section>({
+  const { data: modalSectionsData, isFetching: modalSectionsFetching } = useList<Section>({
     resource: 'sections',
     filters: modalSubjectId ? [{ field: 'subject_id', operator: 'eq', value: modalSubjectId }] : [],
     queryOptions: {
       enabled: !!modalSubjectId,
     },
   });
-  const { data: modalLecturesData } = useList<Lecture>({
+  const { data: modalLecturesData, isFetching: modalLecturesFetching } = useList<Lecture>({
     resource: 'lectures',
     filters: modalSectionId ? [{ field: 'section_id', operator: 'eq', value: modalSectionId }] : [],
     queryOptions: {
@@ -180,6 +186,10 @@ const ResourcesList = () => {
     }
     setFilters(buildFilters(debouncedSearch), 'replace');
   }, [buildFilters, debouncedSearch, setFilters]);
+
+  const hasActiveFilters = Boolean(
+    search || subjectId || sectionId || lectureId || resourceType || typeof isActive === 'boolean',
+  );
 
   const resetFilters = () => {
     setSearch('');
@@ -384,6 +394,9 @@ const ResourcesList = () => {
         'errorFields' in error &&
         Array.isArray((error as { errorFields?: unknown[] }).errorFields)
       ) {
+        // Validation failure — shake the form to draw attention.
+        setFormShake(true);
+        window.setTimeout(() => setFormShake(false), 400);
         return;
       }
       const errorMessage = resolveApiErrorMessage(error, 'notifications.error');
@@ -400,7 +413,8 @@ const ResourcesList = () => {
         onClick: openCreateModal,
       }}
     >
-      <Space wrap size="small" style={{ marginBottom: 12 }} className="resource-filter-bar">
+      <div className="mb-3 rounded-2xl border border-white/[0.08] bg-[#0a1628] p-4">
+      <Space wrap size="small" className="resource-filter-bar">
         <Input.Search
           className="resource-filter-control"
           allowClear
@@ -475,14 +489,53 @@ const ResourcesList = () => {
             { label: t('common.inactive', {}, 'Inactive'), value: false },
           ]}
         />
-        <Button className="resource-filter-button" onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
+        {hasActiveFilters && (
+          <Button className="resource-filter-button" type="text" onClick={resetFilters}>
+            {t('common.clearFilters', {}, 'Clear all')}
+          </Button>
+        )}
+        <Button
+          className="resource-filter-button"
+          type="text"
+          icon={<LinkOutlined />}
+          onClick={() => {
+            void navigator.clipboard
+              ?.writeText(window.location.href)
+              .then(() => notify.success(t('pages.resources.filtersCopied', {}, 'Filter URL copied')))
+              .catch(() => notify.error(t('common.copyFailed', {}, 'Could not copy link')));
+          }}
+        >
+          {t('pages.resources.shareFilters', {}, 'Share filters')}
+        </Button>
       </Space>
+      </div>
 
+      {tableQueryResult?.isError ? (
+        <AdminEmptyState
+          icon={<WarningOutlined />}
+          title={t('pages.resources.error.title', {}, 'Failed to load resources')}
+          subtitle={
+            (tableQueryResult.error as { message?: string } | undefined)?.message ||
+            t('notifications.error', {}, 'Something went wrong')
+          }
+          action={{ label: t('buttons.retry', {}, 'Retry'), onClick: () => void tableQueryResult.refetch() }}
+        />
+      ) : (
       <Table
         {...tableProps}
         rowKey="id"
         size="small"
         scroll={{ x: 'max-content' }}
+        locale={{
+          emptyText: (
+            <AdminEmptyState
+              icon={<DatabaseOutlined />}
+              title={t('pages.resources.empty.title', {}, 'No resources found')}
+              subtitle={t('pages.resources.empty.subtitle', {}, 'Adjust your filters or create a new resource.')}
+              action={{ label: t('buttons.create', {}, 'Create'), onClick: openCreateModal }}
+            />
+          ),
+        }}
       >
         <Table.Column
           dataIndex="subject_name"
@@ -513,11 +566,7 @@ const ResourcesList = () => {
           title={t('pages.resources.fields.type', {}, 'Resource Type')}
           width={150}
           sorter
-          render={(value) => (
-            <Tag color={resourceTypeColors[value] || 'default'}>
-              {resourceTypeOptions.find((o) => o.value === value)?.label || value}
-            </Tag>
-          )}
+          render={(value) => <ResourceTypeTag type={value} />}
         />
         <Table.Column dataIndex="url" title={t('pages.resources.fields.url', {}, 'URL / Video ID')} ellipsis sorter />
         <Table.Column
@@ -557,9 +606,22 @@ const ResourcesList = () => {
           )}
         />
       </Table>
+      )}
 
       <Modal
-        title={editingResource ? t('resources.titles.edit', {}, 'Edit Resource') : t('resources.titles.create', {}, 'Create Resource')}
+        title={
+          <span
+            style={{
+              display: 'inline-block',
+              borderLeft: `4px solid ${typeAccent[modalType] ?? '#0070f3'}`,
+              paddingLeft: 10,
+              fontWeight: 600,
+              fontSize: 18,
+            }}
+          >
+            {editingResource ? t('resources.titles.edit', {}, 'Edit Resource') : t('resources.titles.create', {}, 'Create Resource')}
+          </span>
+        }
         open={isModalOpen}
         onCancel={closeModal}
         onOk={handleSubmit}
@@ -569,7 +631,12 @@ const ResourcesList = () => {
         width={760}
         destroyOnClose
       >
-        <Form form={form} layout="vertical" initialValues={{ order_index: 0, is_active: true }}>
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{ order_index: 0, is_active: true }}
+          className={formShake ? 'admin-shake' : undefined}
+        >
           <Form.Item
             label={<>{t('pages.resources.fields.subject', {}, 'Subject')}</>}
             name="subject_id"
@@ -630,8 +697,13 @@ const ResourcesList = () => {
                 showSearch
                 allowClear
                 disabled={!modalSubjectId}
+                loading={modalSectionsFetching}
                 optionFilterProp="label"
-                placeholder={t('pages.resources.placeholders.section', {}, 'Select section')}
+                placeholder={
+                  modalSubjectId
+                    ? t('pages.resources.placeholders.section', {}, 'Select section')
+                    : t('pages.resources.placeholders.sectionDisabled', {}, 'Select a subject first')
+                }
                 style={{ flex: 1 }}
                 options={modalSections.map((section) => ({
                   label: section.name,
@@ -669,8 +741,13 @@ const ResourcesList = () => {
                 showSearch
                 allowClear
                 disabled={!modalSectionId}
+                loading={modalLecturesFetching}
                 optionFilterProp="label"
-                placeholder={t('pages.resources.placeholders.lecture', {}, 'Select lecture')}
+                placeholder={
+                  modalSectionId
+                    ? t('pages.resources.placeholders.lecture', {}, 'Select lecture')
+                    : t('pages.resources.placeholders.lectureDisabled', {}, 'Select a section first')
+                }
                 style={{ flex: 1 }}
                 options={modalLectures.map((lecture) => ({
                   label: lecture.title,
@@ -707,7 +784,23 @@ const ResourcesList = () => {
             name="url"
             rules={[{ required: true, message: t('pages.resources.validation.urlRequired', {}, 'Please enter URL') }]}
           >
-            <Input placeholder={t('pages.resources.placeholders.url', {}, 'URL or Video ID')} />
+            <Input
+              placeholder={t('pages.resources.placeholders.url', {}, 'URL or Video ID')}
+              addonAfter={
+                <button
+                  type="button"
+                  style={{ border: 0, background: 'transparent', cursor: 'pointer', color: '#60a5fa' }}
+                  onClick={() => {
+                    const url = String(form.getFieldValue('url') ?? '').trim();
+                    if (url) {
+                      window.open(url, '_blank', 'noopener,noreferrer');
+                    }
+                  }}
+                >
+                  {t('pages.resources.testLink', {}, 'Test Link')}
+                </button>
+              }
+            />
           </Form.Item>
 
           <Form.Item label={t('pages.resources.fields.orderIndex', {}, 'Display Order')} name="order_index">

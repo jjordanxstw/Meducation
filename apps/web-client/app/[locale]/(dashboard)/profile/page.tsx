@@ -5,7 +5,8 @@
  * Next.js adapted version
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import axios from 'axios';
 import {
   Card,
   CardBody,
@@ -20,39 +21,111 @@ import {
 } from '@nextui-org/react';
 import { useAuthStore } from '@/stores/auth.store';
 import { api } from '@/lib/api';
-import { FiUser, FiMail, FiBook, FiSave, FiShield } from 'react-icons/fi';
+import { FiUser, FiMail, FiBook, FiSave, FiShield, FiCheck } from 'react-icons/fi';
 import { getYearLevelLabel, getRoleLabel, YEAR_LEVELS } from '@medical-portal/shared';
 import { ProfileSkeleton } from '@/components/skeletons/DashboardSkeletons';
+import { PageTransition } from '@/components/PageTransition';
+import { notify } from '@/lib/notify';
+
+const MIN_NAME = 2;
+const MAX_NAME = 100;
+
+function validateFullName(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return 'Full name is required.';
+  if (trimmed.length < MIN_NAME) return `Full name must be at least ${MIN_NAME} characters.`;
+  if (trimmed.length > MAX_NAME) return `Full name must be ${MAX_NAME} characters or fewer.`;
+  return null;
+}
 
 export default function ProfilePage() {
   const { user, profile, updateProfile, isLoading, isInitialized } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveState, setSaveState] = useState<'idle' | 'success' | 'error'>('idle');
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [nameTouched, setNameTouched] = useState(false);
   const [formData, setFormData] = useState({
     full_name: profile?.full_name || '',
     year_level: profile?.year_level?.toString() || '1',
   });
 
+  const isDirty =
+    isEditing &&
+    (formData.full_name !== (profile?.full_name || '') ||
+      formData.year_level !== (profile?.year_level?.toString() || '1'));
+
+  // Warn before leaving with unsaved edits.
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
+
+  const handleNameChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, full_name: value }));
+    if (saveState !== 'idle') setSaveState('idle');
+    if (nameTouched) setNameError(validateFullName(value));
+  };
+
   const handleSave = async () => {
     if (!profile) return;
 
+    const error = validateFullName(formData.full_name);
+    setNameTouched(true);
+    setNameError(error);
+    if (error) return;
+
+    const trimmedName = formData.full_name.trim();
+    const yearLevel = parseInt(formData.year_level);
+
+    // Optimistic update — reflect the change instantly, roll back on failure.
+    const previous = { full_name: profile.full_name, year_level: profile.year_level };
+    updateProfile({ full_name: trimmedName, year_level: yearLevel });
+
     setIsSaving(true);
+    setSaveState('idle');
     try {
       const response = await api.profile.update(profile.id, {
-        full_name: formData.full_name,
-        year_level: parseInt(formData.year_level),
+        full_name: trimmedName,
+        year_level: yearLevel,
       });
 
       if (response.data.success) {
         updateProfile(response.data.data);
-        setIsEditing(false);
+        notify.success('Profile saved');
+        setSaveState('success');
+        setTimeout(() => {
+          setSaveState('idle');
+          setIsEditing(false);
+        }, 2000);
       }
     } catch (error) {
-      console.error('Failed to update profile:', error);
-      alert('Unable to save data');
+      // Roll back the optimistic change.
+      updateProfile(previous);
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.error?.message || error.response?.data?.message || error.message
+        : 'Unable to save profile';
+      notify.error(message);
+      setSaveState('error');
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setSaveState('idle');
+    setNameError(null);
+    setNameTouched(false);
+    setFormData({
+      full_name: profile?.full_name || '',
+      year_level: profile?.year_level?.toString() || '1',
+    });
   };
 
   if (!isInitialized || isLoading) {
@@ -60,7 +133,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <PageTransition className="mx-auto max-w-4xl space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-[var(--ink-1)]">Profile</h1>
@@ -118,9 +191,14 @@ export default function ProfilePage() {
               labelPlacement="outside"
               placeholder="Enter your full name"
               value={formData.full_name}
-              onValueChange={(value) =>
-                setFormData((prev) => ({ ...prev, full_name: value }))
-              }
+              onValueChange={handleNameChange}
+              onBlur={() => {
+                setNameTouched(true);
+                setNameError(validateFullName(formData.full_name));
+              }}
+              isInvalid={!!nameError}
+              errorMessage={nameError}
+              maxLength={MAX_NAME}
               startContent={<span className="icon-with-text"><FiUser className="h-4 w-4" /></span>}
             />
           ) : (
@@ -186,24 +264,35 @@ export default function ProfilePage() {
                 <Button
                   variant="flat"
                   className="btn-precise w-full justify-center sm:w-auto"
-                  onPress={() => {
-                    setIsEditing(false);
-                    setFormData({
-                      full_name: profile?.full_name || '',
-                      year_level: profile?.year_level?.toString() || '1',
-                    });
-                  }}
+                  isDisabled={isSaving}
+                  onPress={cancelEdit}
                 >
                   Cancel
                 </Button>
                 <Button
-                  color="primary"
-                  startContent={<span className="icon-with-text"><FiSave className="h-4 w-4" /></span>}
+                  color={saveState === 'success' ? 'success' : 'primary'}
+                  startContent={
+                    isSaving ? undefined : (
+                      <span className="icon-with-text">
+                        {saveState === 'success' ? (
+                          <FiCheck className="h-4 w-4" />
+                        ) : (
+                          <FiSave className="h-4 w-4" />
+                        )}
+                      </span>
+                    )
+                  }
                   className="btn-precise w-full justify-center sm:w-auto"
                   onPress={handleSave}
                   isLoading={isSaving}
                 >
-                  Save
+                  {isSaving
+                    ? 'Saving...'
+                    : saveState === 'success'
+                      ? 'Saved!'
+                      : saveState === 'error'
+                        ? 'Try Again'
+                        : 'Save Changes'}
                 </Button>
               </>
             ) : (
@@ -247,6 +336,6 @@ export default function ProfilePage() {
           </div>
         </CardBody>
       </Card>
-    </div>
+    </PageTransition>
   );
 }

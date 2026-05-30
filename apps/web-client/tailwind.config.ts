@@ -53,15 +53,26 @@ const config: Config = {
       },
       animation: {
         marquee: 'marquee 30s linear infinite',
+        'fade-in-up': 'fade-in-up 0.35s ease-out both',
+        'underline-in': 'underline-in 0.3s ease-out both',
       },
       keyframes: {
         marquee: {
           '0%': { transform: 'translateX(0%)' },
           '100%': { transform: 'translateX(-50%)' },
         },
+        'fade-in-up': {
+          '0%': { opacity: '0', transform: 'translateY(12px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'underline-in': {
+          '0%': { transform: 'scaleX(0)' },
+          '100%': { transform: 'scaleX(1)' },
+        },
       },
     },
   },
+  safelist: ['scrollbar-hide'],
   darkMode: 'class',
   plugins: [
     nextui({

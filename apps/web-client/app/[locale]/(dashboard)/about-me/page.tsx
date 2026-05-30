@@ -8,13 +8,52 @@ import { api } from '@/lib/api';
 import { getYearLevelLabel } from '@medical-portal/shared';
 import { useState, useCallback } from 'react';
 import { useLocale } from 'next-intl';
+import { PageTransition } from '@/components/PageTransition';
 
-// Coming Soon badge component - consistent across app
-function ComingSoonBadge() {
+// Small inline "Soon" badge for locked settings rows.
+function SoonBadge() {
   return (
-    <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 text-xs font-medium border border-amber-500/20">
-      Coming Soon
+    <span className="rounded-full border border-amber-500/15 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-400/60">
+      Soon
     </span>
+  );
+}
+
+// A single account-settings row. Locked rows are dimmed, non-interactive, and
+// show a "Soon" badge but remain rendered for layout consistency.
+function SettingRow({
+  title,
+  description,
+  locked = false,
+  withBorder = false,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  locked?: boolean;
+  withBorder?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <div
+      className={`flex min-h-[64px] flex-col gap-2 rounded-lg px-4 py-3 transition-colors duration-150 sm:flex-row sm:items-center sm:justify-between ${
+        withBorder ? 'border-b border-slate-100 dark:border-white/5' : ''
+      } ${locked ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-slate-50 dark:hover:bg-white/[0.04]'}`}
+    >
+      <button
+        type="button"
+        onClick={locked ? undefined : onClick}
+        className={`min-w-0 text-left ${locked ? 'pointer-events-none' : ''}`}
+      >
+        <p className={`font-medium ${locked ? 'text-slate-400 dark:text-white/30' : 'text-foreground'}`}>
+          {title}
+        </p>
+        <p className={`text-sm ${locked ? 'text-slate-400/70 dark:text-white/20' : 'text-[var(--ink-2)]'}`}>
+          {description}
+        </p>
+      </button>
+      {locked && <SoonBadge />}
+    </div>
   );
 }
 
@@ -46,6 +85,7 @@ export default function AboutMePage() {
   }, [isLoggingOut, locale]);
 
   return (
+    <PageTransition>
     <section className="mx-auto max-w-3xl space-y-5 sm:space-y-6">
       {/* Profile Header Card */}
       <Card className="glass-card relative overflow-hidden">
@@ -160,23 +200,17 @@ export default function AboutMePage() {
             <p className="text-sm text-[var(--ink-2)]">Manage your account preferences</p>
           </div>
 
-          {/* Row 1 with bottom border */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between min-h-[64px] px-4 py-3 border-b border-slate-100 dark:border-white/5">
-            <div className="min-w-0">
-              <p className="font-medium text-foreground">Email Notifications</p>
-              <p className="text-sm text-[var(--ink-2)]">Receive updates about your courses</p>
-            </div>
-            <ComingSoonBadge />
-          </div>
-
-          {/* Row 2 */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between min-h-[64px] px-4 py-3">
-            <div className="min-w-0">
-              <p className="font-medium text-foreground">Language</p>
-              <p className="text-sm text-[var(--ink-2)]">Choose your preferred language</p>
-            </div>
-            <ComingSoonBadge />
-          </div>
+          <SettingRow
+            title="Email Notifications"
+            description="Receive updates about your courses"
+            locked
+            withBorder
+          />
+          <SettingRow
+            title="Language"
+            description="Choose your preferred language"
+            locked
+          />
         </CardBody>
       </Card>
 
@@ -197,5 +231,6 @@ export default function AboutMePage() {
         <span>{isLoggingOut ? 'Signing out...' : 'Sign out of MedPi Portal'}</span>
       </button>
     </section>
+    </PageTransition>
   );
 }

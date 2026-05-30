@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { FiVideoOff, FiMaximize2, FiExternalLink } from 'react-icons/fi';
 import { api } from '@/lib/api';
 import { getYouTubeEmbedUrl, ResourceType } from '@medical-portal/shared';
 import type { Resource, WatermarkConfig } from '@medical-portal/shared';
@@ -56,6 +57,30 @@ function normalizeYouTubeVideoId(value: string): string | null {
 export function VideoPlayer({ resource, lectureTitle }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [watermarkPosition, setWatermarkPosition] = useState({ x: 30, y: 20 });
+  const [loaded, setLoaded] = useState(false);
+  const [errored, setErrored] = useState(false);
+
+  // Reset load/error state when the played resource changes (the player is
+  // reused across resources within a lecture).
+  const [trackedId, setTrackedId] = useState(resource.id);
+  if (trackedId !== resource.id) {
+    setTrackedId(resource.id);
+    setLoaded(false);
+    setErrored(false);
+  }
+
+  // Timeout fallback: if the iframe hasn't loaded within 15s, treat as failed.
+  useEffect(() => {
+    if (loaded || errored) {
+      return;
+    }
+    const timer = setTimeout(() => setErrored(true), 15000);
+    return () => clearTimeout(timer);
+  }, [loaded, errored, resource.id]);
+
+  const handleFullscreen = () => {
+    void containerRef.current?.requestFullscreen?.();
+  };
 
   // Fetch watermark configuration
   const { data: watermarkData } = useQuery({
@@ -89,12 +114,12 @@ export function VideoPlayer({ resource, lectureTitle }: VideoPlayerProps) {
       // Fallback to the original value for backward compatibility with existing records.
       return resource.url;
     }
-    // For Google Drive videos
+    // For Google Drive videos — append rm=minimal to strip extra Google UI.
     if (resource.type === ResourceType.GDRIVE_VIDEO) {
       // Extract file ID from various Google Drive URL formats
       const match = resource.url.match(/\/d\/([a-zA-Z0-9_-]+)/);
       const fileId = match ? match[1] : resource.url;
-      return `https://drive.google.com/file/d/${fileId}/preview`;
+      return `https://drive.google.com/file/d/${fileId}/preview?rm=minimal`;
     }
     return resource.url;
   };
@@ -102,19 +127,55 @@ export function VideoPlayer({ resource, lectureTitle }: VideoPlayerProps) {
   return (
     <div
       ref={containerRef}
-      className="watermark-container glass-surface-strong relative w-full aspect-video overflow-hidden rounded-2xl bg-black"
+      className="watermark-container group glass-surface-strong relative w-full aspect-video overflow-hidden rounded-2xl bg-black"
     >
-      {/* Video iframe */}
-      <iframe
-        src={getVideoUrl()}
-        className="w-full h-full"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-        title={lectureTitle}
-      />
+      {/* Error state — iframe failed or timed out */}
+      {errored ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0d1b2e] text-center">
+          <FiVideoOff className="h-12 w-12 text-white/40" />
+          <p className="text-sm font-medium text-white/80">Video unavailable</p>
+          <a
+            href={resource.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-400 hover:text-blue-300"
+          >
+            Open in new tab
+            <FiExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </div>
+      ) : (
+        <>
+          {/* Loading skeleton until the iframe fires onLoad */}
+          {!loaded && (
+            <div className="absolute inset-0 animate-pulse rounded-lg bg-white/[0.06]" aria-hidden />
+          )}
+
+          {/* Video iframe */}
+          <iframe
+            src={getVideoUrl()}
+            className="h-full w-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            title={lectureTitle}
+            onLoad={() => setLoaded(true)}
+            onError={() => setErrored(true)}
+          />
+
+          {/* Fullscreen button — appears on hover */}
+          <button
+            type="button"
+            onClick={handleFullscreen}
+            aria-label="Fullscreen"
+            className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-black/50 text-white/80 opacity-0 backdrop-blur-sm transition-opacity duration-200 hover:bg-black/70 hover:text-white group-hover:opacity-100"
+          >
+            <FiMaximize2 className="h-4 w-4" />
+          </button>
+        </>
+      )}
 
       {/* Watermark Overlay */}
-      {watermarkConfig && (
+      {!errored && watermarkConfig && (
         <>
           {/* Multiple watermark layers for better coverage */}
           <div

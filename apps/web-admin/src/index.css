@@ -36,10 +36,10 @@
   --ink-3: #64748b;
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-default: rgba(148, 163, 184, 0.36);
-  --admin-sider-bg: #0d1b2e;
-  --admin-sider-bg-active: rgba(99, 179, 255, 0.25);
-  --admin-header-bg: #122842;
-  --admin-layout-bg: #07101c;
+  --admin-sider-bg: #070f1a;
+  --admin-sider-bg-active: rgba(0, 112, 243, 0.15);
+  --admin-header-bg: #0a1628;
+  --admin-layout-bg: #07131f;
 }
 
 * {
@@ -78,6 +78,24 @@ h1, h2, h3, h4, h5, h6 {
 :lang(th),
 [lang='th'] {
   font-family: var(--font-thai);
+}
+
+/* Form shake on validation failure (K.1) */
+@keyframes admin-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-8px);
+  }
+  75% {
+    transform: translateX(8px);
+  }
+}
+
+.admin-shake {
+  animation: admin-shake 0.4s ease;
 }
 
 /* Loading spinner */
@@ -194,6 +212,12 @@ h1, h2, h3, h4, h5, h6 {
 .ant-layout-sider .ant-menu-item-selected {
   background: var(--admin-sider-bg-active) !important;
   border-radius: 10px;
+  border-right: 2px solid #0070f3 !important;
+}
+
+.ant-layout-sider .ant-menu-item-selected .ant-menu-title-content,
+.ant-layout-sider .ant-menu-item-selected .anticon {
+  color: #60a5fa !important;
 }
 
 .ant-layout-sider .ant-menu-item-selected:hover,
@@ -202,11 +226,6 @@ h1, h2, h3, h4, h5, h6 {
 .ant-layout-sider .ant-menu-submenu-selected > .ant-menu-submenu-title:hover,
 .ant-layout-sider .ant-menu-submenu-selected > .ant-menu-submenu-title:focus-visible {
   border-radius: 10px;
-}
-
-.ant-layout-sider .ant-menu-item-selected .ant-menu-title-content,
-.ant-layout-sider .ant-menu-item-selected .anticon {
-  color: #ffffff !important;
 }
 
 /* Logout button: support both custom class and legacy last-item rendering */
@@ -335,6 +354,62 @@ h1, h2, h3, h4, h5, h6 {
     height: 56px !important;
     line-height: 56px !important;
     padding: 0 12px !important;
+  }
+}
+
+/* === ADMIN TABLES (H.4) === */
+.refine-layout .ant-table {
+  background: #0a1628 !important;
+}
+
+.refine-layout .ant-table-thead > tr > th {
+  background: #070f1a !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.refine-layout .ant-table-tbody > tr > td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.refine-layout .ant-table-tbody > tr:hover > td,
+.refine-layout .ant-table-tbody > tr.ant-table-row:hover > td {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.refine-layout .ant-table-cell {
+  background: transparent !important;
+}
+
+/* Pagination */
+.refine-layout .ant-pagination .ant-pagination-item {
+  background: #0d1b2e !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.refine-layout .ant-pagination .ant-pagination-item a {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.refine-layout .ant-pagination .ant-pagination-item-active {
+  background: #0070f3 !important;
+  border-color: #0070f3 !important;
+}
+
+.refine-layout .ant-pagination .ant-pagination-item-active a {
+  color: #ffffff !important;
+}
+
+/* Mobile horizontal scroll fade hint */
+@media (max-width: 768px) {
+  .refine-layout .ant-table-content,
+  .refine-layout .ant-table-body {
+    -webkit-mask-image: linear-gradient(to right, black 92%, transparent);
+    mask-image: linear-gradient(to right, black 92%, transparent);
   }
 }
 

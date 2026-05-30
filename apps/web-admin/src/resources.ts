@@ -5,11 +5,11 @@
 
 import React from 'react';
 import {
-  DashboardOutlined,
-  FileTextOutlined,
+  BarChartOutlined,
+  DatabaseOutlined,
   CalendarOutlined,
-  BellOutlined,
-  UserOutlined,
+  NotificationOutlined,
+  TeamOutlined,
   AuditOutlined,
 } from '@ant-design/icons';
 
@@ -19,7 +19,7 @@ export const buildResources = (label: (key: string, fallback: string) => string)
     list: '/dashboard',
     meta: {
       label: label('menu.dashboard', 'Dashboard'),
-      icon: React.createElement(DashboardOutlined),
+      icon: React.createElement(BarChartOutlined),
     },
   },
   {
@@ -29,7 +29,7 @@ export const buildResources = (label: (key: string, fallback: string) => string)
     edit: '/resources/edit/:id',
     meta: {
       label: label('menu.resources', 'Resources'),
-      icon: React.createElement(FileTextOutlined),
+      icon: React.createElement(DatabaseOutlined),
     },
   },
   {
@@ -49,7 +49,7 @@ export const buildResources = (label: (key: string, fallback: string) => string)
     edit: '/announcements/edit/:id',
     meta: {
       label: label('menu.announcements', 'Announcements'),
-      icon: React.createElement(BellOutlined),
+      icon: React.createElement(NotificationOutlined),
     },
   },
   {
@@ -59,7 +59,7 @@ export const buildResources = (label: (key: string, fallback: string) => string)
     show: '/profiles/show/:id',
     meta: {
       label: label('menu.profiles', 'Profiles'),
-      icon: React.createElement(UserOutlined),
+      icon: React.createElement(TeamOutlined),
     },
   },
   {

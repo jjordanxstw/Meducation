@@ -11,6 +11,7 @@ import type {
   GetOneParams,
   GetOneResponse,
 } from '@refinedev/core';
+import axios from 'axios';
 import { authAxios } from './auth-provider';
 import { resolveApiErrorMessage } from '../utils/api-error';
 
@@ -36,7 +37,15 @@ function resolveResourcePath(resource: string): string {
 }
 
 function throwMappedDataProviderError(error: unknown): never {
-  throw new Error(resolveApiErrorMessage(error));
+  // Preserve the HTTP status on the thrown error so React Query's retry logic
+  // (and any caller that inspects it) can branch on it. Refine's HttpError
+  // shape is { message, statusCode }.
+  const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+  const mapped = new Error(resolveApiErrorMessage(error)) as Error & { statusCode?: number };
+  if (status) {
+    mapped.statusCode = status;
+  }
+  throw mapped;
 }
 
 function normalizeParamValue(value: unknown): string {

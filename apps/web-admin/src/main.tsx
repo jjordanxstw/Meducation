@@ -27,7 +27,7 @@ import '@fontsource/sarabun/700.css';
 import { dataProvider } from './providers/data-provider';
 import { authProvider } from './providers/auth-provider';
 import { i18nProvider, LOCALE_CHANGED_EVENT } from './providers/i18n-provider';
-import { ConfigProvider, App as AntdApp } from 'antd';
+import { ConfigProvider, App as AntdApp, theme as antdTheme } from 'antd';
 import { RefineThemes, useNotificationProvider } from '@refinedev/antd';
 import routerBindings from '@refinedev/react-router-v6';
 import thTH from 'antd/locale/th_TH';
@@ -59,7 +59,7 @@ assertValidApiUrl(resolvedApiUrl);
 
 const Root: React.FC = () => {
   const [locale, setLocale] = React.useState(i18nProvider.getLocale() ?? 'th');
-  const tokens = HERO_TOKENS.light;
+  const tokens = HERO_TOKENS.dark;
 
   React.useEffect(() => {
     const onLocaleChange = (event: Event) => {
@@ -85,6 +85,7 @@ const Root: React.FC = () => {
       locale={thTH}
       theme={{
         ...RefineThemes.Blue,
+        algorithm: antdTheme.darkAlgorithm,
         token: {
           colorPrimary: tokens.brand.primary,
           colorBgBase: tokens.bg.canvas,
@@ -111,9 +112,9 @@ const Root: React.FC = () => {
         },
         components: {
           Layout: {
-            bodyBg: tokens.admin.layoutBg,
-            headerBg: tokens.admin.headerBg,
-            siderBg: tokens.admin.siderBg,
+            bodyBg: '#07131f',
+            headerBg: '#0a1628',
+            siderBg: '#070f1a',
           },
           Card: {
             borderRadiusLG: 16,
@@ -153,6 +154,31 @@ const Root: React.FC = () => {
             warnWhenUnsavedChanges: true,
             projectId: 'medical-portal-admin',
             disableTelemetry: true,
+            // Deletes are optimistic with a 5s "Undo" window surfaced by the
+            // notification provider (K.2 soft-delete UX).
+            mutationMode: 'undoable',
+            undoableTimeout: 5000,
+            // Hardened React Query defaults (M.3). Admin data changes via the
+            // admin's own actions, so a slightly longer staleTime is fine; we
+            // still refetch on focus so multi-admin edits stay visible.
+            reactQuery: {
+              clientConfig: {
+                defaultOptions: {
+                  queries: {
+                    staleTime: 60_000,
+                    gcTime: 10 * 60_000,
+                    refetchOnWindowFocus: true,
+                    retry: (count: number, error: unknown) => {
+                      const status = (error as { statusCode?: number } | null)?.statusCode;
+                      if (status && [401, 403, 404, 422].includes(status)) {
+                        return false;
+                      }
+                      return count < 1;
+                    },
+                  },
+                },
+              },
+            },
           }}
         >
           <RouterProvider router={router} />
@@ -161,6 +187,9 @@ const Root: React.FC = () => {
     </ConfigProvider>
   );
 };
+
+// Admin panel uses the dark premium aesthetic.
+document.documentElement.classList.add('dark');
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <StrictMode>

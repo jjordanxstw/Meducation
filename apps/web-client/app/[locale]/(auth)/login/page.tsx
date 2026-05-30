@@ -8,6 +8,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname as useIntlPathname, useRouter as useIntlRouter } from '@/i18n/routing';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import {
   FiMoon,
@@ -45,9 +46,12 @@ function GoogleIcon({ className }: { className?: string }) {
 function LoginContent() {
   const { status } = useSession();
   const router = useRouter();
+  const intlRouter = useIntlRouter();
+  const intlPathname = useIntlPathname();
   const searchParams = useSearchParams();
   const { theme, toggleTheme, isReady } = useAppTheme();
   const locale = useLocale();
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const authError = searchParams.get('error');
   const handledAuthErrorRef = useRef(false);
   const mounted = useSyncExternalStore(
@@ -76,7 +80,10 @@ function LoginContent() {
     AccessDenied: 'Access denied by Google or application policy.',
   };
 
-  const effectiveAuthError = authError || storedAuthError;
+  // storedAuthError comes from sessionStorage, which is unavailable during SSR.
+  // Only factor it in after mount so the hydration render matches the server
+  // (where it is always null) and avoids a text mismatch in the banner below.
+  const effectiveAuthError = authError || (mounted ? storedAuthError : null);
   const authErrorMessage = effectiveAuthError
     ? authErrorMessageMap[effectiveAuthError] || 'Authentication failed. Please try again.'
     : null;
@@ -98,42 +105,73 @@ function LoginContent() {
 
   const handleSignInClick = async () => {
     const to = searchParams.get('to') || '/';
+    setIsRedirecting(true);
     // Note: callbackUrl must be the full path including locale for the auth flow
     await signIn('google', { callbackUrl: `/${locale}/auth/sync?to=${encodeURIComponent(to)}` });
   };
 
+  // Switch locale while staying on the login page, preserving query params.
+  const handleLocaleChange = (newLocale: string) => {
+    const qs = searchParams.toString();
+    intlRouter.replace(qs ? `${intlPathname}?${qs}` : intlPathname, { locale: newLocale });
+  };
+
+  const isSigningIn = status === 'loading' || isRedirecting;
+
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 p-3 dark:bg-[radial-gradient(ellipse_at_top,_#0d1b2e_0%,_#07131f_50%,_#050a12_100%)] sm:p-4">
-      {/* Animated background orbs */}
+      {/* Animated gradient orbs — atmospheric depth */}
       <div
-        className="pointer-events-none absolute left-[10%] top-[20%] h-64 w-64 rounded-full bg-blue-500/5 blur-3xl dark:bg-blue-500/10"
-        style={{ animation: 'pulse 6s ease-in-out infinite' }}
+        className="pointer-events-none absolute left-[-4rem] top-[-4rem] h-96 w-96 rounded-full blur-3xl"
+        style={{
+          background: 'radial-gradient(circle at 35% 35%, rgba(0,112,243,0.20), transparent 70%)',
+          animation: 'login-float 6s ease-in-out infinite',
+        }}
       />
       <div
-        className="pointer-events-none absolute bottom-[15%] right-[8%] h-80 w-80 rounded-full bg-teal-500/5 blur-3xl dark:bg-teal-500/[0.08]"
-        style={{ animation: 'pulse 8s ease-in-out infinite', animationDelay: '2s' }}
-      />
-      <div
-        className="pointer-events-none absolute left-[50%] top-[60%] h-56 w-56 -translate-x-1/2 rounded-full bg-blue-400/3 blur-3xl dark:bg-blue-400/6"
-        style={{ animation: 'pulse 7s ease-in-out infinite', animationDelay: '4s' }}
+        className="pointer-events-none absolute bottom-[-5rem] right-[-4rem] h-96 w-96 rounded-full blur-3xl"
+        style={{
+          background: 'radial-gradient(circle at 50% 50%, rgba(0,112,243,0.20), transparent 70%)',
+          animation: 'login-float 6s ease-in-out infinite',
+          animationDelay: '3s',
+        }}
       />
 
-      {/* Theme toggle button */}
-      <button
-        type="button"
-        aria-label="Toggle theme"
-        onClick={toggleTheme}
-        className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-600 backdrop-blur-sm transition-all hover:bg-slate-100 hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white sm:right-5 sm:top-5"
-      >
-        {mounted && isReady && theme === 'dark' ? (
-          <FiSun className="h-4 w-4" />
-        ) : (
-          <FiMoon className="h-4 w-4" />
-        )}
-      </button>
+      {/* Top-right controls: language switcher + theme toggle */}
+      <div className="absolute right-3 top-3 z-20 flex items-center gap-2 sm:right-5 sm:top-5">
+        <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white/80 p-1 backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+          {(['en', 'th'] as const).map((loc) => (
+            <button
+              key={loc}
+              type="button"
+              onClick={() => handleLocaleChange(loc)}
+              className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all duration-150 ${
+                locale === loc
+                  ? 'bg-white text-slate-900 shadow-sm dark:bg-[#0d1b2e] dark:text-white'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-white/40 dark:hover:text-white/70'
+              }`}
+            >
+              {loc.toUpperCase()}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          aria-label="Toggle theme"
+          onClick={toggleTheme}
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-600 backdrop-blur-sm transition-all hover:bg-slate-100 hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white"
+        >
+          {mounted && isReady && theme === 'dark' ? (
+            <FiSun className="h-4 w-4" />
+          ) : (
+            <FiMoon className="h-4 w-4" />
+          )}
+        </button>
+      </div>
 
+      <div className="relative w-full max-w-[420px]">
       {/* Main card */}
-      <div className="relative w-full max-w-[420px] rounded-2xl border border-slate-200 bg-white/95 p-8 shadow-xl shadow-slate-200/50 backdrop-blur-xl dark:border-white/10 dark:bg-[#0d1b2e]/90 dark:shadow-black/60">
+      <div className="relative w-full rounded-2xl border border-slate-200 bg-white/95 p-8 shadow-xl shadow-slate-200/50 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04] dark:shadow-2xl dark:shadow-black/50">
         {/* Top shine line */}
         <div
           className="absolute left-0 right-0 top-0 h-px rounded-t-2xl"
@@ -190,11 +228,14 @@ function LoginContent() {
         <button
           type="button"
           onClick={handleSignInClick}
-          disabled={status === 'loading'}
-          className="mt-4 flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-gray-800 shadow-md shadow-slate-200/50 transition-all duration-200 hover:bg-slate-50 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed dark:border-transparent dark:shadow-black/30 dark:hover:bg-gray-50"
+          disabled={isSigningIn}
+          className="mt-4 flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-gray-800 shadow-md shadow-slate-200/50 transition-all duration-200 hover:bg-slate-50 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:shadow-black/30 dark:hover:bg-white/[0.08]"
         >
-          {status === 'loading' ? (
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+          {isSigningIn ? (
+            <>
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500 dark:border-white/20 dark:border-t-blue-400" />
+              {isRedirecting ? 'Redirecting…' : 'Continue with Google'}
+            </>
           ) : (
             <>
               <GoogleIcon className="h-5 w-5" />
@@ -210,15 +251,21 @@ function LoginContent() {
         </div>
       </div>
 
-      {/* CSS keyframes for pulse animation */}
+      {/* Accepted email domains notice */}
+      <p className="mt-4 text-center text-xs text-slate-400 dark:text-white/40">
+        Only @student.mahidol.edu and @student.mahidol.ac.th email addresses are accepted.
+      </p>
+      </div>
+
+      {/* CSS keyframes for the floating gradient orbs */}
       <style jsx global>{`
-        @keyframes pulse {
+        @keyframes login-float {
           0%,
           100% {
-            opacity: 0.08;
+            transform: translateY(0);
           }
           50% {
-            opacity: 0.15;
+            transform: translateY(-20px);
           }
         }
       `}</style>

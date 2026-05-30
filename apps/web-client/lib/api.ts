@@ -4,6 +4,7 @@
  */
 
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
+import { notify } from './notify';
 
 type RequestConfig = AxiosRequestConfig & {
   _retry?: boolean;
@@ -276,6 +277,9 @@ export const apiClient: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true,
+  // Hard timeout so a hung backend never leaves a request (and its skeleton)
+  // spinning indefinitely.
+  timeout: 15_000,
 });
 
 apiClient.interceptors.request.use(async (config) => {
@@ -329,6 +333,17 @@ apiClient.interceptors.response.use(
       }
 
       safeRedirect(buildSyncRedirectTarget());
+    }
+
+    // User-facing feedback for transient conditions. We still rethrow so React
+    // Query (and any explicit error handlers) continue to observe the error.
+    if (typeof window !== 'undefined' && !(error instanceof axios.CanceledError)) {
+      if (status === 429) {
+        notify.error('Too many requests — please wait a moment');
+      } else if (!error.response) {
+        // No response object => network failure / timeout / DNS, etc.
+        notify.error('Connection failed');
+      }
     }
 
     return Promise.reject(error);

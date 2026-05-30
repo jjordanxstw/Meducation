@@ -13,6 +13,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import DOMPurify from 'dompurify';
 import { resolveApiErrorMessage } from '../utils/api-error';
 import { attachCsrfInterceptor } from '../utils/api';
+import { notify } from '../utils/notify';
 
 /**
  * Sanitize error message to prevent XSS attacks
@@ -191,6 +192,17 @@ authAxios.interceptors.response.use(
     const originalRequest = error.config as RetryableRequestConfig | undefined;
     const status = error.response?.status;
     const url = originalRequest?.url;
+
+    // Surface transient infrastructure errors that aren't otherwise toasted.
+    // (401/403 are handled as auth failures below; 4xx validation errors are
+    // mapped by the data provider + surfaced by Refine.)
+    if (status === 429) {
+      notify.error('Too many requests — please wait a moment');
+    } else if (status && status >= 500) {
+      notify.error('Server error — please try again or contact support');
+    } else if (!error.response && error.code !== 'ERR_CANCELED') {
+      notify.error('Connection failed — check your network');
+    }
 
     if (!originalRequest || !status || !isAuthFailureStatus(status)) {
       return Promise.reject(error);

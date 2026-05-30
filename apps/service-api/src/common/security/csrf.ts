@@ -44,8 +44,11 @@ export class CsrfMiddleware implements NestMiddleware {
       return next();
     }
 
-    // req.path excludes the query string; compare against the prefixed routes.
-    if (EXCLUDED_PATHS.has(req.path)) {
+    // This middleware is mounted via forRoutes('*'), so Express strips the mount
+    // path and req.path/req.url collapse to '/'. req.originalUrl retains the full
+    // prefixed path; strip the query string before comparing to the routes.
+    const pathname = req.originalUrl.split('?')[0];
+    if (EXCLUDED_PATHS.has(pathname)) {
       return next();
     }
 
@@ -71,7 +74,7 @@ export class CsrfMiddleware implements NestMiddleware {
       error: {
         statusCode: 403,
         timestamp,
-        path: req.url,
+        path: req.originalUrl,
         method: req.method,
         message: 'CSRF token missing or invalid',
         errorCode: ErrorCode.AUTHZ_FORBIDDEN,
