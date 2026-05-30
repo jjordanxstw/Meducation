@@ -26,7 +26,7 @@ function sanitizeErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return DOMPurify.sanitize(error.message, { ALLOWED_TAGS: [] });
   }
-  return 'เกิดข้อผิดพลาด';
+  return 'Something went wrong';
 }
 
 const API_URL = '/api/v1';
@@ -287,7 +287,7 @@ export const authProvider: AuthProvider = {
         success: false,
         error: {
           name: 'ValidationError',
-          message: 'กรุณาระบุชื่อผู้ใช้และรหัสผ่าน'
+          message: 'Please enter your username and password'
         }
       };
     }
@@ -301,7 +301,7 @@ export const authProvider: AuthProvider = {
         success: false,
         error: {
           name: 'ValidationError',
-          message: 'กรุณาเข้าสู่ระบบด้วยรหัสผู้ใช้ (ห้ามใช้อีเมล)'
+          message: 'Please sign in with your username (not an email address)'
         }
       };
     }
@@ -347,7 +347,7 @@ export const authProvider: AuthProvider = {
           success: false,
           error: {
             name: 'LoginError',
-            message: 'ไม่พบข้อมูลผู้ใช้'
+            message: 'User account not found'
           },
         };
       }
@@ -362,7 +362,7 @@ export const authProvider: AuthProvider = {
           success: false,
           error: {
             name: 'AccessDenied',
-            message: 'บัญชีผู้ใช้ถูกระงับ กรุณาติดต่อผู้ดูแลระบบ'
+            message: 'Your account has been suspended. Please contact an administrator.'
           },
         };
       }
@@ -383,7 +383,7 @@ export const authProvider: AuthProvider = {
         redirectTo: '/dashboard',
       };
     } catch (error: unknown) {
-      const errorMessage = resolveApiErrorMessage(error, 'errors.auth.invalidCredentials');
+      const errorMessage = resolveApiErrorMessage(error, 'Invalid username or password');
 
       logSecurityEvent('login_failed', {
         reason: 'authentication_failed',
@@ -570,7 +570,7 @@ export const authProvider: AuthProvider = {
           redirectTo: '/login',
           error: {
             name: 'Unauthorized',
-            message: resolveApiErrorMessage(error, 'errors.auth.tokenInvalid'),
+            message: resolveApiErrorMessage(error, 'Invalid session, please log in again'),
           },
         };
       }
@@ -579,7 +579,7 @@ export const authProvider: AuthProvider = {
         return {
           error: {
             name: 'Forbidden',
-            message: resolveApiErrorMessage(error, 'errors.authorization.forbidden'),
+            message: resolveApiErrorMessage(error, 'You do not have permission to perform this action'),
           },
         };
       }

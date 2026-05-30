@@ -1,17 +1,7 @@
 /**
  * Calendar Events List Page
  * Displays date-only calendar events
- */
-
-import { List, useTable, EditButton, DeleteButton } from '@refinedev/antd';
-import { useList, useTranslate } from '@refinedev/core';
-import { Button, DatePicker, Input, Select, Space, Table, Tag } from 'antd';
-import dayjs from 'dayjs';
-import { EventType } from '@medical-portal/shared';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Subject } from '@medical-portal/shared';
-import type { CalendarEvent } from '@medical-portal/shared';
-import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
+ */import { List, useTable, EditButton, DeleteButton } from '@refinedev/antd';import { useList } from '@refinedev/core';import { Button, DatePicker, Input, Select, Space, Table, Tag } from 'antd';import dayjs from 'dayjs';import { EventType } from '@medical-portal/shared';import { useCallback, useEffect, useRef, useState } from 'react';import type { Subject } from '@medical-portal/shared';import type { CalendarEvent } from '@medical-portal/shared';import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
 
 const eventTypeColors: Record<string, string> = {
   [EventType.EXAM]: 'red',
@@ -21,17 +11,16 @@ const eventTypeColors: Record<string, string> = {
 };
 
 const CalendarList = () => {
-  const t = useTranslate();
   const { tableProps, setFilters, filters } = useTable<CalendarEvent>({
     syncWithLocation: true,
   });
   const { RangePicker } = DatePicker;
 
   const eventTypeOptions = [
-    { label: `🎯 ${t('pages.calendar.types.exam', {}, 'Exam')}`, value: EventType.EXAM },
-    { label: `📚 ${t('pages.calendar.types.lecture', {}, 'Lecture')}`, value: EventType.LECTURE },
-    { label: `🎉 ${t('pages.calendar.types.holiday', {}, 'Holiday')}`, value: EventType.HOLIDAY },
-    { label: `📅 ${t('pages.calendar.types.event', {}, 'Event')}`, value: EventType.EVENT },
+    { label: `🎯 ${'Exam'}`, value: EventType.EXAM },
+    { label: `📚 ${'Lecture'}`, value: EventType.LECTURE },
+    { label: `🎉 ${'Holiday'}`, value: EventType.HOLIDAY },
+    { label: `📅 ${'Event'}`, value: EventType.EVENT },
   ];
 
   const { data: subjectsData } = useList<Subject>({ resource: 'subjects' });
@@ -101,14 +90,14 @@ const CalendarList = () => {
   };
 
   return (
-    <List createButtonProps={{ children: t('buttons.create', {}, 'Create') }}>
+    <List createButtonProps={{ children: 'Create' }}>
       <Space wrap size="small" style={{ marginBottom: 12 }} className="resource-filter-bar">
         <Input.Search
           className="resource-filter-control"
           allowClear
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder={t('common.searchPlaceholder', {}, 'Search')}
+          placeholder={'Search'}
           style={{ width: 220 }}
         />
         <Select
@@ -116,7 +105,7 @@ const CalendarList = () => {
           allowClear
           value={eventType}
           onChange={(value) => setEventType(value)}
-          placeholder={t('pages.calendar.fields.type', {}, 'Type')}
+          placeholder={'Type'}
           style={{ width: 180 }}
           options={eventTypeOptions}
         />
@@ -125,7 +114,7 @@ const CalendarList = () => {
           allowClear
           value={subjectId}
           onChange={(value) => setSubjectId(value)}
-          placeholder={t('pages.calendar.fields.subject', {}, 'Related Subject')}
+          placeholder={'Related Subject'}
           style={{ width: 260 }}
           options={subjects.map((subject) => ({
             label: `${subject.code} - ${subject.name}`,
@@ -135,8 +124,8 @@ const CalendarList = () => {
         <RangePicker
           className="resource-filter-control"
           placeholder={[
-            t('pages.calendar.placeholders.dateRangeStart', {}, 'Start date'),
-            t('pages.calendar.placeholders.dateRangeEnd', {}, 'End date'),
+            'Start date',
+            'End date',
           ]}
           value={
             dateRange
@@ -151,7 +140,7 @@ const CalendarList = () => {
             setDateRange([values[0].format('YYYY-MM-DD'), values[1].format('YYYY-MM-DD')]);
           }}
         />
-        <Button className="resource-filter-button" onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
+        <Button className="resource-filter-button" onClick={resetFilters}>{'Clear'}</Button>
       </Space>
 
       <Table
@@ -160,10 +149,10 @@ const CalendarList = () => {
         size="small"
         scroll={{ x: 'max-content' }}
       >
-        <Table.Column dataIndex="title" title={t('pages.calendar.fields.title', {}, 'Title')} ellipsis sorter />
+        <Table.Column dataIndex="title" title={'Title'} ellipsis sorter />
         <Table.Column
           dataIndex="type"
-          title={t('pages.calendar.fields.type', {}, 'Type')}
+          title={'Type'}
           width={130}
           sorter
           render={(value) => (
@@ -174,7 +163,7 @@ const CalendarList = () => {
         />
         <Table.Column
           dataIndex="start_date"
-          title={t('pages.calendar.fields.startDate', {}, 'Start Date')}
+          title={'Start Date'}
           width={130}
           sorter
           render={(value) =>
@@ -183,7 +172,7 @@ const CalendarList = () => {
         />
         <Table.Column
           dataIndex="end_date"
-          title={t('pages.calendar.fields.endDate', {}, 'End Date')}
+          title={'End Date'}
           width={130}
           sorter
           render={(value) =>
@@ -191,7 +180,7 @@ const CalendarList = () => {
           }
         />
         <Table.Column
-          title={t('pages.calendar.fields.actions', {}, 'Actions')}
+          title={'Actions'}
           fixed="right"
           width={120}
           render={(_, record: CalendarEvent) => (

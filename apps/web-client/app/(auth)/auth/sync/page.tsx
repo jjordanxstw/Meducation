@@ -3,11 +3,10 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
-import { Button } from '@nextui-org/react';
+import { Button } from '@heroui/react';
 import { FiRefreshCw, FiBook, FiAlertCircle } from 'react-icons/fi';
 import axios from 'axios';
 import { api } from '@/lib/api';
-import { useLocale } from 'next-intl';
 
 const SAFE_EXACT_PATHS = new Set([
   '/',
@@ -66,7 +65,6 @@ function AuthSyncContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
-  const locale = useLocale();
   const hasStartedSync = useRef(false);
   const isHandlingAuthFailure = useRef(false);
   const [syncError, setSyncError] = useState<'network_unreachable' | null>(null);
@@ -98,7 +96,7 @@ function AuthSyncContent() {
   };
 
   const handleBackToLogin = () => {
-    router.replace(`/${locale}/login`);
+    router.replace('/login');
   };
 
   const handleAuthFailure = useCallback(async (errorCode: 'session_expired' | 'domain_restricted' = 'session_expired') => {
@@ -126,8 +124,8 @@ function AuthSyncContent() {
       // Ignore storage failures.
     }
 
-    router.replace(`/${locale}/login?error=${errorCode}`);
-  }, [router, locale]);
+    router.replace(`/login?error=${errorCode}`);
+  }, [router]);
 
   useEffect(() => {
     const syncBackendSession = async () => {
@@ -137,7 +135,7 @@ function AuthSyncContent() {
 
       if (status !== 'authenticated') {
         if (status === 'unauthenticated') {
-          router.replace(`/${locale}/login`);
+          router.replace('/login');
         }
         return;
       }
@@ -158,7 +156,7 @@ function AuthSyncContent() {
         await api.auth.verify(idToken);
 
         const to = sanitizeTargetPath(searchParams.get('to'));
-        router.replace(`/${locale}${to}`);
+        router.replace(to);
       } catch (error) {
         if (axios.isAxiosError(error)) {
           const statusCode = error.response?.status;
@@ -183,7 +181,7 @@ function AuthSyncContent() {
     };
 
     void syncBackendSession();
-  }, [status, session, router, searchParams, syncError, handleAuthFailure, locale]);
+  }, [status, session, router, searchParams, syncError, handleAuthFailure]);
 
   if (syncError) {
     return (
@@ -230,7 +228,7 @@ function AuthSyncContent() {
         {/* Animated logo with pulse ring */}
         <div className="relative mx-auto mb-5 flex h-12 w-12 items-center justify-center">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-20" />
-          <FiBook className="relative h-12 w-12 text-blue-500 dark:text-blue-400" />
+          <FiBook className="relative h-12 w-12 text-blue-500" />
         </div>
         <p className="text-sm font-medium text-[var(--ink-2)] transition-opacity duration-300">
           {syncSteps[stepIndex]}

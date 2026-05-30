@@ -1,18 +1,10 @@
 /**
  * Profiles List Page
  * Migrated from src/app/profiles/page.tsx
- */
-
-import { List, useTable, EditButton, ShowButton } from '@refinedev/antd';
-import { useTranslate } from '@refinedev/core';
-import { Avatar, Button, Input, Select, Space, Table, Tag } from 'antd';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { UserRole } from '@medical-portal/shared';
-import type { Profile } from '@medical-portal/shared';
-import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
+ */import { List, useTable, EditButton, ShowButton } from '@refinedev/antd';
+import { Avatar, Button, Input, Select, Space, Table, Tag } from 'antd';import { useCallback, useEffect, useRef, useState } from 'react';import { UserRole } from '@medical-portal/shared';import type { Profile } from '@medical-portal/shared';import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
 
 const ProfilesList = () => {
-  const t = useTranslate();
   const { tableProps, setFilters, filters } = useTable<Profile>({
     syncWithLocation: true,
   });
@@ -77,7 +69,7 @@ const ProfilesList = () => {
           allowClear
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder={t('common.searchPlaceholder', {}, 'Search')}
+          placeholder={'Search'}
           style={{ width: 260 }}
         />
         <Select
@@ -85,11 +77,11 @@ const ProfilesList = () => {
           allowClear
           value={role}
           onChange={(value) => setRole(value)}
-          placeholder={t('pages.profiles.fields.role', {}, 'Role')}
+          placeholder={'Role'}
           style={{ width: 180 }}
           options={[
-            { label: t('pages.profiles.roles.admin', {}, 'Admin'), value: UserRole.ADMIN },
-            { label: t('pages.profiles.roles.student', {}, 'Student'), value: UserRole.STUDENT },
+            { label: 'Admin', value: UserRole.ADMIN },
+            { label: 'Student', value: UserRole.STUDENT },
           ]}
         />
         <Select
@@ -97,14 +89,14 @@ const ProfilesList = () => {
           allowClear
           value={yearLevel}
           onChange={(value) => setYearLevel(value)}
-          placeholder={t('pages.profiles.fields.yearLevel', {}, 'Year Level')}
+          placeholder={'Year Level'}
           style={{ width: 160 }}
           options={[1, 2, 3, 4, 5, 6].map((value) => ({
-            label: `${t('common.yearPrefix', {}, 'Year')} ${value}`,
+            label: `${'Year'} ${value}`,
             value,
           }))}
         />
-        <Button className="resource-filter-button" onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
+        <Button className="resource-filter-button" onClick={resetFilters}>{'Clear'}</Button>
       </Space>
 
       <Table
@@ -124,31 +116,31 @@ const ProfilesList = () => {
             </Avatar>
           )}
         />
-        <Table.Column dataIndex="full_name" title={t('pages.profiles.fields.fullName', {}, 'Full Name')} ellipsis sorter />
-        <Table.Column dataIndex="email" title={t('pages.profiles.fields.email', {}, 'Email')} ellipsis sorter />
-        <Table.Column dataIndex="student_id" title={t('pages.profiles.fields.studentId', {}, 'Student ID')} ellipsis sorter />
+        <Table.Column dataIndex="full_name" title={'Full Name'} ellipsis sorter />
+        <Table.Column dataIndex="email" title={'Email'} ellipsis sorter />
+        <Table.Column dataIndex="student_id" title={'Student ID'} ellipsis sorter />
         <Table.Column
           dataIndex="year_level"
-          title={t('pages.profiles.fields.yearLevel', {}, 'Year Level')}
+          title={'Year Level'}
           width={80}
           sorter
-          render={(value) => (value ? `${t('common.yearPrefix', {}, 'Year')} ${value}` : t('common.notAvailable', {}, '-'))}
+          render={(value) => (value ? `${'Year'} ${value}` : '-')}
         />
         <Table.Column
           dataIndex="role"
-          title={t('pages.profiles.fields.role', {}, 'Role')}
+          title={'Role'}
           width={120}
           sorter
           render={(value) => (
             <Tag color={value === UserRole.ADMIN ? 'gold' : 'blue'}>
               {value === UserRole.ADMIN
-                ? t('pages.profiles.roles.admin', {}, 'Admin')
-                : t('pages.profiles.roles.student', {}, 'Student')}
+                ? 'Admin'
+                : 'Student'}
             </Tag>
           )}
         />
         <Table.Column
-          title={t('common.actions', {}, 'Actions')}
+          title={'Actions'}
           fixed="right"
           width={120}
           render={(_, record: Profile) => (

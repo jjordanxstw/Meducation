@@ -1,14 +1,7 @@
 /**
  * Audit Logs List Page
  * Migrated from src/app/audit-logs/page.tsx
- */
-
-import { List, useTable } from '@refinedev/antd';
-import { useTranslate, useGetLocale } from '@refinedev/core';
-import { Button, DatePicker, Input, Select, Space, Table, Tag } from 'antd';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import dayjs from 'dayjs';
-import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
+ */import { List, useTable } from '@refinedev/antd';import { Button, DatePicker, Input, Select, Space, Table, Tag } from 'antd';import { useCallback, useEffect, useRef, useState } from 'react';import dayjs from 'dayjs';import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
 
 interface AuditLog {
   id: string;
@@ -24,9 +17,6 @@ interface AuditLog {
 }
 
 const AuditLogsList = () => {
-  const t = useTranslate();
-  const getLocale = useGetLocale();
-  const locale = getLocale() || 'th';
   const { tableProps, setFilters, filters } = useTable<AuditLog>({
     syncWithLocation: true,
   });
@@ -109,7 +99,7 @@ const AuditLogsList = () => {
           allowClear
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder={t('common.searchPlaceholder', {}, 'Search')}
+          placeholder={'Search'}
           style={{ width: 240 }}
         />
         <Select
@@ -117,7 +107,7 @@ const AuditLogsList = () => {
           allowClear
           value={action}
           onChange={(value) => setAction(value)}
-          placeholder={t('common.actions', {}, 'Actions')}
+          placeholder={'Actions'}
           style={{ width: 160 }}
           options={[
             { label: 'INSERT', value: 'INSERT' },
@@ -130,7 +120,7 @@ const AuditLogsList = () => {
           allowClear
           value={tableName}
           onChange={(value) => setTableName(value)}
-          placeholder={t('pages.auditLogs.fields.table', {}, 'Table')}
+          placeholder={'Table'}
           style={{ width: 180 }}
           options={[
             { label: 'profiles', value: 'profiles' },
@@ -144,8 +134,8 @@ const AuditLogsList = () => {
         <RangePicker
           className="resource-filter-control"
           placeholder={[
-            t('pages.auditLogs.placeholders.dateRangeStart', {}, 'Start date'),
-            t('pages.auditLogs.placeholders.dateRangeEnd', {}, 'End date'),
+            'Start date',
+            'End date',
           ]}
           value={
             dateRange
@@ -160,7 +150,7 @@ const AuditLogsList = () => {
             setDateRange([values[0].startOf('day').toISOString(), values[1].endOf('day').toISOString()]);
           }}
         />
-        <Button className="resource-filter-button" onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
+        <Button className="resource-filter-button" onClick={resetFilters}>{'Clear'}</Button>
       </Space>
 
       <Table
@@ -171,14 +161,14 @@ const AuditLogsList = () => {
       >
         <Table.Column
           dataIndex="table_name"
-          title={t('pages.auditLogs.fields.table', {}, 'Table')}
+          title={'Table'}
           width={150}
           sorter
           render={(value) => <Tag>{value}</Tag>}
         />
         <Table.Column
           dataIndex="action"
-          title={t('common.actions', {}, 'Actions')}
+          title={'Actions'}
           width={120}
           sorter
           render={(value) => (
@@ -189,45 +179,45 @@ const AuditLogsList = () => {
         />
         <Table.Column
           dataIndex="record_id"
-          title={t('pages.auditLogs.fields.recordId', {}, 'Record ID')}
+          title={'Record ID'}
           width={100}
           sorter
         />
         <Table.Column
           dataIndex="old_data"
-          title={t('pages.auditLogs.fields.oldValues', {}, 'Old Values')}
+          title={'Old Values'}
           ellipsis
           sorter
           render={(value) => {
-            if (!value || typeof value !== 'object') return t('common.notAvailable', {}, '-');
+            if (!value || typeof value !== 'object') return '-';
             try {
               return JSON.stringify(value).slice(0, 50) + '...';
             } catch {
-              return t('common.notAvailable', {}, '-');
+              return '-';
             }
           }}
         />
         <Table.Column
           dataIndex="new_data"
-          title={t('pages.auditLogs.fields.newValues', {}, 'New Values')}
+          title={'New Values'}
           ellipsis
           sorter
           render={(value) => {
-            if (!value || typeof value !== 'object') return t('common.notAvailable', {}, '-');
+            if (!value || typeof value !== 'object') return '-';
             try {
               return JSON.stringify(value).slice(0, 50) + '...';
             } catch {
-              return t('common.notAvailable', {}, '-');
+              return '-';
             }
           }}
         />
         <Table.Column
           dataIndex="created_at"
-          title={t('pages.auditLogs.fields.createdAt', {}, 'Created At')}
+          title={'Created At'}
           width={180}
           sorter
           render={(value) =>
-            new Date(value).toLocaleString(locale === 'th' ? 'th-TH' : 'en-US', {
+            new Date(value).toLocaleString('en-US', {
               dateStyle: 'short',
               timeStyle: 'short',
             })

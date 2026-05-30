@@ -3,43 +3,17 @@
 @tailwind utilities;
 
 :root {
-  --color-primary: #0070f3;
-  --color-primary-dark: #0050c7;
-  --bg-canvas: #f7f8fa;
+  --brand: #2f80ed;
+  --brand-hover: #1b66cc;
+  --bg-canvas: #f4f8ff;
   --bg-surface: #ffffff;
-  --bg-surface-elevated: #ffffff;
   --ink-1: #0f172a;
-  --ink-2: #334155;
+  --ink-2: #475569;
   --ink-3: #64748b;
-  --border-subtle: rgba(15, 23, 42, 0.08);
-  --border-default: rgba(15, 23, 42, 0.14);
-  --admin-sider-bg: #12243c;
-  --admin-sider-bg-active: rgba(255, 255, 255, 0.16);
-  --admin-header-bg: #ffffff;
-  --admin-layout-bg: #f7f8fa;
-  /*
-   * Typography
-   * - Latin glyphs use Noto Sans (loaded from @fontsource/noto-sans).
-   * - Thai glyphs use Sarabun (loaded from @fontsource/sarabun).
-   * The browser's per-glyph fallback handles mixed-script content.
-   */
-  --font-latin: 'Noto Sans', 'Sarabun', sans-serif;
-  --font-thai: 'Sarabun', 'Noto Sans', sans-serif;
-}
-
-.dark {
-  --bg-canvas: #07101c;
-  --bg-surface: #0d1b2e;
-  --bg-surface-elevated: #122842;
-  --ink-1: #f1f5f9;
-  --ink-2: #94a3b8;
-  --ink-3: #64748b;
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-default: rgba(148, 163, 184, 0.36);
-  --admin-sider-bg: #070f1a;
-  --admin-sider-bg-active: rgba(0, 112, 243, 0.15);
-  --admin-header-bg: #0a1628;
-  --admin-layout-bg: #07131f;
+  --border-subtle: rgba(15, 23, 42, 0.07);
+  --border-default: rgba(15, 23, 42, 0.12);
+  --sider-active: rgba(47, 128, 237, 0.10);
+  --font-sans: 'Noto Sans', system-ui, sans-serif;
 }
 
 * {
@@ -49,49 +23,29 @@
 }
 
 html,
-body {
+body,
+#root {
+  height: 100%;
   max-width: 100vw;
   overflow-x: hidden;
 }
 
-html,
-body,
-#root {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
-
 body {
-  font-family: var(--font-latin);
-  overflow-x: hidden;
-  overflow-y: auto;
-  background: var(--admin-layout-bg);
+  font-family: var(--font-sans);
+  background: var(--bg-canvas);
   color: var(--ink-1);
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-latin);
+  font-family: var(--font-sans);
   letter-spacing: -0.01em;
-}
-
-:lang(th),
-[lang='th'] {
-  font-family: var(--font-thai);
 }
 
 /* Form shake on validation failure (K.1) */
 @keyframes admin-shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-8px);
-  }
-  75% {
-    transform: translateX(8px);
-  }
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
 }
 
 .admin-shake {
@@ -102,8 +56,8 @@ h1, h2, h3, h4, h5, h6 {
 .spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid var(--color-primary);
+  border: 4px solid var(--border-subtle);
+  border-top: 4px solid var(--brand);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -111,11 +65,6 @@ h1, h2, h3, h4, h5, h6 {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
-}
-
-/* Prevent layout shift during sidebar load */
-#app-root {
-  min-height: 100vh;
 }
 
 /* Hide scrollbar but allow scrolling */
@@ -128,184 +77,58 @@ h1, h2, h3, h4, h5, h6 {
   scrollbar-width: none;
 }
 
-/* Sidebar shell (legacy Refine ThemedLayout) */
-.ant-layout-sider,
-.ant-layout-sider .ant-layout-sider-children,
-.ant-layout-sider > div:first-child,
-.ant-layout-sider > div:first-child > div,
-.ant-layout-sider .ant-menu {
-  background: var(--admin-sider-bg) !important;
-  width: 100% !important;
-}
-
+/* === Sidebar (Refine ThemedLayout) — light surface === */
 .ant-layout-sider {
-  border-right: 0 !important;
-  overflow: hidden !important;
+  border-right: 1px solid var(--border-subtle) !important;
 }
 
-.ant-layout-sider > div:first-child {
-  margin-bottom: 0 !important;
-  border-bottom: 0 !important;
-}
-
-.ant-layout-sider > div:first-child,
-.ant-layout-sider > div:first-child * {
-  color: #ffffff !important;
-}
-
-.ant-layout-sider .ant-layout-sider-children {
-  position: relative;
-  z-index: 1;
-}
-
-/* Menu layout: no seam at top and no horizontal jitter */
-.ant-layout-sider .ant-layout-sider-children > .ant-menu {
-  flex: 1;
-  min-height: 0;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
-  margin-top: 0 !important;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
-  padding-left: 6px;
-  padding-right: 6px;
-}
-
-/* Hide bottom trigger; custom trigger is rendered in title area */
-.ant-layout-sider-trigger,
-.sidebar-collapse-trigger {
-  display: none !important;
-}
-
-/* Sider gets `ant-layout-sider-has-trigger` from antd when collapsible,
-   which adds `padding-bottom: 48px` to reserve space for the (hidden) trigger.
-   We hide the trigger via the rule above, so reclaim that space too. */
-.ant-layout-sider.ant-layout-sider-has-trigger {
-  padding-bottom: 0 !important;
-}
-
-.ant-layout-sider .ant-layout-sider-zero-width-trigger {
-  background: var(--admin-sider-bg) !important;
-}
-
-/* Regular item colors */
-.ant-layout-sider .ant-menu-item,
-.ant-layout-sider .ant-menu-submenu-title,
-.ant-layout-sider .ant-menu-title-content,
-.ant-layout-sider .ant-menu-item .anticon {
-  color: rgba(255, 255, 255, 0.92) !important;
+.ant-layout-sider .ant-menu {
+  border-inline-end: 0 !important;
 }
 
 .ant-layout-sider .ant-menu-item,
 .ant-layout-sider .ant-menu-submenu-title {
-  max-width: 100%;
-  width: calc(100% - 4px);
-  margin-inline: 2px !important;
-  min-height: 44px;
-  line-height: 44px;
+  width: calc(100% - 12px);
+  margin-inline: 6px !important;
+  min-height: 42px;
+  line-height: 42px;
   border-radius: 10px;
-  padding-left: 22px !important;
 }
 
 .ant-layout-sider .ant-menu-item-selected {
-  background: var(--admin-sider-bg-active) !important;
-  border-radius: 10px;
-  border-right: 2px solid #0070f3 !important;
+  background: var(--sider-active) !important;
+  font-weight: 600;
 }
 
-.ant-layout-sider .ant-menu-item-selected .ant-menu-title-content,
-.ant-layout-sider .ant-menu-item-selected .anticon {
-  color: #60a5fa !important;
-}
-
-.ant-layout-sider .ant-menu-item-selected:hover,
-.ant-layout-sider .ant-menu-item-selected.ant-menu-item-active,
-.ant-layout-sider .ant-menu-item-selected:focus-visible,
-.ant-layout-sider .ant-menu-submenu-selected > .ant-menu-submenu-title:hover,
-.ant-layout-sider .ant-menu-submenu-selected > .ant-menu-submenu-title:focus-visible {
-  border-radius: 10px;
-}
-
-/* Logout button: support both custom class and legacy last-item rendering */
+/* Logout button pinned to the bottom of the menu */
 .ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout,
 .ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child {
   margin-top: auto;
-  margin-bottom: 16px;
-  border-radius: 10px;
-  background: #ef4444 !important;
-  color: #ffffff !important;
+  margin-bottom: 12px;
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout .anticon,
+.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child .anticon {
+  color: #dc2626 !important;
 }
 
 .ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout:hover,
-.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout.ant-menu-item-active,
-.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout.ant-menu-item-selected,
-.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout:focus-visible,
-.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child:hover,
-.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child.ant-menu-item-active,
-.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child.ant-menu-item-selected,
-.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child:focus-visible {
-  background: #dc2626 !important;
-  color: #ffffff !important;
+.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child:hover {
+  background: #fecaca !important;
 }
 
-.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout .ant-menu-title-content,
-.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout .anticon,
-.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child .ant-menu-title-content,
-.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child .anticon {
-  color: #ffffff !important;
-}
-
-/* Collapsed mode: slightly narrower sider + centered logout */
-.ant-layout-sider.ant-layout-sider-collapsed {
-  width: 70px !important;
-  min-width: 76px !important;
-  max-width: 76px !important;
-  flex: 0 0 76px !important;
-}
-
-.ant-layout-sider.ant-layout-sider-collapsed > div:first-child {
-  width: 76px !important;
-}
-
-.ant-layout-sider.ant-layout-sider-collapsed .ant-layout-sider-children > .ant-menu .admin-sider-logout,
-.ant-layout-sider.ant-layout-sider-collapsed .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child {
-  width: 60px;
-  min-width: 60px;
-  margin-left: auto;
-  margin-right: auto;
-  margin-bottom: 8px;
-  padding-inline: calc(50% - 12px) !important;
-}
-
-.ant-layout-sider.ant-layout-sider-collapsed .ant-layout-sider-children > .ant-menu .admin-sider-logout .anticon,
-.ant-layout-sider.ant-layout-sider-collapsed .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child .anticon {
-  margin-inline-end: 0 !important;
-  display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  opacity: 1 !important;
-}
-
-.ant-layout-sider.ant-layout-sider-collapsed .ant-layout-sider-children > .ant-menu .admin-sider-logout .ant-menu-title-content,
-.ant-layout-sider.ant-layout-sider-collapsed .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child .ant-menu-title-content {
+/* Hide the default bottom collapse trigger; expansion handled in the title area */
+.ant-layout-sider-trigger {
   display: none !important;
 }
 
-.ant-layout-sider .sider-top-trigger {
-  color: #ffffff !important;
+.ant-layout-sider.ant-layout-sider-has-trigger {
+  padding-bottom: 0 !important;
 }
 
-.ant-layout-sider .sider-top-trigger:hover,
-.ant-layout-sider .sider-top-trigger:focus-visible {
-  color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.16) !important;
-}
-
-/* Own scroll in content area so header/sider remain stable */
+/* === Layout scroll: sticky sider + header, scrollable content === */
 .refine-layout,
 .refine-layout > .ant-layout {
   height: 100%;
@@ -328,91 +151,33 @@ h1, h2, h3, h4, h5, h6 {
   flex-direction: column;
 }
 
-.refine-layout .ant-layout-content {
-  height: auto;
-  min-height: 0;
+.refine-layout .ant-layout-sider-children > .ant-menu {
   flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.refine-layout .ant-layout-content {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding-bottom: 24px;
 }
 
-.refine-layout .ant-layout-content > div {
-  min-height: fit-content;
-}
-
-@media (max-width: 992px) {
-  .ant-layout-sider .ant-layout-sider-children > .ant-menu {
-    height: calc(100% - 48px);
-  }
-
-  .refine-layout .ant-layout-content {
-    padding: 12px;
-  }
-
-  .refine-layout .ant-layout-header {
-    height: 56px !important;
-    line-height: 56px !important;
-    padding: 0 12px !important;
-  }
-}
-
-/* === ADMIN TABLES (H.4) === */
-.refine-layout .ant-table {
-  background: #0a1628 !important;
-}
-
+/* === Tables: subtle uppercase headers === */
 .refine-layout .ant-table-thead > tr > th {
-  background: #070f1a !important;
-  color: rgba(255, 255, 255, 0.5) !important;
   font-size: 11px !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.06em !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  letter-spacing: 0.05em !important;
+  color: var(--ink-3) !important;
 }
 
-.refine-layout .ant-table-tbody > tr > td {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-}
-
-.refine-layout .ant-table-tbody > tr:hover > td,
-.refine-layout .ant-table-tbody > tr.ant-table-row:hover > td {
-  background: rgba(255, 255, 255, 0.03) !important;
-}
-
-.refine-layout .ant-table-cell {
-  background: transparent !important;
-}
-
-/* Pagination */
-.refine-layout .ant-pagination .ant-pagination-item {
-  background: #0d1b2e !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-.refine-layout .ant-pagination .ant-pagination-item a {
-  color: rgba(255, 255, 255, 0.6) !important;
-}
-
-.refine-layout .ant-pagination .ant-pagination-item-active {
-  background: #0070f3 !important;
-  border-color: #0070f3 !important;
-}
-
-.refine-layout .ant-pagination .ant-pagination-item-active a {
-  color: #ffffff !important;
-}
-
-/* Mobile horizontal scroll fade hint */
-@media (max-width: 768px) {
-  .refine-layout .ant-table-content,
-  .refine-layout .ant-table-body {
-    -webkit-mask-image: linear-gradient(to right, black 92%, transparent);
-    mask-image: linear-gradient(to right, black 92%, transparent);
-  }
-}
-
+/* === Responsive filter bars === */
 .resource-filter-bar {
   width: 100%;
 }
@@ -425,30 +190,40 @@ h1, h2, h3, h4, h5, h6 {
   min-width: 88px;
 }
 
+@media (max-width: 992px) {
+  .refine-layout .ant-layout-content {
+    padding: 12px;
+  }
+
+  .refine-layout .ant-layout-header {
+    height: 56px !important;
+    line-height: 56px !important;
+    padding: 0 12px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .refine-layout .ant-table-content,
+  .refine-layout .ant-table-body {
+    -webkit-mask-image: linear-gradient(to right, black 92%, transparent);
+    mask-image: linear-gradient(to right, black 92%, transparent);
+  }
+
+  .resource-filter-control,
+  .resource-filter-control.ant-picker {
+    width: 100% !important;
+    max-width: 100%;
+  }
+}
+
 @media (max-width: 576px) {
   .refine-layout .ant-card {
     border-radius: 12px;
-  }
-
-  .refine-layout .ant-space {
-    row-gap: 8px;
-  }
-
-  .resource-filter-bar {
-    margin-bottom: 8px !important;
   }
 
   .resource-filter-control,
   .resource-filter-control.ant-picker,
   .resource-filter-button {
     width: 100% !important;
-  }
-}
-
-@media (max-width: 768px) {
-  .resource-filter-control,
-  .resource-filter-control.ant-picker {
-    width: 100% !important;
-    max-width: 100%;
   }
 }

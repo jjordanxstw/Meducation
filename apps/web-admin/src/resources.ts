@@ -1,6 +1,6 @@
 /**
  * Refine Resources Configuration
- * Defines menu items and resources for the sidebar
+ * Defines menu items and resources for the sidebar.
  */
 
 import React from 'react';
@@ -13,12 +13,12 @@ import {
   AuditOutlined,
 } from '@ant-design/icons';
 
-export const buildResources = (label: (key: string, fallback: string) => string) => [
+export const buildResources = () => [
   {
     name: 'dashboard',
     list: '/dashboard',
     meta: {
-      label: label('menu.dashboard', 'Dashboard'),
+      label: 'Dashboard',
       icon: React.createElement(BarChartOutlined),
     },
   },
@@ -28,7 +28,7 @@ export const buildResources = (label: (key: string, fallback: string) => string)
     create: '/resources/create',
     edit: '/resources/edit/:id',
     meta: {
-      label: label('menu.resources', 'Resources'),
+      label: 'Resources',
       icon: React.createElement(DatabaseOutlined),
     },
   },
@@ -38,7 +38,7 @@ export const buildResources = (label: (key: string, fallback: string) => string)
     create: '/calendar/create',
     edit: '/calendar/edit/:id',
     meta: {
-      label: label('menu.calendar', 'Calendar'),
+      label: 'Calendar',
       icon: React.createElement(CalendarOutlined),
     },
   },
@@ -48,7 +48,7 @@ export const buildResources = (label: (key: string, fallback: string) => string)
     create: '/announcements/create',
     edit: '/announcements/edit/:id',
     meta: {
-      label: label('menu.announcements', 'Announcements'),
+      label: 'Announcements',
       icon: React.createElement(NotificationOutlined),
     },
   },
@@ -58,7 +58,7 @@ export const buildResources = (label: (key: string, fallback: string) => string)
     edit: '/profiles/edit/:id',
     show: '/profiles/show/:id',
     meta: {
-      label: label('menu.profiles', 'Profiles'),
+      label: 'Profiles',
       icon: React.createElement(TeamOutlined),
     },
   },
@@ -66,7 +66,7 @@ export const buildResources = (label: (key: string, fallback: string) => string)
     name: 'audit-logs',
     list: '/audit-logs',
     meta: {
-      label: label('menu.auditLogs', 'Audit Logs'),
+      label: 'Audit Logs',
       icon: React.createElement(AuditOutlined),
     },
   },

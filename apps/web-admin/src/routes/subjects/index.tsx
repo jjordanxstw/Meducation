@@ -1,17 +1,10 @@
 /**
  * Subjects List Page
  * Migrated from src/app/subjects/page.tsx
- */
-
-import { List, useTable, EditButton, ShowButton, DeleteButton } from '@refinedev/antd';
-import { useTranslate } from '@refinedev/core';
-import { Button, Input, Select, Space, Table, Tag } from 'antd';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Subject } from '@medical-portal/shared';
-import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
+ */import { List, useTable, EditButton, ShowButton, DeleteButton } from '@refinedev/antd';
+import { Button, Input, Select, Space, Table, Tag } from 'antd';import { useCallback, useEffect, useRef, useState } from 'react';import type { Subject } from '@medical-portal/shared';import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
 
 const SubjectsList = () => {
-  const t = useTranslate();
   const { tableProps, setFilters, filters } = useTable<Subject>({
     syncWithLocation: true,
   });
@@ -70,14 +63,14 @@ const SubjectsList = () => {
   };
 
   return (
-    <List createButtonProps={{ children: t('buttons.create', {}, 'Create') }}>
+    <List createButtonProps={{ children: 'Create' }}>
       <Space wrap size="small" style={{ marginBottom: 12 }} className="resource-filter-bar">
         <Input.Search
           className="resource-filter-control"
           allowClear
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder={t('common.searchPlaceholder', {}, 'Search')}
+          placeholder={'Search'}
           style={{ width: 240 }}
         />
         <Select
@@ -85,10 +78,10 @@ const SubjectsList = () => {
           allowClear
           value={yearLevel}
           onChange={(value) => setYearLevel(value)}
-          placeholder={t('pages.subjects.fields.yearLevel', {}, 'Year Level')}
+          placeholder={'Year Level'}
           style={{ width: 160 }}
           options={[1, 2, 3, 4, 5, 6].map((value) => ({
-            label: `${t('common.yearPrefix', {}, 'Year')} ${value}`,
+            label: `${'Year'} ${value}`,
             value,
           }))}
         />
@@ -97,14 +90,14 @@ const SubjectsList = () => {
           allowClear
           value={isActive}
           onChange={(value) => setIsActive(value)}
-          placeholder={t('common.status', {}, 'Status')}
+          placeholder={'Status'}
           style={{ width: 160 }}
           options={[
-            { label: t('common.active', {}, 'Active'), value: true },
-            { label: t('common.inactive', {}, 'Inactive'), value: false },
+            { label: 'Active', value: true },
+            { label: 'Inactive', value: false },
           ]}
         />
-        <Button className="resource-filter-button" onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
+        <Button className="resource-filter-button" onClick={resetFilters}>{'Clear'}</Button>
       </Space>
 
       <Table
@@ -113,34 +106,34 @@ const SubjectsList = () => {
         size="small"
         scroll={{ x: 'max-content' }}
       >
-        <Table.Column dataIndex="code" title={t('pages.subjects.fields.code', {}, 'Subject Code')} width={150} sorter/>
-        <Table.Column dataIndex="name" title={t('pages.subjects.fields.name', {}, 'Subject Name')} ellipsis sorter/>
+        <Table.Column dataIndex="code" title={'Subject Code'} width={150} sorter/>
+        <Table.Column dataIndex="name" title={'Subject Name'} ellipsis sorter/>
         <Table.Column
           dataIndex="year_level"
-          title={t('pages.subjects.fields.yearLevel', {}, 'Year Level')}
+          title={'Year Level'}
           width={150}
-          render={(value) => `${t('common.yearPrefix', {}, 'Year')} ${value}`}
+          render={(value) => `${'Year'} ${value}`}
           sorter
         />
         <Table.Column
           dataIndex="order_index"
-          title={t('common.order', {}, 'Order')}
+          title={'Order'}
           width={10}
           sorter
         />
         <Table.Column
           dataIndex="is_active"
-          title={t('common.status', {}, 'Status')}
+          title={'Status'}
           width={10}
           sorter
           render={(value) => (
             <Tag color={value ? 'green' : 'red'}>
-              {value ? t('common.active', {}, 'Active') : t('common.inactive', {}, 'Inactive')}
+              {value ? 'Active' : 'Inactive'}
             </Tag>
           )}
         />
         <Table.Column
-          title={t('common.actions', {}, 'Actions')}
+          title={'Actions'}
           fixed="right"
           width={10}
           render={(_, record: Subject) => (

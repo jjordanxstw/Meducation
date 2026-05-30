@@ -1,18 +1,11 @@
 /**
  * Lectures Create Page
  * Migrated from src/app/lectures/create/page.tsx
- */
-
-import { useList, useTranslate } from '@refinedev/core';
-import { Create, useForm } from '@refinedev/antd';
-import { useMemo } from 'react';
-import { Form, Input, InputNumber, Switch, Select, DatePicker } from 'antd';
-import type { Lecture, Section, Subject } from '@medical-portal/shared';
+ */import { useList } from '@refinedev/core';import { Create, useForm } from '@refinedev/antd';import { useMemo } from 'react';import { Form, Input, InputNumber, Switch, Select, DatePicker } from 'antd';import type { Lecture, Section, Subject } from '@medical-portal/shared';
 
 const { TextArea } = Input;
 
 const LecturesCreate = () => {
-  const t = useTranslate();
   const { formProps, saveButtonProps } = useForm<Lecture>();
   const selectedSubjectId = Form.useWatch('subject_id', formProps.form);
 
@@ -42,12 +35,12 @@ const LecturesCreate = () => {
     <Create saveButtonProps={saveButtonProps}>
       <Form {...formProps} layout="vertical" style={{ maxWidth: 600 }}>
         <Form.Item
-          label={t('pages.lectures.fields.subject', {}, 'Subject')}
+          label={'Subject'}
           name="subject_id"
-          rules={[{ required: true, message: t('pages.lectures.validation.subjectRequired', {}, 'Please select a subject') }]}
+          rules={[{ required: true, message: 'Please select a subject' }]}
         >
           <Select
-            placeholder={t('pages.lectures.placeholders.subject', {}, 'Select subject')}
+            placeholder={'Select subject'}
             options={subjects.map((subject) => ({
               label: `${subject.code} - ${subject.name}`,
               value: subject.id,
@@ -59,12 +52,12 @@ const LecturesCreate = () => {
         </Form.Item>
 
         <Form.Item
-          label={t('pages.lectures.fields.section', {}, 'Section')}
+          label={'Section'}
           name="section_id"
-          rules={[{ required: true, message: t('pages.lectures.validation.sectionRequired', {}, 'Please select a section') }]}
+          rules={[{ required: true, message: 'Please select a section' }]}
         >
           <Select
-            placeholder={t('pages.lectures.placeholders.section', {}, 'Select section')}
+            placeholder={'Select section'}
             options={sectionOptions}
             disabled={!selectedSubjectId}
             showSearch
@@ -73,30 +66,30 @@ const LecturesCreate = () => {
         </Form.Item>
 
         <Form.Item
-          label={t('pages.lectures.fields.title', {}, 'Lecture Title')}
+          label={'Lecture Title'}
           name="title"
-          rules={[{ required: true, message: t('pages.lectures.validation.titleRequired', {}, 'Please enter title') }]}
+          rules={[{ required: true, message: 'Please enter title' }]}
         >
-          <Input placeholder={t('pages.lectures.placeholders.title', {}, 'e.g. Lecture 1: Heart Anatomy')} />
+          <Input placeholder={'e.g. Lecture 1: Heart Anatomy'} />
         </Form.Item>
 
-        <Form.Item label={t('pages.lectures.fields.description', {}, 'Description')} name="description">
+        <Form.Item label={'Description'} name="description">
           <TextArea rows={3} />
         </Form.Item>
 
-        <Form.Item label={t('pages.lectures.fields.lectureDate', {}, 'Lecture Date')} name="lecture_date">
+        <Form.Item label={'Lecture Date'} name="lecture_date">
           <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
         </Form.Item>
 
-        <Form.Item label={t('pages.lectures.fields.lecturerName', {}, 'Lecturer')} name="lecturer_name">
-          <Input placeholder={t('pages.lectures.placeholders.lecturerName', {}, 'Lecturer full name')} />
+        <Form.Item label={'Lecturer'} name="lecturer_name">
+          <Input placeholder={'Lecturer full name'} />
         </Form.Item>
 
-        <Form.Item label={t('pages.lectures.fields.orderIndex', {}, 'Display Order')} name="order_index" initialValue={0}>
+        <Form.Item label={'Display Order'} name="order_index" initialValue={0}>
           <InputNumber min={0} style={{ width: '100%' }} />
         </Form.Item>
 
-        <Form.Item label={t('pages.lectures.fields.isActive', {}, 'Active')} name="is_active" valuePropName="checked" initialValue={true}>
+        <Form.Item label={'Active'} name="is_active" valuePropName="checked" initialValue={true}>
           <Switch />
         </Form.Item>
       </Form>

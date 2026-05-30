@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { Link } from '@/i18n/routing';
+import Link from 'next/link';
 import { HighlightText } from '@/components/ui/HighlightText';
 import { usePrefetchSubject } from '@/hooks/use-subjects';
 
@@ -70,7 +70,7 @@ export function SubjectCard({
         onMouseLeave={cancelPrefetch}
         onFocus={startPrefetch}
         onBlur={cancelPrefetch}
-        className="group flex h-40 min-h-[10rem] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-[var(--bg-surface)] transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/40 dark:border-white/10 dark:hover:border-white/20"
+        className="group flex h-40 min-h-[10rem] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-[var(--bg-surface)] shadow-[var(--shadow-subtle)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[var(--shadow-lg)]"
       >
         {/* Top accent bar (gradient per year) */}
         <div
@@ -80,21 +80,21 @@ export function SubjectCard({
 
         {/* Content */}
         <div className="flex flex-1 flex-col gap-1 p-4">
-          <span className="font-mono text-xs text-slate-400 dark:text-white/40">{code}</span>
-          <h3 className="font-heading text-base font-semibold leading-tight text-slate-900 line-clamp-2 dark:text-white">
+          <span className="font-mono text-xs text-slate-400">{code}</span>
+          <h3 className="font-heading text-base font-semibold leading-tight text-slate-900 line-clamp-2">
             <HighlightText text={name} query={searchQuery} />
           </h3>
           {description ? (
-            <p className="text-xs text-slate-500 line-clamp-2 dark:text-white/50">{description}</p>
+            <p className="text-xs text-slate-500 line-clamp-2">{description}</p>
           ) : null}
 
           {/* Bottom row: year pill + lecture count badge */}
           <div className="mt-auto flex items-center gap-2 pt-2">
-            <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs text-blue-600 dark:border-blue-500/20 dark:bg-blue-500/15 dark:text-blue-300">
+            <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs text-blue-600">
               Year {yearLevel}
             </span>
             {typeof lectureCount === 'number' && (
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500 dark:border-white/10 dark:bg-white/[0.06] dark:text-white/60">
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500">
                 {lectureCount} {lectureCount === 1 ? 'lecture' : 'lectures'}
               </span>
             )}

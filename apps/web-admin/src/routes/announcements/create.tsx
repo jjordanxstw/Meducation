@@ -2,15 +2,11 @@
  * Announcements Create Page
  */
 
-import { useTranslate } from '@refinedev/core';
-import { Create, useForm } from '@refinedev/antd';
-import { Form, Input, Switch } from 'antd';
-import type { Announcement } from '@medical-portal/shared';
+import { Create, useForm } from '@refinedev/antd';import { Form, Input, Switch } from 'antd';import type { Announcement } from '@medical-portal/shared';
 
 const { TextArea } = Input;
 
 const AnnouncementsCreate = () => {
-  const t = useTranslate();
   const { formProps, saveButtonProps } = useForm<Announcement>();
 
   return (
@@ -22,23 +18,23 @@ const AnnouncementsCreate = () => {
         initialValues={{ is_published: true, is_pinned: false }}
       >
         <Form.Item
-          label={t('pages.announcements.fields.title', {}, 'Title')}
+          label={'Title'}
           name="title"
-          rules={[{ required: true, message: t('pages.announcements.validation.titleRequired', {}, 'Please enter title') }]}
+          rules={[{ required: true, message: 'Please enter title' }]}
         >
-          <Input placeholder={t('pages.announcements.placeholders.title', {}, 'Announcement title')} />
+          <Input placeholder={'Announcement title'} />
         </Form.Item>
 
         <Form.Item
-          label={t('pages.announcements.fields.content', {}, 'Content')}
+          label={'Content'}
           name="content"
-          rules={[{ required: true, message: t('pages.announcements.validation.contentRequired', {}, 'Please enter content') }]}
+          rules={[{ required: true, message: 'Please enter content' }]}
         >
-          <TextArea rows={5} placeholder={t('pages.announcements.placeholders.content', {}, 'Announcement content')} />
+          <TextArea rows={5} placeholder={'Announcement content'} />
         </Form.Item>
 
         <Form.Item
-          label={t('pages.announcements.fields.pinned', {}, 'Pinned')}
+          label={'Pinned'}
           name="is_pinned"
           valuePropName="checked"
         >
@@ -46,7 +42,7 @@ const AnnouncementsCreate = () => {
         </Form.Item>
 
         <Form.Item
-          label={t('pages.announcements.fields.published', {}, 'Published')}
+          label={'Published'}
           name="is_published"
           valuePropName="checked"
         >

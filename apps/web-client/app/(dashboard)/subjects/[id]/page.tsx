@@ -21,7 +21,7 @@ import {
   ModalBody,
   useDisclosure,
   type Selection,
-} from '@nextui-org/react';
+} from '@heroui/react';
 import { useState } from 'react';
 import axios from 'axios';
 import { useSubjectDetail } from '@/hooks/use-subjects';
@@ -84,7 +84,7 @@ function ResourceButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-100 hover:text-blue-700 dark:border-blue-500/30 dark:bg-blue-600/20 dark:text-blue-400 dark:hover:bg-blue-600/40 dark:hover:text-blue-300"
+      className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-100 hover:text-blue-700"
     >
       {getIcon()}
       <span className="max-w-[10rem] truncate">{resource.label}</span>
@@ -107,14 +107,14 @@ function LectureCard({ lecture }: { lecture: LectureWithResources }) {
 
   return (
     <>
-      <div className="mb-2 rounded-xl border border-slate-200 bg-white px-4 py-4 transition-colors duration-150 hover:border-slate-300 hover:bg-slate-50 dark:border-white/[0.08] dark:bg-[#0d1b2e] dark:hover:border-white/15 dark:hover:bg-white/[0.04]">
+      <div className="mb-2 rounded-xl border border-slate-200 bg-white px-4 py-4 transition-colors duration-150 hover:border-slate-300 hover:bg-slate-50">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex-1 min-w-0 space-y-2">
             <div className="flex items-start gap-2.5">
-              <span className="mt-0.5 shrink-0 text-blue-500 dark:text-blue-400" aria-hidden>
+              <span className="mt-0.5 shrink-0 text-blue-500" aria-hidden>
                 {lectureTypeIcon(lecture)}
               </span>
-              <h4 className="text-sm font-medium text-slate-900 dark:text-white line-clamp-1">
+              <h4 className="text-sm font-medium text-slate-900 line-clamp-1">
                 {lecture.title}
               </h4>
             </div>
@@ -234,8 +234,8 @@ export default function SubjectDetailPage({
           <CardBody className="flex flex-col items-center gap-4 py-16 text-center">
             <FiAlertCircle className="h-12 w-12 text-red-400 opacity-50" />
             <div className="space-y-1">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h3>
-              <p className="text-sm text-slate-500 dark:text-white/50">{message}</p>
+              <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+              <p className="text-sm text-slate-500">{message}</p>
             </div>
             <div className="mt-2 flex flex-col items-center gap-3 sm:flex-row">
               <Button
@@ -267,7 +267,7 @@ export default function SubjectDetailPage({
       <Link href="/subjects" className="inline-block">
         <button
           type="button"
-          className="mb-5 flex items-center gap-2 rounded-full border border-slate-200 bg-[var(--bg-surface)] px-4 py-2 text-sm font-medium text-[var(--ink-2)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-sm)] hover:text-[var(--ink-1)] dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300"
+          className="mb-5 flex items-center gap-2 rounded-full border border-slate-200 bg-[var(--bg-surface)] px-4 py-2 text-sm font-medium text-[var(--ink-2)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-sm)] hover:text-[var(--ink-1)]"
         >
           <FiArrowLeft className="h-4 w-4" />
           Back to Subjects
@@ -276,25 +276,25 @@ export default function SubjectDetailPage({
 
       {/* Subject Header */}
       <Card className="glass-card relative overflow-hidden border-l-[3px] border-l-blue-500 text-[var(--ink-1)]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_15%,rgba(59,130,246,0.05),transparent_36%),radial-gradient(circle_at_82%_20%,rgba(14,165,233,0.04),transparent_42%)] dark:bg-[radial-gradient(circle_at_12%_15%,rgba(59,130,246,0.14),transparent_36%),radial-gradient(circle_at_82%_20%,rgba(14,165,233,0.11),transparent_42%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_15%,rgba(59,130,246,0.05),transparent_36%),radial-gradient(circle_at_82%_20%,rgba(14,165,233,0.04),transparent_42%)]" />
         <CardBody className="gap-4 p-6">
           <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-5">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-blue-200 bg-blue-100 dark:border-blue-500/30 dark:bg-blue-600/20">
-              <FiVideo className="h-7 w-7 text-blue-600 dark:text-blue-400" />
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-blue-200 bg-blue-100">
+              <FiVideo className="h-7 w-7 text-blue-600" />
             </div>
             <div className="flex-1 min-w-0 space-y-2">
-              <span className="inline-block rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600 dark:bg-white/10 dark:text-white/60">
+              <span className="inline-block rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600">
                 {subject.code}
               </span>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-slate-900">
                 {subject.name}
               </h1>
-              <p className="line-clamp-3 text-sm text-slate-600 dark:text-[var(--ink-2)] sm:text-base">{subject.description}</p>
+              <p className="line-clamp-3 text-sm text-slate-600 sm:text-base">{subject.description}</p>
               <div className="flex flex-wrap gap-2">
-                <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs text-blue-600 dark:border-blue-500/20 dark:bg-blue-500/15 dark:text-blue-300">
+                <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs text-blue-600">
                   Year {subject.year_level}
                 </span>
-                <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs text-blue-600 dark:border-blue-500/20 dark:bg-blue-500/15 dark:text-blue-300">
+                <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs text-blue-600">
                   {subject.sections?.length || 0} Sections
                 </span>
               </div>
@@ -320,15 +320,15 @@ export default function SubjectDetailPage({
               aria-label={section.name}
               title={
                 <div className="flex items-center gap-3 px-2 py-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-100 text-sm font-bold text-blue-600 dark:border-blue-500/30 dark:bg-blue-600/25 dark:text-blue-300">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-100 text-sm font-bold text-blue-600">
                     {index + 1}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-sm font-semibold text-slate-900 dark:text-white line-clamp-1">
+                    <span className="text-sm font-semibold text-slate-900 line-clamp-1">
                       {section.name}
                     </span>
                     <p
-                      className={`text-xs text-slate-500 transition-opacity duration-200 dark:text-white/40 ${
+                      className={`text-xs text-slate-500 transition-opacity duration-200 ${
                         isOpen ? 'opacity-0' : 'opacity-100'
                       }`}
                     >
@@ -345,8 +345,8 @@ export default function SubjectDetailPage({
                 {(!section.lectures || section.lectures.length === 0) && (
                   <Card className="glass-surface">
                     <CardBody className="text-center py-16">
-                      <FiVideo className="mx-auto mb-4 h-12 w-12 text-slate-300 dark:text-default-300" />
-                      <p className="font-medium text-slate-600 dark:text-white">No lectures in this section yet</p>
+                      <FiVideo className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+                      <p className="font-medium text-slate-600">No lectures in this section yet</p>
                     </CardBody>
                   </Card>
                 )}
@@ -358,9 +358,9 @@ export default function SubjectDetailPage({
       ) : (
         <Card className="glass-surface">
           <CardBody className="text-center py-16">
-            <FiVideo className="mx-auto mb-4 h-16 w-16 text-slate-300 dark:text-default-300" />
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Content Available</h3>
-            <p className="text-slate-500 dark:text-default-500">
+            <FiVideo className="mx-auto mb-4 h-16 w-16 text-slate-300" />
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">No Content Available</h3>
+            <p className="text-slate-500">
               This subject doesn&apos;t have content yet. Please check back later.
             </p>
           </CardBody>

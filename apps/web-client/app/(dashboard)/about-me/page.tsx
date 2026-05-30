@@ -1,13 +1,12 @@
 'use client';
 
-import { Card, CardBody, Chip, Avatar } from '@nextui-org/react';
+import { Card, CardBody, Chip, Avatar } from '@heroui/react';
 import { useAuthStore } from '@/stores/auth.store';
 import { FiMail, FiUser, FiCalendar, FiMapPin, FiLogOut } from 'react-icons/fi';
 import { signOut } from 'next-auth/react';
 import { api } from '@/lib/api';
 import { getYearLevelLabel } from '@medical-portal/shared';
 import { useState, useCallback } from 'react';
-import { useLocale } from 'next-intl';
 import { PageTransition } from '@/components/PageTransition';
 
 // Small inline "Soon" badge for locked settings rows.
@@ -37,18 +36,18 @@ function SettingRow({
   return (
     <div
       className={`flex min-h-[64px] flex-col gap-2 rounded-lg px-4 py-3 transition-colors duration-150 sm:flex-row sm:items-center sm:justify-between ${
-        withBorder ? 'border-b border-slate-100 dark:border-white/5' : ''
-      } ${locked ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-slate-50 dark:hover:bg-white/[0.04]'}`}
+        withBorder ? 'border-b border-slate-100' : ''
+      } ${locked ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-slate-50'}`}
     >
       <button
         type="button"
         onClick={locked ? undefined : onClick}
         className={`min-w-0 text-left ${locked ? 'pointer-events-none' : ''}`}
       >
-        <p className={`font-medium ${locked ? 'text-slate-400 dark:text-white/30' : 'text-foreground'}`}>
+        <p className={`font-medium ${locked ? 'text-slate-400' : 'text-foreground'}`}>
           {title}
         </p>
-        <p className={`text-sm ${locked ? 'text-slate-400/70 dark:text-white/20' : 'text-[var(--ink-2)]'}`}>
+        <p className={`text-sm ${locked ? 'text-slate-400/70' : 'text-[var(--ink-2)]'}`}>
           {description}
         </p>
       </button>
@@ -70,19 +69,17 @@ function getInitials(name: string | undefined): string {
 export default function AboutMePage() {
   const { profile } = useAuthStore();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const locale = useLocale();
 
   const handleLogout = useCallback(async () => {
     if (isLoggingOut) return;
     setIsLoggingOut(true);
     try {
       await api.auth.logout();
-      // Preserve the user's chosen locale through the sign-out flow.
-      await signOut({ callbackUrl: `/${locale}/login` });
+      await signOut({ callbackUrl: '/login' });
     } catch {
       setIsLoggingOut(false);
     }
-  }, [isLoggingOut, locale]);
+  }, [isLoggingOut]);
 
   return (
     <PageTransition>
@@ -184,7 +181,7 @@ export default function AboutMePage() {
                     {profile.student_id}
                   </p>
                 ) : (
-                  <span className="text-slate-400 dark:text-white/30 text-sm italic">Not assigned yet</span>
+                  <span className="text-slate-400 text-sm italic">Not assigned yet</span>
                 )}
               </div>
             </div>

@@ -33,13 +33,10 @@ function getApiBaseUrl(): string {
 const API_BASE_URL = getApiBaseUrl();
 // Keep lightweight session validation, but avoid per-request chatter bursts.
 const AUTH_CHECK_TTL_MS = 60000;
-const SUPPORTED_LOCALES = ['en', 'th'] as const;
-const DEFAULT_LOCALE: (typeof SUPPORTED_LOCALES)[number] = 'en';
-
 /**
- * Allowlist of dashboard routes (without locale prefix) that are safe to use
- * as the post-login `to` redirect target. Anything outside this list is
- * coerced back to the home page to defend against open-redirect abuse.
+ * Allowlist of dashboard routes that are safe to use as the post-login `to`
+ * redirect target. Anything outside this list is coerced back to the home
+ * page to defend against open-redirect abuse.
  */
 const SAFE_REDIRECT_EXACT_PATHS = new Set([
   '/',
@@ -59,48 +56,6 @@ let sessionCheckPromise: Promise<void> | null = null;
 let refreshPromise: Promise<boolean> | null = null;
 let isAuthRedirectInProgress = false;
 let authRedirectTimer: ReturnType<typeof setTimeout> | null = null;
-
-function isSupportedLocale(value: string): value is (typeof SUPPORTED_LOCALES)[number] {
-  return (SUPPORTED_LOCALES as readonly string[]).includes(value);
-}
-
-/**
- * Read the locale segment from the current URL pathname so all auth
- * redirects stay within the user's chosen language. Falls back to
- * the default locale when running on the server or when the path
- * does not yet contain a known locale segment.
- */
-function getCurrentLocale(): (typeof SUPPORTED_LOCALES)[number] {
-  if (typeof window === 'undefined') {
-    return DEFAULT_LOCALE;
-  }
-
-  const segment = window.location.pathname.split('/').filter(Boolean)[0];
-  if (segment && isSupportedLocale(segment)) {
-    return segment;
-  }
-
-  if (typeof document !== 'undefined') {
-    const htmlLang = document.documentElement.lang;
-    if (htmlLang && isSupportedLocale(htmlLang)) {
-      return htmlLang;
-    }
-  }
-
-  return DEFAULT_LOCALE;
-}
-
-/**
- * Strip the locale prefix and the trailing slash from a pathname so we
- * can validate the remainder against {@link SAFE_REDIRECT_EXACT_PATHS}.
- */
-function stripLocalePrefix(pathname: string): string {
-  const segments = pathname.split('/').filter(Boolean);
-  if (segments.length > 0 && isSupportedLocale(segments[0])) {
-    segments.shift();
-  }
-  return segments.length === 0 ? '/' : `/${segments.join('/')}`;
-}
 
 /**
  * Build a safe relative `to` target for the login flow. We strictly only
@@ -129,13 +84,12 @@ function sanitizeReturnPath(rawPath: string): string {
   }
 
   const [pathOnly] = rawPath.split('?');
-  const localeStripped = stripLocalePrefix(pathOnly);
 
-  if (SAFE_REDIRECT_EXACT_PATHS.has(localeStripped)) {
+  if (SAFE_REDIRECT_EXACT_PATHS.has(pathOnly)) {
     return rawPath;
   }
 
-  if (SAFE_REDIRECT_PREFIXES.some((prefix) => localeStripped.startsWith(prefix))) {
+  if (SAFE_REDIRECT_PREFIXES.some((prefix) => pathOnly.startsWith(prefix))) {
     return rawPath;
   }
 
@@ -204,17 +158,15 @@ function buildCurrentReturnPath(): string {
 }
 
 function buildLoginRedirectTarget(): string {
-  const locale = getCurrentLocale();
   const target = buildCurrentReturnPath();
   const encodedTarget = encodeURIComponent(target);
-  return `/${locale}/login?to=${encodedTarget}`;
+  return `/login?to=${encodedTarget}`;
 }
 
 function buildSyncRedirectTarget(): string {
-  const locale = getCurrentLocale();
   const target = buildCurrentReturnPath();
   const encodedTarget = encodeURIComponent(target);
-  return `/${locale}/auth/sync?to=${encodedTarget}`;
+  return `/auth/sync?to=${encodedTarget}`;
 }
 
 async function ensureNextAuthSession(): Promise<void> {
@@ -410,5 +362,4 @@ export const __testables__ = {
   sanitizeReturnPath,
   buildLoginRedirectTarget,
   buildSyncRedirectTarget,
-  getCurrentLocale,
 };

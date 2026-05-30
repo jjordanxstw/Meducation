@@ -1,40 +1,23 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import createIntlMiddleware from 'next-intl/middleware';
-import { routing } from './i18n/routing';
 
-// Create the next-intl middleware
-const intlMiddleware = createIntlMiddleware(routing);
-
-// Public routes (without locale prefix for matching)
+// Public routes that do not require an authenticated session.
 const publicRoutes = new Set(['/login', '/auth/sync']);
 
-// Check if pathname matches a public route (accounting for locale prefix)
 function isPublicRoute(pathname: string): boolean {
-  // Check exact match
-  if (publicRoutes.has(pathname)) {
-    return true;
-  }
-  // Check with locale prefix (e.g., /en/login, /th/login)
-  for (const locale of routing.locales) {
-    if (publicRoutes.has(pathname.slice(locale.length + 1))) {
-      return true;
-    }
-  }
-  return false;
+  return publicRoutes.has(pathname);
 }
 
 /**
- * Proxy function for Next.js 16+
- * Handles:
- * 1. i18n routing (locale detection and redirects)
- * 2. Authentication (session validation and route protection)
+ * Proxy function for Next.js 16+.
+ * Single responsibility now that the app is English-only: authentication
+ * (session validation and route protection).
  */
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Skip proxy for API routes, static files, and Next.js internals
+  // Skip proxy for API routes, static files, and Next.js internals.
   if (
     pathname.startsWith('/api/') ||
     pathname.startsWith('/_next/') ||
@@ -44,40 +27,26 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Step 1: Handle i18n routing first
-  const intlResponse = intlMiddleware(req);
-  if (intlResponse.status !== 200 || intlResponse.headers.get('x-middleware-rewrite')) {
-    // If intl middleware wants to redirect or rewrite, let it
-    return intlResponse;
-  }
-
-  // Step 2: Handle authentication
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const isPublic = isPublicRoute(pathname);
 
-  // Extract locale from pathname for redirects
-  const localeMatch = pathname.match(/^\/(en|th)(\/|$)/);
-  const locale = localeMatch ? localeMatch[1] : routing.defaultLocale;
-
-  // If not authenticated and trying to access protected route
+  // Not authenticated and trying to reach a protected route → login.
   if (!token && !isPublic) {
-    const loginUrl = new URL(`/${locale}/login`, req.url);
-    const target = pathname === `/${locale}` || pathname === '/' ? '/' : pathname;
+    const loginUrl = new URL('/login', req.url);
+    const target = pathname === '/' ? '/' : pathname;
     loginUrl.searchParams.set('to', target);
     return NextResponse.redirect(loginUrl);
   }
 
-  // If authenticated and on login page, redirect to home
-  if (token && pathname.includes('/login')) {
-    return NextResponse.redirect(new URL(`/${locale}`, req.url));
+  // Already authenticated and on the login page → home.
+  if (token && pathname === '/login') {
+    return NextResponse.redirect(new URL('/', req.url));
   }
 
-  return intlResponse;
+  return NextResponse.next();
 }
 
 export const config = {
-  // Match all pathnames except for
-  // - … if they start with `/api`, `/_next` or `/_vercel`
-  // - … the ones containing a dot (e.g. `favicon.ico`)
-  matcher: ['/', '/(th|en)/:path*', '/((?!api|_next|_vercel|.*\\..*).*)'],
+  // Match all pathnames except `/api`, `/_next`, `/_vercel`, and files with a dot.
+  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)'],
 };

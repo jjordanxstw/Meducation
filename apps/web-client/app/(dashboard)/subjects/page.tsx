@@ -7,13 +7,13 @@
  */
 
 import { useState, Suspense, useMemo, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 import {
   Card,
   CardBody,
   Input,
   Skeleton,
-} from '@nextui-org/react';
+} from '@heroui/react';
 import { useAuthStore } from '@/stores/auth.store';
 import { FiSearch, FiBook, FiX } from 'react-icons/fi';
 import { SubjectCard } from '@/components/ui/SubjectCard';
@@ -21,7 +21,6 @@ import { PageTransition } from '@/components/PageTransition';
 import { DataFreshnessDot } from '@/components/ui/DataFreshnessDot';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useSubjects } from '@/hooks/use-subjects';
-import { usePathname, useRouter } from '@/i18n/routing';
 
 // Year filter tab component - pill only, no underline
 function YearFilterTab({
@@ -40,7 +39,7 @@ function YearFilterTab({
       className={`shrink-0 px-4 py-2.5 text-sm font-medium rounded-full transition-[background,box-shadow,transform,color] duration-200 ease-out min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-canvas)] ${
         isActive
           ? 'scale-105 bg-[#0070F3] text-white font-semibold shadow-lg shadow-blue-500/25'
-          : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-white/50 dark:hover:text-white/80 dark:hover:bg-white/[0.08]'
+          : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
       }`}
     >
       {children}
@@ -53,9 +52,9 @@ function SubjectSkeletonGrid() {
   return (
     <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {[...Array(10)].map((_, i) => (
-        <div key={i} className="flex h-40 min-h-[10rem] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-[#0d1b2e]">
+        <div key={i} className="flex h-40 min-h-[10rem] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white">
           {/* Accent bar */}
-          <div className="h-1 w-full bg-slate-200 dark:bg-white/10" />
+          <div className="h-1 w-full bg-slate-200" />
           <div className="flex flex-1 flex-col gap-2 p-4">
             <Skeleton className="h-3 w-16 rounded" />
             <Skeleton className="h-4 w-3/4 rounded" />
@@ -74,8 +73,8 @@ function SubjectSkeletonGrid() {
 // Placeholder card for when there's only 1 subject
 function PlaceholderCard() {
   return (
-    <div className="aspect-square border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl flex flex-col items-center justify-center opacity-30">
-      <FiBook className="h-10 w-10 text-slate-300 dark:text-white/30 mb-2" />
+    <div className="aspect-square border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center opacity-30">
+      <FiBook className="h-10 w-10 text-slate-300 mb-2" />
       <p className="text-slate-500 text-sm">More subjects soon</p>
     </div>
   );
@@ -87,14 +86,14 @@ function SubjectsLoading() {
     <div className="space-y-5 sm:space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-1">
-          <div className="h-8 w-48 bg-slate-200 dark:bg-white/10 rounded-lg animate-pulse" />
-          <div className="h-4 w-64 bg-slate-200 dark:bg-white/10 rounded-lg animate-pulse" />
+          <div className="h-8 w-48 bg-slate-200 rounded-lg animate-pulse" />
+          <div className="h-4 w-64 bg-slate-200 rounded-lg animate-pulse" />
         </div>
-        <div className="h-10 w-72 bg-slate-200 dark:bg-white/10 rounded-lg animate-pulse" />
+        <div className="h-10 w-72 bg-slate-200 rounded-lg animate-pulse" />
       </div>
       <div className="flex flex-wrap gap-1">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-11 w-20 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
+          <div key={i} className="h-11 w-20 bg-slate-200 rounded-full animate-pulse" />
         ))}
       </div>
       <SubjectSkeletonGrid />
@@ -172,7 +171,7 @@ function SubjectsContent() {
           onValueChange={setSearchQuery}
           startContent={
             <span className="icon-with-text">
-              <FiSearch className="h-4 w-4 text-slate-400 dark:text-white/40" />
+              <FiSearch className="h-4 w-4 text-slate-400" />
             </span>
           }
           endContent={
@@ -181,14 +180,14 @@ function SubjectsContent() {
                 type="button"
                 aria-label="Clear search"
                 onClick={() => setSearchQuery('')}
-                className="flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:text-white/40 dark:hover:bg-white/10 dark:hover:text-white/70"
+                className="flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
               >
                 <FiX className="h-3.5 w-3.5" />
               </button>
             ) : null
           }
           classNames={{
-            inputWrapper: 'bg-[var(--bg-surface)] border border-slate-200 dark:border-white/10 ring-2 ring-transparent focus-within:ring-2 focus-within:ring-brand/40 focus-within:border-brand transition-all rounded-xl shadow-[var(--shadow-subtle)]',
+            inputWrapper: 'bg-[var(--bg-surface)] border border-slate-200 ring-2 ring-transparent focus-within:ring-2 focus-within:ring-brand/40 focus-within:border-brand transition-all rounded-xl shadow-[var(--shadow-subtle)]',
             input: 'text-sm text-[var(--ink-1)] placeholder:text-[var(--ink-3)]',
           }}
           className="w-full sm:w-72"
@@ -235,11 +234,11 @@ function SubjectsContent() {
       ) : (
         <Card className="card-flat">
           <CardBody className="empty-state">
-            <div className="empty-state-icon flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/[0.08]">
-              <FiBook className="h-6 w-6 text-slate-400 dark:text-slate-400" />
+            <div className="empty-state-icon flex items-center justify-center rounded-full bg-slate-100">
+              <FiBook className="h-6 w-6 text-slate-400" />
             </div>
-            <h3 className="empty-state-heading text-slate-700 dark:text-slate-200">No Subjects Found</h3>
-            <p className="empty-state-subtext text-slate-500 dark:text-slate-400">
+            <h3 className="empty-state-heading text-slate-700">No Subjects Found</h3>
+            <p className="empty-state-subtext text-slate-500">
               {debouncedQuery
                 ? `No subjects found for "${debouncedQuery}"`
                 : 'No subjects available in the system'}
@@ -248,7 +247,7 @@ function SubjectsContent() {
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:border-white/10 dark:text-white/70 dark:hover:bg-white/[0.06]"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
               >
                 <FiX className="h-3.5 w-3.5" />
                 Clear search

@@ -15,7 +15,7 @@ interface AdminEmptyStateProps {
 /**
  * Centered empty-state used across admin tables (resources, calendar,
  * announcements, profiles, audit logs) for a consistent, intentional
- * "no data" experience on the dark theme.
+ * "no data" experience.
  */
 export function AdminEmptyState({ icon, title, subtitle, action }: AdminEmptyStateProps) {
   return (
@@ -30,13 +30,11 @@ export function AdminEmptyState({ icon, title, subtitle, action }: AdminEmptySta
         textAlign: 'center',
       }}
     >
-      <span style={{ fontSize: 48, opacity: 0.3, color: 'rgba(255,255,255,0.3)', lineHeight: 1 }}>
+      <span style={{ fontSize: 48, color: 'var(--brand)', opacity: 0.35, lineHeight: 1 }}>
         {icon}
       </span>
-      <span style={{ fontWeight: 500, color: 'rgba(255,255,255,0.7)' }}>{title}</span>
-      {subtitle ? (
-        <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)' }}>{subtitle}</span>
-      ) : null}
+      <span style={{ fontWeight: 600, color: 'var(--ink-1)' }}>{title}</span>
+      {subtitle ? <span style={{ fontSize: 14, color: 'var(--ink-3)' }}>{subtitle}</span> : null}
       {action ? (
         <Button type="primary" onClick={action.onClick} style={{ marginTop: 8 }}>
           {action.label}

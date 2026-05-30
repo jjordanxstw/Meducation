@@ -1,18 +1,9 @@
 /**
  * Lectures List Page
  * Migrated from src/app/lectures/page.tsx
- */
-
-import { useList, useTranslate } from '@refinedev/core';
-import { List, useTable, EditButton, DeleteButton } from '@refinedev/antd';
-import { Button, Input, Select, Space, Table, Tag } from 'antd';
-import dayjs from 'dayjs';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Lecture, Section, Subject } from '@medical-portal/shared';
-import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
+ */import { useList } from '@refinedev/core';import { List, useTable, EditButton, DeleteButton } from '@refinedev/antd';import { Button, Input, Select, Space, Table, Tag } from 'antd';import dayjs from 'dayjs';import { useCallback, useEffect, useMemo, useRef, useState } from 'react';import type { Lecture, Section, Subject } from '@medical-portal/shared';import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
 
 const LecturesList = () => {
-  const t = useTranslate();
   const { tableProps, setFilters, filters } = useTable<Lecture>({
     syncWithLocation: true,
   });
@@ -117,14 +108,14 @@ const LecturesList = () => {
   };
 
   return (
-    <List createButtonProps={{ children: t('buttons.create', {}, 'Create') }}>
+    <List createButtonProps={{ children: 'Create' }}>
       <Space wrap size="small" style={{ marginBottom: 12 }} className="resource-filter-bar">
         <Input.Search
           className="resource-filter-control"
           allowClear
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder={t('common.searchPlaceholder', {}, 'Search')}
+          placeholder={'Search'}
           style={{ width: 240 }}
         />
         <Select
@@ -135,7 +126,7 @@ const LecturesList = () => {
             setSubjectId(value);
             setSectionId(undefined);
           }}
-          placeholder={t('pages.lectures.fields.subject', {}, 'Subject')}
+          placeholder={'Subject'}
           style={{ width: 280 }}
           options={subjects.map((subject) => ({
             label: `${subject.code} - ${subject.name}`,
@@ -147,7 +138,7 @@ const LecturesList = () => {
           allowClear
           value={sectionId}
           onChange={(value) => setSectionId(value)}
-          placeholder={t('pages.lectures.fields.section', {}, 'Section')}
+          placeholder={'Section'}
           style={{ width: 280 }}
           options={filteredSections.map((section) => ({
             label: section.name,
@@ -159,14 +150,14 @@ const LecturesList = () => {
           allowClear
           value={isActive}
           onChange={(value) => setIsActive(value)}
-          placeholder={t('common.status', {}, 'Status')}
+          placeholder={'Status'}
           style={{ width: 160 }}
           options={[
-            { label: t('common.active', {}, 'Active'), value: true },
-            { label: t('common.inactive', {}, 'Inactive'), value: false },
+            { label: 'Active', value: true },
+            { label: 'Inactive', value: false },
           ]}
         />
-        <Button className="resource-filter-button" onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
+        <Button className="resource-filter-button" onClick={resetFilters}>{'Clear'}</Button>
       </Space>
 
       <Table
@@ -176,54 +167,54 @@ const LecturesList = () => {
         scroll={{ x: 'max-content' }}
       >
         <Table.Column
-          title={t('pages.lectures.fields.subject', {}, 'Subject')}
+          title={'Subject'}
           ellipsis
           sorter
           render={(_, record: Lecture) => {
             const section = sectionMap.get(record.section_id);
             if (!section) {
-              return t('common.notAvailable', {}, '-');
+              return '-';
             }
 
             const subject = subjectMap.get(section.subject_id);
-            return subject ? `${subject.code} - ${subject.name}` : t('common.notAvailable', {}, '-');
+            return subject ? `${subject.code} - ${subject.name}` : '-';
           }}
         />
         <Table.Column
           dataIndex="section_id"
-          title={t('pages.lectures.fields.section', {}, 'Section')}
+          title={'Section'}
           ellipsis
           render={(value) => sectionMap.get(value)?.name || value}
           sorter
         />
-        <Table.Column sorter dataIndex="title" title={t('pages.lectures.fields.title', {}, 'Lecture Title')} ellipsis />
+        <Table.Column sorter dataIndex="title" title={'Lecture Title'} ellipsis />
         <Table.Column
           dataIndex="lecture_date"
-          title={t('pages.lectures.fields.lectureDate', {}, 'Lecture Date')}
+          title={'Lecture Date'}
           width={120}
           sorter
-          render={(value) => value ? dayjs(value).format('DD/MM/YYYY') : t('common.notAvailable', {}, '-')}
+          render={(value) => value ? dayjs(value).format('DD/MM/YYYY') : '-'}
         />
-        <Table.Column sorter dataIndex="lecturer_name" title={t('pages.lectures.fields.lecturerName', {}, 'Lecturer')} ellipsis />
+        <Table.Column sorter dataIndex="lecturer_name" title={'Lecturer'} ellipsis />
         <Table.Column
           dataIndex="order_index"
-          title={t('common.order', {}, 'Order')}
+          title={'Order'}
           width={80}
           sorter
         />
         <Table.Column
           dataIndex="is_active"
-          title={t('common.status', {}, 'Status')}
+          title={'Status'}
           width={100}
           sorter
           render={(value) => (
             <Tag color={value ? 'green' : 'red'}>
-              {value ? t('common.active', {}, 'Active') : t('common.inactive', {}, 'Inactive')}
+              {value ? 'Active' : 'Inactive'}
             </Tag>
           )}
         />
         <Table.Column
-          title={t('common.actions', {}, 'Actions')}
+          title={'Actions'}
           fixed="right"
           width={10}
           render={(_, record: Lecture) => (

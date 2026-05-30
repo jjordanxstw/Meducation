@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { usePathname } from '@/i18n/routing';
+import { usePathname } from 'next/navigation';
 
 const SUBJECT_DETAIL_RE = /^\/subjects\/([^/]+)$/;
 

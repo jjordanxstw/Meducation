@@ -1,26 +1,18 @@
 /**
  * Resources Create Page
  * Migrated from src/app/resources/create/page.tsx
- */
-
-import { useList, useTranslate } from '@refinedev/core';
-import { Create, useForm } from '@refinedev/antd';
-import { useMemo } from 'react';
-import { Form, Input, InputNumber, Switch, Select } from 'antd';
-import { ResourceType } from '@medical-portal/shared';
-import type { Resource, Lecture, Section, Subject } from '@medical-portal/shared';
+ */import { useList } from '@refinedev/core';import { Create, useForm } from '@refinedev/antd';import { useMemo } from 'react';import { Form, Input, InputNumber, Switch, Select } from 'antd';import { ResourceType } from '@medical-portal/shared';import type { Resource, Lecture, Section, Subject } from '@medical-portal/shared';
 
 const ResourcesCreate = () => {
-  const t = useTranslate();
   const { formProps, saveButtonProps } = useForm<Resource>();
   const selectedSubjectId = Form.useWatch('subject_id', formProps.form);
   const selectedSectionId = Form.useWatch('section_id', formProps.form);
 
   const resourceTypeOptions = [
-    { label: `🎬 ${t('pages.resources.types.youtube', {}, 'YouTube')}`, value: ResourceType.YOUTUBE },
-    { label: `📹 ${t('pages.resources.types.gdriveVideo', {}, 'Google Drive Video')}`, value: ResourceType.GDRIVE_VIDEO },
-    { label: `📄 ${t('pages.resources.types.gdrivePdf', {}, 'Google Drive PDF')}`, value: ResourceType.GDRIVE_PDF },
-    { label: `🔗 ${t('pages.resources.types.external', {}, 'External Link')}`, value: ResourceType.EXTERNAL },
+    { label: `🎬 ${'YouTube'}`, value: ResourceType.YOUTUBE },
+    { label: `📹 ${'Google Drive Video'}`, value: ResourceType.GDRIVE_VIDEO },
+    { label: `📄 ${'Google Drive PDF'}`, value: ResourceType.GDRIVE_PDF },
+    { label: `🔗 ${'External Link'}`, value: ResourceType.EXTERNAL },
   ];
 
   const { data: lecturesData } = useList<Lecture>({
@@ -66,12 +58,12 @@ const ResourcesCreate = () => {
     <Create saveButtonProps={saveButtonProps}>
       <Form {...formProps} layout="vertical" style={{ maxWidth: 600 }}>
         <Form.Item
-          label={t('pages.resources.fields.subject', {}, 'Subject')}
+          label={'Subject'}
           name="subject_id"
-          rules={[{ required: true, message: t('pages.resources.validation.subjectRequired', {}, 'Please select subject') }]}
+          rules={[{ required: true, message: 'Please select subject' }]}
         >
           <Select
-            placeholder={t('pages.resources.placeholders.subject', {}, 'Select subject')}
+            placeholder={'Select subject'}
             options={subjects.map((subject) => ({
               label: `${subject.code} - ${subject.name}`,
               value: subject.id,
@@ -86,12 +78,12 @@ const ResourcesCreate = () => {
         </Form.Item>
 
         <Form.Item
-          label={t('pages.resources.fields.section', {}, 'Section')}
+          label={'Section'}
           name="section_id"
-          rules={[{ required: true, message: t('pages.resources.validation.sectionRequired', {}, 'Please select section') }]}
+          rules={[{ required: true, message: 'Please select section' }]}
         >
           <Select
-            placeholder={t('pages.resources.placeholders.section', {}, 'Select section')}
+            placeholder={'Select section'}
             options={sectionOptions}
             disabled={!selectedSubjectId}
             onChange={() => formProps.form?.setFieldValue('lecture_id', undefined)}
@@ -101,12 +93,12 @@ const ResourcesCreate = () => {
         </Form.Item>
 
         <Form.Item
-          label={t('pages.resources.fields.lecture', {}, 'Lecture')}
+          label={'Lecture'}
           name="lecture_id"
-          rules={[{ required: true, message: t('pages.resources.validation.lectureRequired', {}, 'Please select lecture') }]}
+          rules={[{ required: true, message: 'Please select lecture' }]}
         >
           <Select
-            placeholder={t('pages.resources.placeholders.lecture', {}, 'Select lecture')}
+            placeholder={'Select lecture'}
             options={lectureOptions}
             disabled={!selectedSectionId}
             showSearch
@@ -115,36 +107,36 @@ const ResourcesCreate = () => {
         </Form.Item>
 
         <Form.Item
-          label={t('pages.resources.fields.label', {}, 'Button Label')}
+          label={'Button Label'}
           name="label"
-          rules={[{ required: true, message: t('pages.resources.validation.labelRequired', {}, 'Please enter label') }]}
-          extra={t('pages.resources.help.label', {}, 'Displayed text on button, e.g. Slide, Video, Summary, Exercise')}
+          rules={[{ required: true, message: 'Please enter label' }]}
+          extra={'Displayed text on button, e.g. Slide, Video, Summary, Exercise'}
         >
-          <Input placeholder={t('pages.resources.placeholders.label', {}, 'e.g. Slide, Video, Summary')} />
+          <Input placeholder={'e.g. Slide, Video, Summary'} />
         </Form.Item>
 
         <Form.Item
-          label={t('pages.resources.fields.type', {}, 'Resource Type')}
+          label={'Resource Type'}
           name="type"
-          rules={[{ required: true, message: t('pages.resources.validation.typeRequired', {}, 'Please select type') }]}
+          rules={[{ required: true, message: 'Please select type' }]}
         >
           <Select options={resourceTypeOptions} />
         </Form.Item>
 
         <Form.Item
-          label={t('pages.resources.fields.url', {}, 'URL / Video ID')}
+          label={'URL / Video ID'}
           name="url"
-          rules={[{ required: true, message: t('pages.resources.validation.urlRequired', {}, 'Please enter URL') }]}
-          extra={t('pages.resources.help.url', {}, 'For YouTube use video ID, for Google Drive use full URL')}
+          rules={[{ required: true, message: 'Please enter URL' }]}
+          extra={'For YouTube use video ID, for Google Drive use full URL'}
         >
-          <Input placeholder={t('pages.resources.placeholders.url', {}, 'URL or Video ID')} />
+          <Input placeholder={'URL or Video ID'} />
         </Form.Item>
 
-        <Form.Item label={t('pages.resources.fields.orderIndex', {}, 'Display Order (left to right)')} name="order_index" initialValue={0}>
+        <Form.Item label={'Display Order (left to right)'} name="order_index" initialValue={0}>
           <InputNumber min={0} style={{ width: '100%' }} />
         </Form.Item>
 
-        <Form.Item label={t('pages.resources.fields.isActive', {}, 'Active')} name="is_active" valuePropName="checked" initialValue={true}>
+        <Form.Item label={'Active'} name="is_active" valuePropName="checked" initialValue={true}>
           <Switch />
         </Form.Item>
       </Form>

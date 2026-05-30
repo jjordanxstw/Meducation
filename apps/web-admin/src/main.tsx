@@ -2,7 +2,7 @@
 
 /**
  * Main Entry Point for Medical Portal Admin Panel
- * Vite + React + Refine.dev v4
+ * Vite + React + Refine.dev v4 — single light (blue/white) theme, English only.
  */
 
 import React from 'react';
@@ -11,26 +11,18 @@ import { StrictMode } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { Refine } from '@refinedev/core';
 
-// Latin (English) primary face. Browser falls through to Sarabun for Thai glyphs.
+// Latin (English) UI face.
 import '@fontsource/noto-sans/300.css';
 import '@fontsource/noto-sans/400.css';
 import '@fontsource/noto-sans/500.css';
 import '@fontsource/noto-sans/600.css';
 import '@fontsource/noto-sans/700.css';
-// Thai primary face (Designed by Suppakit Chalermlarp). Includes Thai subset.
-import '@fontsource/sarabun/300.css';
-import '@fontsource/sarabun/400.css';
-import '@fontsource/sarabun/500.css';
-import '@fontsource/sarabun/600.css';
-import '@fontsource/sarabun/700.css';
 
 import { dataProvider } from './providers/data-provider';
 import { authProvider } from './providers/auth-provider';
-import { i18nProvider, LOCALE_CHANGED_EVENT } from './providers/i18n-provider';
 import { ConfigProvider, App as AntdApp, theme as antdTheme } from 'antd';
 import { RefineThemes, useNotificationProvider } from '@refinedev/antd';
 import routerBindings from '@refinedev/react-router-v6';
-import thTH from 'antd/locale/th_TH';
 import { HERO_TOKENS } from '@medical-portal/shared';
 import './index.css';
 
@@ -57,35 +49,21 @@ function assertValidApiUrl(apiUrl: string): void {
 
 assertValidApiUrl(resolvedApiUrl);
 
+const tokens = HERO_TOKENS.light;
+
 const Root: React.FC = () => {
-  const [locale, setLocale] = React.useState(i18nProvider.getLocale() ?? 'th');
-  const tokens = HERO_TOKENS.dark;
-
-  React.useEffect(() => {
-    const onLocaleChange = (event: Event) => {
-      const customEvent = event as CustomEvent<string>;
-      setLocale(customEvent.detail || (i18nProvider.getLocale() ?? 'th'));
-    };
-
-    window.addEventListener(LOCALE_CHANGED_EVENT, onLocaleChange);
-    return () => {
-      window.removeEventListener(LOCALE_CHANGED_EVENT, onLocaleChange);
-    };
-  }, []);
-
   const refineDataProvider = React.useMemo(
     () => dataProvider(resolvedApiUrl),
     []
   );
 
-  const resources = buildResources((key: string, fallback: string) => i18nProvider.translate(key, {}, fallback));
+  const resources = buildResources();
 
   return (
     <ConfigProvider
-      locale={thTH}
       theme={{
         ...RefineThemes.Blue,
-        algorithm: antdTheme.darkAlgorithm,
+        algorithm: antdTheme.defaultAlgorithm,
         token: {
           colorPrimary: tokens.brand.primary,
           colorBgBase: tokens.bg.canvas,
@@ -103,49 +81,44 @@ const Root: React.FC = () => {
           colorWarning: tokens.state.warning.fg,
           colorError: tokens.state.danger.fg,
           colorInfo: tokens.state.info.fg,
-          // Latin first (Noto Sans), Thai second (Sarabun). Browser handles
-          // per-glyph fallback so mixed-language text renders cleanly in both
-          // scripts without manual <span lang="..."> wrappers.
-          fontFamily: "'Noto Sans', 'Sarabun', sans-serif",
+          fontFamily: "'Noto Sans', sans-serif",
           borderRadius: 12,
           wireframe: false,
         },
         components: {
           Layout: {
-            bodyBg: '#07131f',
-            headerBg: '#0a1628',
-            siderBg: '#070f1a',
+            bodyBg: tokens.admin.layoutBg,
+            headerBg: tokens.admin.headerBg,
+            siderBg: tokens.admin.siderBg,
           },
           Card: {
             borderRadiusLG: 16,
-            boxShadow: tokens.shadow.md,
+            boxShadow: tokens.shadow.sm,
             borderRadius: 16,
           },
           Table: {
             borderRadius: 12,
             headerBg: tokens.bg.muted,
-            headerColor: tokens.text.primary,
+            headerColor: tokens.text.secondary,
           },
           Button: {
-            borderRadius: 12,
+            borderRadius: 10,
             fontWeight: 500,
-            boxShadow: tokens.shadow.sm,
+            boxShadow: 'none',
           },
           Input: {
-            borderRadius: 12,
+            borderRadius: 10,
           },
           Select: {
-            borderRadius: 12,
+            borderRadius: 10,
           },
         },
       }}
     >
       <AntdApp>
         <Refine
-          key={locale}
           dataProvider={refineDataProvider}
           authProvider={authProvider}
-          i18nProvider={i18nProvider}
           notificationProvider={useNotificationProvider}
           resources={resources}
           routerProvider={routerBindings}
@@ -187,9 +160,6 @@ const Root: React.FC = () => {
     </ConfigProvider>
   );
 };
-
-// Admin panel uses the dark premium aesthetic.
-document.documentElement.classList.add('dark');
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Card } from '@nextui-org/react';
+import { Card } from '@heroui/react';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { PageTransition } from '@/components/PageTransition';
 
@@ -25,25 +25,25 @@ const teamMembers = [
 // Team member card component
 function TeamMemberCard({ member }: { member: typeof teamMembers[0] }) {
   return (
-    <div className="snap-center shrink-0 w-[220px] rounded-2xl bg-white dark:bg-[#0d1b2e] border border-slate-200 dark:border-white/10 p-5 cursor-pointer transition-all duration-300 ease-out hover:scale-105 hover:z-1 group relative">
+    <div className="snap-center shrink-0 w-[220px] rounded-2xl bg-white border border-slate-200 p-5 cursor-pointer transition-all duration-300 ease-out hover:scale-105 hover:z-1 group relative">
       {/* Profile Image */}
-      <div className="w-full aspect-square rounded-xl bg-slate-100 dark:bg-white/5 mb-4 overflow-hidden">
+      <div className="w-full aspect-square rounded-xl bg-slate-100 mb-4 overflow-hidden">
         {member.image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-slate-300 dark:text-white/30">
+          <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-slate-300">
             {member.initials}
           </div>
         )}
       </div>
 
       {/* Info */}
-      <p className="font-bold text-slate-900 dark:text-white text-sm">{member.name}</p>
-      <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">{member.role}</p>
+      <p className="font-bold text-slate-900 text-sm">{member.name}</p>
+      <p className="text-xs text-slate-500 mt-0.5">{member.role}</p>
 
       {/* Hover overlay */}
-      <div className="absolute inset-0 rounded-2xl bg-blue-500/5 dark:bg-blue-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      <div className="absolute inset-0 rounded-2xl bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
     </div>
   );
 }
@@ -111,11 +111,11 @@ export default function AboutUsPage() {
     <PageTransition className="space-y-6">
       {/* Header */}
       <section className="text-center py-6">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+        <h1 className="text-3xl font-bold text-slate-900">
           About Us
         </h1>
-        <p className="text-slate-500 dark:text-white/50 mt-2 text-sm">
-          รู้จักกับทีมงานผู้สร้างเว็บไซต์นี้
+        <p className="text-slate-500 mt-2 text-sm">
+          Meet the team behind MedPi Portal
         </p>
       </section>
 
@@ -124,7 +124,7 @@ export default function AboutUsPage() {
         {/* Left Arrow Button */}
         <button
           onClick={goPrev}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white dark:bg-[#0d1b2e] border border-slate-200 dark:border-white/10 shadow-md flex items-center justify-center hover:bg-slate-50 dark:hover:bg-white/10 transition"
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white border border-slate-200 shadow-md flex items-center justify-center hover:bg-slate-50 transition"
           aria-label="Scroll left"
         >
           <FiChevronLeft size={18} />
@@ -152,7 +152,7 @@ export default function AboutUsPage() {
         {/* Right Arrow Button */}
         <button
           onClick={goNext}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white dark:bg-[#0d1b2e] border border-slate-200 dark:border-white/10 shadow-md flex items-center justify-center hover:bg-slate-50 dark:hover:bg-white/10 transition"
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white border border-slate-200 shadow-md flex items-center justify-center hover:bg-slate-50 transition"
           aria-label="Scroll right"
         >
           <FiChevronRight size={18} />
@@ -170,7 +170,7 @@ export default function AboutUsPage() {
             aria-label={`Go to ${member.name}`}
             aria-selected={index === current}
             className={`h-1.5 rounded-full transition-[width,background-color] duration-300 ease-out ${
-              index === current ? 'w-5 bg-blue-400' : 'w-1.5 bg-white/20 hover:bg-white/40'
+              index === current ? 'w-5 bg-blue-500' : 'w-1.5 bg-slate-300 hover:bg-slate-400'
             }`}
           />
         ))}
@@ -179,10 +179,10 @@ export default function AboutUsPage() {
       {/* Additional Info Section */}
       <Card className="glass-card mt-8">
         <div className="p-5">
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">
             Our Mission
           </h3>
-          <p className="text-sm text-slate-600 dark:text-white/70 leading-relaxed">
+          <p className="text-sm text-slate-600 leading-relaxed">
             We are a dedicated team of developers, designers, and educators working together to
             create the best learning experience for medical students. Our goal is to make
             medical education more accessible, organized, and engaging through technology.
@@ -193,10 +193,10 @@ export default function AboutUsPage() {
       {/* Contact Section */}
       <Card className="glass-card">
         <div className="p-5">
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">
             Get in Touch
           </h3>
-          <p className="text-sm text-slate-600 dark:text-white/70">
+          <p className="text-sm text-slate-600">
             Have questions or feedback? We&apos;d love to hear from you. Reach out to us through
             the MedPi Portal team.
           </p>

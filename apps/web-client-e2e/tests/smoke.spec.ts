@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
  */
 
 test('login page shows the Google sign-in button and redirects to Google', async ({ page }) => {
-  await page.goto('/en/login');
+  await page.goto('/login');
 
   const signIn = page.getByRole('button', { name: /sign in with google|google/i });
   await expect(signIn).toBeVisible();
@@ -23,7 +23,7 @@ test('login page shows the Google sign-in button and redirects to Google', async
 });
 
 test('unauthenticated access to a dashboard route redirects to login', async ({ page }) => {
-  await page.goto('/en/subjects');
+  await page.goto('/subjects');
   await expect(page).toHaveURL(/\/login/);
 });
 
@@ -42,6 +42,6 @@ test('authenticated user can see the subjects list', async ({ page, context }) =
     },
   ]);
 
-  await page.goto('/en/subjects');
+  await page.goto('/subjects');
   await expect(page.getByRole('main')).toBeVisible();
 });

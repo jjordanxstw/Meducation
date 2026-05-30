@@ -1,17 +1,10 @@
 /**
  * Announcements Edit Page
- */
-
-import { useShow, useTranslate } from '@refinedev/core';
-import { Edit, useForm } from '@refinedev/antd';
-import { useParams } from 'react-router-dom';
-import { Form, Input, Switch } from 'antd';
-import type { Announcement } from '@medical-portal/shared';
+ */import { useShow } from '@refinedev/core';import { Edit, useForm } from '@refinedev/antd';import { useParams } from 'react-router-dom';import { Form, Input, Switch } from 'antd';import type { Announcement } from '@medical-portal/shared';
 
 const { TextArea } = Input;
 
 const AnnouncementsEdit = () => {
-  const t = useTranslate();
   const { id } = useParams<{ id: string }>();
   const { queryResult } = useShow<Announcement>({ id });
   const { formProps, saveButtonProps } = useForm<Announcement>({ id });
@@ -29,7 +22,7 @@ const AnnouncementsEdit = () => {
         }}
       >
         <Form.Item
-          label={t('pages.announcements.fields.title', {}, 'Title')}
+          label={'Title'}
           name="title"
           rules={[{ required: true }]}
         >
@@ -37,7 +30,7 @@ const AnnouncementsEdit = () => {
         </Form.Item>
 
         <Form.Item
-          label={t('pages.announcements.fields.content', {}, 'Content')}
+          label={'Content'}
           name="content"
           rules={[{ required: true }]}
         >
@@ -45,7 +38,7 @@ const AnnouncementsEdit = () => {
         </Form.Item>
 
         <Form.Item
-          label={t('pages.announcements.fields.pinned', {}, 'Pinned')}
+          label={'Pinned'}
           name="is_pinned"
           valuePropName="checked"
         >
@@ -53,7 +46,7 @@ const AnnouncementsEdit = () => {
         </Form.Item>
 
         <Form.Item
-          label={t('pages.announcements.fields.published', {}, 'Published')}
+          label={'Published'}
           name="is_published"
           valuePropName="checked"
         >

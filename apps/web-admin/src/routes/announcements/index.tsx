@@ -1,17 +1,10 @@
 /**
  * Announcements List Page
  * Admin management of system announcements
- */
-
-import { List, useTable, EditButton, DeleteButton } from '@refinedev/antd';
-import { useTranslate } from '@refinedev/core';
-import { Button, Input, Select, Space, Table, Tag } from 'antd';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Announcement } from '@medical-portal/shared';
-import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
+ */import { List, useTable, EditButton, DeleteButton } from '@refinedev/antd';
+import { Button, Input, Select, Space, Table, Tag } from 'antd';import { useCallback, useEffect, useRef, useState } from 'react';import type { Announcement } from '@medical-portal/shared';import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
 
 const AnnouncementsList = () => {
-  const t = useTranslate();
   const { tableProps, setFilters, filters } = useTable<Announcement>({
     syncWithLocation: true,
   });
@@ -69,14 +62,14 @@ const AnnouncementsList = () => {
   };
 
   return (
-    <List createButtonProps={{ children: t('buttons.create', {}, 'Create') }}>
+    <List createButtonProps={{ children: 'Create' }}>
       <Space wrap size="small" style={{ marginBottom: 12 }} className="resource-filter-bar">
         <Input.Search
           className="resource-filter-control"
           allowClear
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder={t('common.searchPlaceholder', {}, 'Search')}
+          placeholder={'Search'}
           style={{ width: 220 }}
         />
         <Select
@@ -84,11 +77,11 @@ const AnnouncementsList = () => {
           allowClear
           value={isPublished}
           onChange={(value) => setIsPublished(value)}
-          placeholder={t('pages.announcements.fields.published', {}, 'Status')}
+          placeholder={'Status'}
           style={{ width: 150 }}
           options={[
-            { label: t('pages.announcements.published', {}, 'Published'), value: 'true' },
-            { label: t('pages.announcements.draft', {}, 'Draft'), value: 'false' },
+            { label: 'Published', value: 'true' },
+            { label: 'Draft', value: 'false' },
           ]}
         />
         <Select
@@ -96,14 +89,14 @@ const AnnouncementsList = () => {
           allowClear
           value={isPinned}
           onChange={(value) => setIsPinned(value)}
-          placeholder={t('pages.announcements.fields.pinned', {}, 'Pinned')}
+          placeholder={'Pinned'}
           style={{ width: 150 }}
           options={[
-            { label: t('pages.announcements.pinned', {}, 'Pinned'), value: 'true' },
-            { label: t('pages.announcements.notPinned', {}, 'Not Pinned'), value: 'false' },
+            { label: 'Pinned', value: 'true' },
+            { label: 'Not Pinned', value: 'false' },
           ]}
         />
-        <Button className="resource-filter-button" onClick={resetFilters}>{t('common.clearFilters', {}, 'Clear')}</Button>
+        <Button className="resource-filter-button" onClick={resetFilters}>{'Clear'}</Button>
       </Space>
 
       <Table
@@ -112,35 +105,35 @@ const AnnouncementsList = () => {
         size="small"
         scroll={{ x: 'max-content' }}
       >
-        <Table.Column dataIndex="title" title={t('pages.announcements.fields.title', {}, 'Title')} ellipsis />
+        <Table.Column dataIndex="title" title={'Title'} ellipsis />
         <Table.Column
           dataIndex="is_published"
-          title={t('pages.announcements.fields.published', {}, 'Published')}
+          title={'Published'}
           width={110}
           render={(value) => (
             <Tag color={value ? 'green' : 'default'}>
-              {value ? t('pages.announcements.published', {}, 'Published') : t('pages.announcements.draft', {}, 'Draft')}
+              {value ? 'Published' : 'Draft'}
             </Tag>
           )}
         />
         <Table.Column
           dataIndex="is_pinned"
-          title={t('pages.announcements.fields.pinned', {}, 'Pinned')}
+          title={'Pinned'}
           width={90}
           render={(value) => (
             <Tag color={value ? 'gold' : 'default'}>
-              {value ? '📌 ' + t('pages.announcements.pinned', {}, 'Pinned') : '-'}
+              {value ? '📌 ' + 'Pinned' : '-'}
             </Tag>
           )}
         />
         <Table.Column
           dataIndex="created_at"
-          title={t('pages.announcements.fields.createdAt', {}, 'Created')}
+          title={'Created'}
           width={130}
           render={(value) => new Date(value).toLocaleDateString()}
         />
         <Table.Column
-          title={t('pages.announcements.fields.actions', {}, 'Actions')}
+          title={'Actions'}
           fixed="right"
           width={120}
           render={(_, record: Announcement) => (

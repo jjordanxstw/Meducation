@@ -1,15 +1,14 @@
 import type { Config } from 'tailwindcss';
-import { nextui } from '@nextui-org/react';
+import { heroui } from '@heroui/react';
 import { HERO_BRAND, HERO_TOKENS } from '@medical-portal/shared';
 
 const light = HERO_TOKENS.light;
-const dark = HERO_TOKENS.dark;
 
 const config: Config = {
   content: [
     './app/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './node_modules/@nextui-org/theme/dist/**/*.{js,ts,jsx,tsx}',
+    './node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {
@@ -45,11 +44,9 @@ const config: Config = {
         info: light.state.info.fg,
       },
       fontFamily: {
-        // Latin first, Thai (Sarabun) as automatic fallback for Thai glyphs.
-        heading: ['var(--font-noto-sans)', 'var(--font-sarabun)', 'Noto Sans', 'Sarabun', 'sans-serif'],
-        body: ['var(--font-noto-sans)', 'var(--font-sarabun)', 'Noto Sans', 'Sarabun', 'sans-serif'],
-        sans: ['var(--font-noto-sans)', 'var(--font-sarabun)', 'Noto Sans', 'Sarabun', 'sans-serif'],
-        thai: ['var(--font-sarabun)', 'Sarabun', 'sans-serif'],
+        heading: ['var(--font-noto-sans)', 'Noto Sans', 'sans-serif'],
+        body: ['var(--font-noto-sans)', 'Noto Sans', 'sans-serif'],
+        sans: ['var(--font-noto-sans)', 'Noto Sans', 'sans-serif'],
       },
       animation: {
         marquee: 'marquee 30s linear infinite',
@@ -73,9 +70,8 @@ const config: Config = {
     },
   },
   safelist: ['scrollbar-hide'],
-  darkMode: 'class',
   plugins: [
-    nextui({
+    heroui({
       themes: {
         light: {
           colors: {
@@ -92,24 +88,6 @@ const config: Config = {
               900: HERO_BRAND.blue[900],
               DEFAULT: HERO_BRAND.blue[500],
               foreground: light.brand.foreground,
-            },
-          },
-        },
-        dark: {
-          colors: {
-            primary: {
-              50: HERO_BRAND.blue[50],
-              100: HERO_BRAND.blue[100],
-              200: HERO_BRAND.blue[200],
-              300: HERO_BRAND.blue[300],
-              400: HERO_BRAND.blue[400],
-              500: HERO_BRAND.blue[500],
-              600: HERO_BRAND.blue[600],
-              700: HERO_BRAND.blue[700],
-              800: HERO_BRAND.blue[800],
-              900: HERO_BRAND.blue[900],
-              DEFAULT: HERO_BRAND.blue[500],
-              foreground: dark.brand.foreground,
             },
           },
         },

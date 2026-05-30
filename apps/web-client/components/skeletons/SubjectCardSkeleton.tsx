@@ -1,10 +1,10 @@
-const base = 'bg-white/[0.06] animate-pulse rounded-lg';
+const base = 'bg-slate-100 animate-pulse rounded-lg';
 
 /** Loading placeholder for a subject card. */
 export function SubjectCardSkeleton() {
   return (
     <div
-      className="rounded-xl border border-white/[0.08] bg-white/5 p-4"
+      className="rounded-xl border border-slate-200 bg-white p-4"
       role="status"
       aria-label="Loading subject"
     >

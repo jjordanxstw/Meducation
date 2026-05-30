@@ -16,7 +16,6 @@
     "@ant-design/charts": "^2.6.7",
     "@ant-design/icons": "^5.2.6",
     "@fontsource/noto-sans": "^5.2.10",
-    "@fontsource/sarabun": "^5.2.8",
     "@medical-portal/shared": "workspace:*",
     "@refinedev/antd": "^5.47.0",
     "@refinedev/core": "^4.51.0",

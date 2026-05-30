@@ -1,15 +1,13 @@
 /**
- * Admin Dashboard Page
+ * Admin Dashboard Page — light blue/white theme, English only.
  *
  * UX goals:
  * - Show both total and active counts on every KPI card with a progress bar.
- * - Replace the plain "Students by Year" rows with an interactive bar chart.
- * - Add an "Activity over time" line chart with a granularity (day/week/month)
- *   and date-range picker, backed by /admin/statistics/activity.
- * - Render upcoming events as a colour-coded Timeline with relative times.
- * - Render audit logs as a filterable, paginated Table with action chips.
- * - Add a welcome banner, last-updated timestamp + manual refresh, and a
- *   quick-actions row that deep-links into the most common create flows.
+ * - "Students by Year" bar chart + "Activity over time" line chart with
+ *   granularity (day/week/month) and a date-range picker.
+ * - Upcoming events as a colour-coded Timeline with relative times.
+ * - Audit logs as a filterable, paginated Table with action chips.
+ * - Welcome banner, last-updated timestamp + manual refresh, quick actions.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -48,7 +46,7 @@ import {
   UnorderedListOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
-import { useGetIdentity, useGo, useTranslate } from '@refinedev/core';
+import { useGetIdentity, useGo } from '@refinedev/core';
 import dayjs, { type Dayjs } from 'dayjs';
 import { authAxios } from '../../providers/auth-provider';
 
@@ -127,55 +125,19 @@ function defaultRangeFor(preset: Exclude<RangePreset, 'custom'>): [Dayjs, Dayjs]
 }
 
 const KPI_DEFINITIONS = [
-  {
-    key: 'subjects' as const,
-    accent: '#1677ff',
-    icon: <BookOutlined />,
-    labelKey: 'pages.dashboard.kpi.subjects',
-    fallback: 'Subjects',
-  },
-  {
-    key: 'sections' as const,
-    accent: '#722ed1',
-    icon: <UnorderedListOutlined />,
-    labelKey: 'pages.dashboard.kpi.sections',
-    fallback: 'Sections',
-  },
-  {
-    key: 'lectures' as const,
-    accent: '#13c2c2',
-    icon: <ReadOutlined />,
-    labelKey: 'pages.dashboard.kpi.lectures',
-    fallback: 'Lectures',
-  },
-  {
-    key: 'resources' as const,
-    accent: '#fa8c16',
-    icon: <FileTextOutlined />,
-    labelKey: 'pages.dashboard.kpi.resources',
-    fallback: 'Resources',
-  },
-  {
-    key: 'profiles' as const,
-    accent: '#52c41a',
-    icon: <TeamOutlined />,
-    labelKey: 'pages.dashboard.kpi.profiles',
-    fallback: 'Profiles',
-  },
-  {
-    key: 'calendarEvents' as const,
-    accent: '#eb2f96',
-    icon: <CalendarOutlined />,
-    labelKey: 'pages.dashboard.kpi.calendarEvents',
-    fallback: 'Calendar events',
-  },
+  { key: 'subjects' as const, accent: '#2f80ed', icon: <BookOutlined />, label: 'Subjects' },
+  { key: 'sections' as const, accent: '#7c3aed', icon: <UnorderedListOutlined />, label: 'Sections' },
+  { key: 'lectures' as const, accent: '#0891b2', icon: <ReadOutlined />, label: 'Lectures' },
+  { key: 'resources' as const, accent: '#ea580c', icon: <FileTextOutlined />, label: 'Resources' },
+  { key: 'profiles' as const, accent: '#16a34a', icon: <TeamOutlined />, label: 'Profiles' },
+  { key: 'calendarEvents' as const, accent: '#db2777', icon: <CalendarOutlined />, label: 'Calendar events' },
 ];
 
 const EVENT_COLORS: Record<string, string> = {
-  exam: '#cf1322',
-  lecture: '#1677ff',
-  holiday: '#faad14',
-  event: '#52c41a',
+  exam: '#dc2626',
+  lecture: '#2f80ed',
+  holiday: '#d97706',
+  event: '#16a34a',
 };
 
 const ACTION_COLORS: Record<string, string> = {
@@ -184,12 +146,12 @@ const ACTION_COLORS: Record<string, string> = {
   DELETE: 'red',
 };
 
-function formatRelativeTime(target: dayjs.Dayjs, now: dayjs.Dayjs, t: ReturnType<typeof useTranslate>): string {
+function formatRelativeTime(target: dayjs.Dayjs, now: dayjs.Dayjs): string {
   const diffMs = target.diff(now);
   const absMs = Math.abs(diffMs);
 
   if (absMs < 60_000) {
-    return t('pages.dashboard.timeline.now', {}, 'happening now');
+    return 'happening now';
   }
 
   const minutes = Math.round(absMs / 60_000);
@@ -205,15 +167,10 @@ function formatRelativeTime(target: dayjs.Dayjs, now: dayjs.Dayjs, t: ReturnType
     value = `${minutes}m`;
   }
 
-  if (diffMs >= 0) {
-    return t('pages.dashboard.timeline.relativeIn', { value }, `in ${value}`);
-  }
-
-  return t('pages.dashboard.timeline.relativeAgo', { value }, `${value} ago`);
+  return diffMs >= 0 ? `in ${value}` : `${value} ago`;
 }
 
 const DashboardPage = () => {
-  const t = useTranslate();
   const go = useGo();
   const { data: identity } = useGetIdentity<AdminIdentity>();
 
@@ -233,8 +190,7 @@ const DashboardPage = () => {
   const [refreshTick, setRefreshTick] = useState(0);
   const [nowTick, setNowTick] = useState<Dayjs>(() => dayjs());
 
-  // M.10: auto-refresh stats every 60s while the tab is visible so an admin
-  // sees changes made by others without manually refreshing.
+  // M.10: auto-refresh stats every 60s while the tab is visible.
   useEffect(() => {
     const id = setInterval(() => {
       if (document.visibilityState === 'visible') {
@@ -270,11 +226,11 @@ const DashboardPage = () => {
         }
         setOverview(response.data?.data ?? null);
         setLastUpdated(dayjs());
-      } catch (error) {
+      } catch {
         if (!mounted) {
           return;
         }
-        setOverviewError(t('pages.dashboard.noData', {}, 'Dashboard data is unavailable'));
+        setOverviewError('Dashboard data is unavailable');
       } finally {
         if (mounted) {
           setOverviewLoading(false);
@@ -287,7 +243,7 @@ const DashboardPage = () => {
     return () => {
       mounted = false;
     };
-  }, [refreshTick, t]);
+  }, [refreshTick]);
 
   useEffect(() => {
     let mounted = true;
@@ -312,7 +268,7 @@ const DashboardPage = () => {
         if (!mounted) {
           return;
         }
-        setActivityError(t('pages.dashboard.activity.empty', {}, 'No activity in the selected range'));
+        setActivityError('No activity in the selected range');
         setActivity(null);
       } finally {
         if (mounted) {
@@ -326,7 +282,7 @@ const DashboardPage = () => {
     return () => {
       mounted = false;
     };
-  }, [effectiveRange, granularity, refreshTick, t]);
+  }, [effectiveRange, granularity, refreshTick]);
 
   const handleRefresh = useCallback(() => {
     setRefreshTick((tick) => tick + 1);
@@ -348,8 +304,6 @@ const DashboardPage = () => {
     setCustomRange([dates[0].startOf('day'), dates[1].startOf('day')]);
   }, []);
 
-  // Charts use a normalized long-form dataset so that legends, tooltips, and
-  // colour mapping stay consistent.
   const activityChartData = useMemo(() => {
     if (!activity) {
       return [];
@@ -357,35 +311,23 @@ const DashboardPage = () => {
 
     const series: Array<{ bucket: string; series: string; value: number }> = [];
     for (const point of activity.buckets) {
-      series.push({
-        bucket: point.bucket,
-        series: t('pages.dashboard.activity.newProfiles', {}, 'New users'),
-        value: point.newProfiles,
-      });
-      series.push({
-        bucket: point.bucket,
-        series: t('pages.dashboard.activity.newLectures', {}, 'New lectures'),
-        value: point.newLectures,
-      });
-      series.push({
-        bucket: point.bucket,
-        series: t('pages.dashboard.activity.newAuditEvents', {}, 'Audit events'),
-        value: point.newAuditEvents,
-      });
+      series.push({ bucket: point.bucket, series: 'New users', value: point.newProfiles });
+      series.push({ bucket: point.bucket, series: 'New lectures', value: point.newLectures });
+      series.push({ bucket: point.bucket, series: 'Audit events', value: point.newAuditEvents });
     }
     return series;
-  }, [activity, t]);
+  }, [activity]);
 
   const studentsChartData = useMemo(() => {
     if (!overview?.studentsByYear) {
       return [];
     }
     return overview.studentsByYear.map((row) => ({
-      year: `${t('common.yearPrefix', {}, 'Year')} ${row.yearLevel}`,
+      year: `Year ${row.yearLevel}`,
       count: row.count,
       yearLevel: row.yearLevel,
     }));
-  }, [overview, t]);
+  }, [overview]);
 
   const filteredAuditLogs = useMemo(() => {
     if (!overview?.recentAuditLogs) {
@@ -400,7 +342,7 @@ const DashboardPage = () => {
   const auditColumns = useMemo<ColumnsType<DashboardOverview['recentAuditLogs'][number]>>(
     () => [
       {
-        title: t('pages.dashboard.audit.action', {}, 'Action'),
+        title: 'Action',
         dataIndex: 'action',
         key: 'action',
         width: 110,
@@ -411,13 +353,13 @@ const DashboardPage = () => {
         ),
       },
       {
-        title: t('pages.dashboard.audit.table', {}, 'Table'),
+        title: 'Table',
         dataIndex: 'table_name',
         key: 'table_name',
         ellipsis: true,
       },
       {
-        title: t('pages.dashboard.audit.user', {}, 'User'),
+        title: 'User',
         dataIndex: 'user_email',
         key: 'user_email',
         ellipsis: true,
@@ -433,8 +375,8 @@ const DashboardPage = () => {
                   width: 26,
                   height: 26,
                   borderRadius: '50%',
-                  background: 'rgba(22, 119, 255, 0.12)',
-                  color: '#1677ff',
+                  background: 'rgba(47, 128, 237, 0.12)',
+                  color: '#2f80ed',
                   fontWeight: 600,
                   fontSize: 12,
                 }}
@@ -444,11 +386,11 @@ const DashboardPage = () => {
               <Text>{email}</Text>
             </Space>
           ) : (
-            <Text type="secondary">{t('common.notAvailable', {}, '-')}</Text>
+            <Text type="secondary">-</Text>
           ),
       },
       {
-        title: t('pages.dashboard.audit.time', {}, 'Time'),
+        title: 'Time',
         dataIndex: 'created_at',
         key: 'created_at',
         width: 180,
@@ -459,35 +401,35 @@ const DashboardPage = () => {
         ),
       },
     ],
-    [t],
+    [],
   );
 
   const welcomeName = identity?.name ?? identity?.username ?? '';
-  const welcomeMessage = welcomeName
-    ? t('pages.dashboard.welcome', { name: welcomeName }, `Welcome back, ${welcomeName}`)
-    : t('pages.dashboard.welcomeFallback', {}, 'Welcome to the admin console');
+  const welcomeMessage = welcomeName ? `Welcome back, ${welcomeName}` : 'Welcome to the admin console';
 
   const isLoadingOverview = overviewLoading && !overview;
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
       {/* Welcome / refresh banner */}
-      <Card bordered={false} style={{ background: 'linear-gradient(135deg, #1b2d48 0%, #21385a 100%)', color: '#fff' }}>
+      <Card
+        bordered={false}
+        style={{ background: 'linear-gradient(135deg, #2f80ed 0%, #1b66cc 100%)', color: '#fff' }}
+      >
         <Row align="middle" justify="space-between" gutter={[12, 12]} wrap>
           <Col xs={24} md={16}>
             <Title level={3} style={{ color: '#fff', marginBottom: 4 }}>
               {welcomeMessage}
             </Title>
-            <Paragraph style={{ color: 'rgba(255,255,255,0.78)', margin: 0 }}>
-              {t('pages.dashboard.subtitle', {}, 'Select a menu item to manage the system')}
+            <Paragraph style={{ color: 'rgba(255,255,255,0.85)', margin: 0 }}>
+              Select a menu item to manage the system
             </Paragraph>
           </Col>
           <Col xs={24} md="auto">
             <Space size={8} wrap>
               {lastUpdated && (
-                <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
-                  {t('pages.dashboard.lastUpdated', {}, 'Last updated')}:{' '}
-                  {Math.max(0, nowTick.diff(lastUpdated, 'second'))}s {t('pages.dashboard.ago', {}, 'ago')}
+                <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12 }}>
+                  Last updated: {Math.max(0, nowTick.diff(lastUpdated, 'second'))}s ago
                 </Text>
               )}
               <Button
@@ -496,16 +438,14 @@ const DashboardPage = () => {
                 onClick={handleRefresh}
                 disabled={overviewLoading && activityLoading}
               >
-                {t('buttons.refresh', {}, 'Refresh')}
+                Refresh
               </Button>
             </Space>
           </Col>
         </Row>
       </Card>
 
-      {overviewError && (
-        <Alert type="error" showIcon message={overviewError} />
-      )}
+      {overviewError && <Alert type="error" showIcon message={overviewError} />}
 
       {/* KPI cards */}
       <Row gutter={[12, 12]}>
@@ -534,7 +474,7 @@ const DashboardPage = () => {
                     <Row align="middle" justify="space-between" wrap={false}>
                       <Col flex="auto" style={{ minWidth: 0 }}>
                         <Text type="secondary" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          {t(definition.labelKey, {}, definition.fallback)}
+                          {definition.label}
                         </Text>
                         <Title level={3} style={{ margin: '4px 0 0', color: definition.accent }}>
                           {overviewError ? '—' : total.toLocaleString()}
@@ -565,10 +505,10 @@ const DashboardPage = () => {
                         size="small"
                         showInfo={false}
                         strokeColor={definition.accent}
-                        trailColor="rgba(255,255,255,0.08)"
+                        trailColor="rgba(15,23,42,0.06)"
                       />
                       <Text type="secondary" style={{ fontSize: 12 }}>
-                        {t('pages.dashboard.kpi.activeRatio', { active, total }, `${active}/${total} active`)}
+                        {`${active}/${total} active`}
                       </Text>
                     </div>
                   </>
@@ -580,32 +520,19 @@ const DashboardPage = () => {
       </Row>
 
       {/* Quick actions */}
-      <Card title={t('pages.dashboard.quickActions', {}, 'Quick actions')} size="small">
+      <Card title="Quick actions" size="small">
         <Space wrap>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => go({ to: { resource: 'subjects', action: 'create' } })}
-          >
-            {t('pages.dashboard.quickActions.newSubject', {}, 'New subject')}
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => go({ to: { resource: 'subjects', action: 'create' } })}>
+            New subject
           </Button>
-          <Button
-            icon={<PlusOutlined />}
-            onClick={() => go({ to: { resource: 'lectures', action: 'create' } })}
-          >
-            {t('pages.dashboard.quickActions.newLecture', {}, 'New lecture')}
+          <Button icon={<PlusOutlined />} onClick={() => go({ to: { resource: 'lectures', action: 'create' } })}>
+            New lecture
           </Button>
-          <Button
-            icon={<PlusOutlined />}
-            onClick={() => go({ to: { resource: 'calendar', action: 'create' } })}
-          >
-            {t('pages.dashboard.quickActions.newEvent', {}, 'New calendar event')}
+          <Button icon={<PlusOutlined />} onClick={() => go({ to: { resource: 'calendar', action: 'create' } })}>
+            New calendar event
           </Button>
-          <Button
-            icon={<PlusOutlined />}
-            onClick={() => go({ to: { resource: 'announcements', action: 'create' } })}
-          >
-            {t('pages.dashboard.quickActions.newAnnouncement', {}, 'New announcement')}
+          <Button icon={<PlusOutlined />} onClick={() => go({ to: { resource: 'announcements', action: 'create' } })}>
+            New announcement
           </Button>
         </Space>
       </Card>
@@ -615,7 +542,7 @@ const DashboardPage = () => {
         title={
           <Space size={8}>
             <ClockCircleOutlined />
-            {t('pages.dashboard.activityTitle', {}, 'Activity over time')}
+            Activity over time
           </Space>
         }
         extra={
@@ -624,9 +551,9 @@ const DashboardPage = () => {
               value={granularity}
               onChange={(value) => setGranularity(value as Granularity)}
               options={[
-                { label: t('pages.dashboard.granularity.day', {}, 'Daily'), value: 'day' },
-                { label: t('pages.dashboard.granularity.week', {}, 'Weekly'), value: 'week' },
-                { label: t('pages.dashboard.granularity.month', {}, 'Monthly'), value: 'month' },
+                { label: 'Daily', value: 'day' },
+                { label: 'Weekly', value: 'week' },
+                { label: 'Monthly', value: 'month' },
               ]}
             />
             <Radio.Group
@@ -636,10 +563,10 @@ const DashboardPage = () => {
               buttonStyle="solid"
               size="small"
             >
-              <Radio.Button value="7d">{t('pages.dashboard.range.7d', {}, 'Last 7 days')}</Radio.Button>
-              <Radio.Button value="30d">{t('pages.dashboard.range.30d', {}, 'Last 30 days')}</Radio.Button>
-              <Radio.Button value="90d">{t('pages.dashboard.range.90d', {}, 'Last 90 days')}</Radio.Button>
-              <Radio.Button value="custom">{t('pages.dashboard.range.custom', {}, 'Custom')}</Radio.Button>
+              <Radio.Button value="7d">Last 7 days</Radio.Button>
+              <Radio.Button value="30d">Last 30 days</Radio.Button>
+              <Radio.Button value="90d">Last 90 days</Radio.Button>
+              <Radio.Button value="custom">Custom</Radio.Button>
             </Radio.Group>
             {rangePreset === 'custom' && (
               <RangePicker
@@ -653,35 +580,30 @@ const DashboardPage = () => {
         }
       >
         <Paragraph type="secondary" style={{ marginTop: -4, marginBottom: 12, fontSize: 12 }}>
-          {t(
-            'pages.dashboard.activitySubtitle',
-            {},
-            'New users, lectures, and audit events across the selected period',
-          )}
+          New users, lectures, and audit events across the selected period
         </Paragraph>
         {activityLoading ? (
           <Skeleton active paragraph={{ rows: 6 }} />
         ) : activityError ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '32px 0' }}>
-            <WarningOutlined style={{ fontSize: 32, color: '#fbbf24' }} />
-            <Text type="secondary">{t('pages.dashboard.chartUnavailable', {}, 'Chart data unavailable')}</Text>
+            <WarningOutlined style={{ fontSize: 32, color: '#d97706' }} />
+            <Text type="secondary">Chart data unavailable</Text>
             <Button type="link" size="small" onClick={handleRefresh}>
-              {t('buttons.retry', {}, 'Retry')}
+              Retry
             </Button>
           </div>
         ) : !activity || activity.buckets.length === 0 ? (
-          <Empty description={t('pages.dashboard.activity.empty', {}, 'No activity in the selected range')} />
+          <Empty description="No activity in the selected range" />
         ) : (
           <Line
             data={activityChartData}
-            theme="classicDark"
             autoFit
             xField="bucket"
             yField="value"
             seriesField="series"
             smooth
             height={260}
-            color={['#0070F3', '#7c3aed', '#10b981']}
+            color={['#2f80ed', '#7c3aed', '#16a34a']}
             point={{ size: 3, shape: 'circle' }}
             xAxis={{ tickCount: 6 }}
             yAxis={{ minInterval: 1 }}
@@ -693,7 +615,7 @@ const DashboardPage = () => {
       <Row gutter={[12, 12]}>
         {/* Students by year (bar chart) */}
         <Col xs={24} lg={10}>
-          <Card title={t('pages.dashboard.studentsByYear', {}, 'Students By Year')} style={{ height: '100%' }}>
+          <Card title="Students By Year" style={{ height: '100%' }}>
             {isLoadingOverview ? (
               <Skeleton active paragraph={{ rows: 5 }} />
             ) : studentsChartData.length === 0 ? (
@@ -701,20 +623,19 @@ const DashboardPage = () => {
             ) : (
               <Column
                 data={studentsChartData}
-                theme="classicDark"
                 autoFit
                 xField="year"
                 yField="count"
                 height={280}
-                color="#0070F3"
+                color="#2f80ed"
                 columnStyle={{ radius: [6, 6, 0, 0] }}
                 label={{
                   position: 'top',
-                  style: { fill: 'rgba(255,255,255,0.6)', fontSize: 12 },
+                  style: { fill: 'rgba(15,23,42,0.45)', fontSize: 12 },
                 }}
                 tooltip={{
                   formatter: (datum: { count?: number }) => ({
-                    name: t('pages.dashboard.kpi.profiles', {}, 'Profiles'),
+                    name: 'Profiles',
                     value: datum?.count ?? 0,
                   }),
                 }}
@@ -731,7 +652,7 @@ const DashboardPage = () => {
             title={
               <Space size={8}>
                 <BellOutlined />
-                {t('pages.dashboard.upcomingEvents', {}, 'Upcoming Events')}
+                Upcoming Events
               </Space>
             }
             style={{ height: '100%' }}
@@ -739,10 +660,7 @@ const DashboardPage = () => {
             {isLoadingOverview ? (
               <Skeleton active paragraph={{ rows: 4 }} />
             ) : !overview?.upcomingEvents || overview.upcomingEvents.length === 0 ? (
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description={t('pages.dashboard.noUpcomingEvents', {}, 'No upcoming events')}
-              />
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No upcoming events" />
             ) : (
               <Timeline
                 mode="left"
@@ -750,14 +668,9 @@ const DashboardPage = () => {
                   const startSource = event.start_date ?? event.start_time ?? '';
                   const start = dayjs(startSource);
                   const now = dayjs();
-                  const color = EVENT_COLORS[event.type?.toLowerCase()] ?? '#8c8c8c';
+                  const color = EVENT_COLORS[event.type?.toLowerCase()] ?? '#94a3b8';
                   const hoursUntil = start.diff(now, 'hour');
-                  const urgencyColor =
-                    hoursUntil < 24
-                      ? '#f87171'
-                      : hoursUntil < 72
-                        ? '#fbbf24'
-                        : 'rgba(255,255,255,0.3)';
+                  const urgencyColor = hoursUntil < 24 ? '#dc2626' : hoursUntil < 72 ? '#d97706' : '#94a3b8';
                   return {
                     color,
                     label: (
@@ -776,11 +689,9 @@ const DashboardPage = () => {
                         </Space>
                         <Text style={{ fontSize: 12 }}>
                           <span style={{ color: urgencyColor, fontWeight: 500 }}>
-                            {formatRelativeTime(start, now, t)}
+                            {formatRelativeTime(start, now)}
                           </span>
-                          {event.location ? (
-                            <span style={{ color: 'rgba(255,255,255,0.4)' }}> · {event.location}</span>
-                          ) : null}
+                          {event.location ? <span style={{ color: '#94a3b8' }}> · {event.location}</span> : null}
                         </Text>
                       </Space>
                     ),
@@ -797,7 +708,7 @@ const DashboardPage = () => {
         title={
           <Space size={8}>
             <AuditOutlined />
-            {t('pages.dashboard.recentAuditLogs', {}, 'Recent Audit Logs')}
+            Recent Audit Logs
           </Space>
         }
         extra={
@@ -807,9 +718,7 @@ const DashboardPage = () => {
             optionType="button"
             size="small"
           >
-            <Radio.Button value="all">
-              {t('pages.dashboard.audit.allActions', {}, 'All actions')}
-            </Radio.Button>
+            <Radio.Button value="all">All actions</Radio.Button>
             <Radio.Button value="INSERT">INSERT</Radio.Button>
             <Radio.Button value="UPDATE">UPDATE</Radio.Button>
             <Radio.Button value="DELETE">DELETE</Radio.Button>
@@ -824,7 +733,7 @@ const DashboardPage = () => {
           loading={isLoadingOverview}
           pagination={{ pageSize: 5, showSizeChanger: false }}
           locale={{
-            emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('pages.dashboard.noAuditLogs', {}, 'No recent audit logs')} />,
+            emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No recent audit logs" />,
           }}
           scroll={{ x: 'max-content' }}
         />

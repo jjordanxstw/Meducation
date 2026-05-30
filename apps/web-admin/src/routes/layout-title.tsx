@@ -1,15 +1,11 @@
 import { LeftOutlined } from '@ant-design/icons';
 import { Button, Space, Typography } from 'antd';
-import { useTranslate } from '@refinedev/core';
-
-const LOGO_PATH = '';
 
 type LayoutTitleProps = {
   collapsed?: boolean;
 };
 
 export const AppLayoutTitle = ({ collapsed }: LayoutTitleProps) => {
-  const t = useTranslate();
   const logoSize = collapsed ? 40 : 28;
   const initialsRadius = collapsed ? 10 : 8;
   const initialsFontSize = collapsed ? 14 : 12;
@@ -31,69 +27,44 @@ export const AppLayoutTitle = ({ collapsed }: LayoutTitleProps) => {
 
   return (
     <Space size={10} align="center">
-      {LOGO_PATH ? (
-        <button
-          type="button"
-          onClick={expandFromCollapsed}
-          style={{
-            background: 'transparent',
-            border: 0,
-            padding: 0,
-            cursor: collapsed ? 'pointer' : 'default',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-          aria-label={collapsed ? t('buttons.expand', {}, 'Expand') : 'MedPI Logo'}
-        >
-          <img src={LOGO_PATH} alt="MedPI Logo" style={{ width: logoSize, height: logoSize, objectFit: 'contain' }} />
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={expandFromCollapsed}
-          style={{
-            width: logoSize,
-            height: logoSize,
-            borderRadius: initialsRadius,
-            border: '1px solid rgba(255, 255, 255, 0.55)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#ffffff',
-            fontWeight: 600,
-            fontSize: initialsFontSize,
-            background: 'transparent',
-            padding: 0,
-            cursor: collapsed ? 'pointer' : 'default',
-          }}
-          aria-label={collapsed ? t('buttons.expand', {}, 'Expand') : 'MedPI Logo'}
-        >
-          M
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={expandFromCollapsed}
+        style={{
+          width: logoSize,
+          height: logoSize,
+          borderRadius: initialsRadius,
+          border: 'none',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#ffffff',
+          fontWeight: 700,
+          fontSize: initialsFontSize,
+          background: 'linear-gradient(135deg, #2f80ed, #1b66cc)',
+          padding: 0,
+          cursor: collapsed ? 'pointer' : 'default',
+        }}
+        aria-label={collapsed ? 'Expand' : 'Meducation Admin'}
+      >
+        M
+      </button>
       {!collapsed && (
         <Space size={8} align="center">
           <Typography.Text
             strong
             style={{
-              fontFamily: "'Noto Sans', 'Sarabun', sans-serif",
+              fontFamily: "'Noto Sans', sans-serif",
               fontSize: 16,
               lineHeight: 1.1,
               letterSpacing: '-0.01em',
-              color: '#ffffff',
+              color: 'var(--ink-1)',
               whiteSpace: 'nowrap',
             }}
           >
-            {t('app.projectName', {}, 'MedPI Admin')}
+            Meducation Admin
           </Typography.Text>
-          <Button
-            type="text"
-            className="sider-top-trigger"
-            icon={<LeftOutlined />}
-            onClick={toggleSider}
-            aria-label={t('buttons.collapse', {}, 'Collapse')}
-          />
+          <Button type="text" icon={<LeftOutlined />} onClick={toggleSider} aria-label="Collapse" />
         </Space>
       )}
     </Space>

@@ -1,17 +1,7 @@
 /**
  * Resources List Page
  * Single-page workflow for hierarchy-aware resource management.
- */
-
-import {
-  useDataProvider,
-  useDelete,
-  useInvalidate,
-  useList,
-  useTranslate,
-} from '@refinedev/core';
-import { List, useTable } from '@refinedev/antd';
-import {
+ */import { useDataProvider, useDelete, useInvalidate, useList } from '@refinedev/core';import { List, useTable } from '@refinedev/antd';import {
   App,
   Button,
   Form,
@@ -24,19 +14,9 @@ import {
   Switch,
   Table,
   Tag,
-} from 'antd';
-import { ResourceType } from '@medical-portal/shared';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { DatabaseOutlined, LinkOutlined, WarningOutlined } from '@ant-design/icons';
-import type { ResourceWithHierarchy, Section, Subject, Lecture } from '@medical-portal/shared';
-import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
-import { resolveApiErrorMessage } from '../../utils/api-error';
-import { ResourceTypeTag } from '../../components/ResourceTypeTag';
-import { AdminEmptyState } from '../../components/AdminEmptyState';
-import { notify } from '../../utils/notify';
+} from 'antd';import { ResourceType } from '@medical-portal/shared';import { useCallback, useEffect, useRef, useState } from 'react';import { DatabaseOutlined, LinkOutlined, WarningOutlined } from '@ant-design/icons';import type { ResourceWithHierarchy, Section, Subject, Lecture } from '@medical-portal/shared';import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';import { resolveApiErrorMessage } from '../../utils/api-error';import { ResourceTypeTag } from '../../components/ResourceTypeTag';import { AdminEmptyState } from '../../components/AdminEmptyState';import { notify } from '../../utils/notify';
 
 const ResourcesList = () => {
-  const t = useTranslate();
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const invalidate = useInvalidate();
@@ -47,10 +27,10 @@ const ResourcesList = () => {
   });
 
   const resourceTypeOptions = [
-    { label: `🎬 ${t('pages.resources.types.youtube', {}, 'YouTube')}`, value: ResourceType.YOUTUBE },
-    { label: `📹 ${t('pages.resources.types.gdriveVideo', {}, 'Google Drive Video')}`, value: ResourceType.GDRIVE_VIDEO },
-    { label: `📄 ${t('pages.resources.types.gdrivePdf', {}, 'Google Drive PDF')}`, value: ResourceType.GDRIVE_PDF },
-    { label: `🔗 ${t('pages.resources.types.external', {}, 'External Link')}`, value: ResourceType.EXTERNAL },
+    { label: `🎬 ${'YouTube'}`, value: ResourceType.YOUTUBE },
+    { label: `📹 ${'Google Drive Video'}`, value: ResourceType.GDRIVE_VIDEO },
+    { label: `📄 ${'Google Drive PDF'}`, value: ResourceType.GDRIVE_PDF },
+    { label: `🔗 ${'External Link'}`, value: ResourceType.EXTERNAL },
   ];
 
   const [search, setSearch] = useState('');
@@ -102,10 +82,10 @@ const ResourcesList = () => {
   const modalType = Form.useWatch('type', form);
 
   const typeAccent: Record<string, string> = {
-    [ResourceType.YOUTUBE]: '#ef4444',
-    [ResourceType.GDRIVE_VIDEO]: '#3b82f6',
-    [ResourceType.GDRIVE_PDF]: '#10b981',
-    [ResourceType.EXTERNAL]: '#a855f7',
+    [ResourceType.YOUTUBE]: '#dc2626',
+    [ResourceType.GDRIVE_VIDEO]: '#2f80ed',
+    [ResourceType.GDRIVE_PDF]: '#16a34a',
+    [ResourceType.EXTERNAL]: '#7c3aed',
   };
 
   const { data: quickCreateSectionsData } = useList<Section>({
@@ -278,14 +258,14 @@ const ResourcesList = () => {
           method: 'post',
           payload: { code: values.code, name: values.name, year_level: values.year_level },
         });
-        message.success(t('notifications.createSuccess', {}, 'Created successfully'));
+        message.success('Created successfully');
       } else if (quickCreateType === 'section') {
         await provider.custom({
           url: '/api/v1/admin/sections',
           method: 'post',
           payload: { subject_id: values.subject_id, name: values.name },
         });
-        message.success(t('notifications.createSuccess', {}, 'Created successfully'));
+        message.success('Created successfully');
       } else if (quickCreateType === 'lecture') {
         await provider.custom({
           url: '/api/v1/admin/lectures',
@@ -296,7 +276,7 @@ const ResourcesList = () => {
             title: values.title,
           },
         });
-        message.success(t('notifications.createSuccess', {}, 'Created successfully'));
+        message.success('Created successfully');
       }
 
       await Promise.all([
@@ -327,11 +307,11 @@ const ResourcesList = () => {
       resource: 'resources',
       id,
       successNotification: {
-        message: t('notifications.deleteSuccess', {}, 'Deleted successfully'),
+        message: 'Deleted successfully',
         type: 'success',
       },
       errorNotification: {
-        message: t('notifications.deleteError', {}, 'Failed to delete'),
+        message: 'Failed to delete',
         type: 'error',
       },
     });
@@ -375,8 +355,8 @@ const ResourcesList = () => {
 
       message.success(
         editingResource
-          ? t('notifications.updateSuccess', {}, 'Updated successfully')
-          : t('notifications.createSuccess', {}, 'Created successfully'),
+          ? 'Updated successfully'
+          : 'Created successfully',
       );
 
       await Promise.all([
@@ -409,18 +389,18 @@ const ResourcesList = () => {
   return (
     <List
       createButtonProps={{
-        children: t('buttons.create', {}, 'Create'),
+        children: 'Create',
         onClick: openCreateModal,
       }}
     >
-      <div className="mb-3 rounded-2xl border border-white/[0.08] bg-[#0a1628] p-4">
+      <div className="mb-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <Space wrap size="small" className="resource-filter-bar">
         <Input.Search
           className="resource-filter-control"
           allowClear
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder={t('common.searchPlaceholder', {}, 'Search')}
+          placeholder={'Search'}
           style={{ width: 240 }}
         />
         <Select
@@ -432,7 +412,7 @@ const ResourcesList = () => {
             setSectionId(undefined);
             setLectureId(undefined);
           }}
-          placeholder={t('pages.resources.fields.subject', {}, 'Subject')}
+          placeholder={'Subject'}
           style={{ width: 280 }}
           options={subjects.map((subject) => ({
             label: `${subject.code} - ${subject.name}`,
@@ -447,7 +427,7 @@ const ResourcesList = () => {
             setSectionId(value);
             setLectureId(undefined);
           }}
-          placeholder={t('pages.resources.fields.section', {}, 'Section')}
+          placeholder={'Section'}
           style={{ width: 280 }}
           disabled={!subjectId}
           options={sections.map((section) => ({
@@ -460,7 +440,7 @@ const ResourcesList = () => {
           allowClear
           value={lectureId}
           onChange={(value) => setLectureId(value)}
-          placeholder={t('pages.resources.fields.lecture', {}, 'Lecture')}
+          placeholder={'Lecture'}
           style={{ width: 280 }}
           disabled={!sectionId}
           options={lectures.map((lecture) => ({
@@ -473,7 +453,7 @@ const ResourcesList = () => {
           allowClear
           value={resourceType}
           onChange={(value) => setResourceType(value)}
-          placeholder={t('pages.resources.fields.type', {}, 'Resource Type')}
+          placeholder={'Resource Type'}
           style={{ width: 220 }}
           options={resourceTypeOptions}
         />
@@ -482,16 +462,16 @@ const ResourcesList = () => {
           allowClear
           value={isActive}
           onChange={(value) => setIsActive(value)}
-          placeholder={t('common.status', {}, 'Status')}
+          placeholder={'Status'}
           style={{ width: 160 }}
           options={[
-            { label: t('common.active', {}, 'Active'), value: true },
-            { label: t('common.inactive', {}, 'Inactive'), value: false },
+            { label: 'Active', value: true },
+            { label: 'Inactive', value: false },
           ]}
         />
         {hasActiveFilters && (
           <Button className="resource-filter-button" type="text" onClick={resetFilters}>
-            {t('common.clearFilters', {}, 'Clear all')}
+            {'Clear all'}
           </Button>
         )}
         <Button
@@ -501,11 +481,11 @@ const ResourcesList = () => {
           onClick={() => {
             void navigator.clipboard
               ?.writeText(window.location.href)
-              .then(() => notify.success(t('pages.resources.filtersCopied', {}, 'Filter URL copied')))
-              .catch(() => notify.error(t('common.copyFailed', {}, 'Could not copy link')));
+              .then(() => notify.success('Filter URL copied'))
+              .catch(() => notify.error('Could not copy link'));
           }}
         >
-          {t('pages.resources.shareFilters', {}, 'Share filters')}
+          {'Share filters'}
         </Button>
       </Space>
       </div>
@@ -513,12 +493,12 @@ const ResourcesList = () => {
       {tableQueryResult?.isError ? (
         <AdminEmptyState
           icon={<WarningOutlined />}
-          title={t('pages.resources.error.title', {}, 'Failed to load resources')}
+          title={'Failed to load resources'}
           subtitle={
             (tableQueryResult.error as { message?: string } | undefined)?.message ||
-            t('notifications.error', {}, 'Something went wrong')
+            'Something went wrong'
           }
-          action={{ label: t('buttons.retry', {}, 'Retry'), onClick: () => void tableQueryResult.refetch() }}
+          action={{ label: 'Retry', onClick: () => void tableQueryResult.refetch() }}
         />
       ) : (
       <Table
@@ -530,74 +510,74 @@ const ResourcesList = () => {
           emptyText: (
             <AdminEmptyState
               icon={<DatabaseOutlined />}
-              title={t('pages.resources.empty.title', {}, 'No resources found')}
-              subtitle={t('pages.resources.empty.subtitle', {}, 'Adjust your filters or create a new resource.')}
-              action={{ label: t('buttons.create', {}, 'Create'), onClick: openCreateModal }}
+              title={'No resources found'}
+              subtitle={'Adjust your filters or create a new resource.'}
+              action={{ label: 'Create', onClick: openCreateModal }}
             />
           ),
         }}
       >
         <Table.Column
           dataIndex="subject_name"
-          title={t('pages.resources.fields.subject', {}, 'Subject')}
+          title={'Subject'}
           ellipsis
           sorter
           render={(_, record: ResourceWithHierarchy) => (
             record.subject_code && record.subject_name
               ? `${record.subject_code} - ${record.subject_name}`
-              : t('common.notAvailable', {}, '-')
+              : '-'
           )}
         />
         <Table.Column
           dataIndex="section_name"
-          title={t('pages.resources.fields.section', {}, 'Section')}
+          title={'Section'}
           ellipsis
           sorter
         />
         <Table.Column
           dataIndex="lecture_title"
-          title={t('pages.resources.fields.lecture', {}, 'Lecture')}
+          title={'Lecture'}
           ellipsis
           sorter
         />
-        <Table.Column dataIndex="label" title={t('pages.resources.fields.label', {}, 'Button Label')} ellipsis sorter />
+        <Table.Column dataIndex="label" title={'Button Label'} ellipsis sorter />
         <Table.Column
           dataIndex="type"
-          title={t('pages.resources.fields.type', {}, 'Resource Type')}
+          title={'Resource Type'}
           width={150}
           sorter
           render={(value) => <ResourceTypeTag type={value} />}
         />
-        <Table.Column dataIndex="url" title={t('pages.resources.fields.url', {}, 'URL / Video ID')} ellipsis sorter />
+        <Table.Column dataIndex="url" title={'URL / Video ID'} ellipsis sorter />
         <Table.Column
           dataIndex="order_index"
-          title={t('common.order', {}, 'Order')}
+          title={'Order'}
           width={80}
           sorter
         />
         <Table.Column
           dataIndex="is_active"
-          title={t('common.status', {}, 'Status')}
+          title={'Status'}
           width={100}
           sorter
           render={(value) => (
             <Tag color={value ? 'green' : 'red'}>
-              {value ? t('common.active', {}, 'Active') : t('common.inactive', {}, 'Inactive')}
+              {value ? 'Active' : 'Inactive'}
             </Tag>
           )}
         />
         <Table.Column
-          title={t('common.actions', {}, 'Actions')}
+          title={'Actions'}
           fixed="right"
           width={120}
           render={(_, record: ResourceWithHierarchy) => (
             <Space size="small">
               <Button size="small" onClick={() => openEditModal(record)}>
-                {t('buttons.edit', {}, 'Edit')}
+                {'Edit'}
               </Button>
               <Popconfirm
-                title={t('common.actions', {}, 'Actions')}
-                description={t('notifications.deleteError', {}, 'Failed to delete')}
+                title={'Actions'}
+                description={'Failed to delete'}
                 onConfirm={() => handleDelete(record.id)}
               >
                 <Button danger size="small">Delete</Button>
@@ -619,14 +599,14 @@ const ResourcesList = () => {
               fontSize: 18,
             }}
           >
-            {editingResource ? t('resources.titles.edit', {}, 'Edit Resource') : t('resources.titles.create', {}, 'Create Resource')}
+            {editingResource ? 'Edit Resource' : 'Create Resource'}
           </span>
         }
         open={isModalOpen}
         onCancel={closeModal}
         onOk={handleSubmit}
-        okText={t('buttons.confirm', {}, 'Confirm')}
-        cancelText={t('buttons.cancel', {}, 'Cancel')}
+        okText={'Confirm'}
+        cancelText={'Cancel'}
         confirmLoading={isSubmitting}
         width={760}
         destroyOnClose
@@ -638,7 +618,7 @@ const ResourcesList = () => {
           className={formShake ? 'admin-shake' : undefined}
         >
           <Form.Item
-            label={<>{t('pages.resources.fields.subject', {}, 'Subject')}</>}
+            label={<>{'Subject'}</>}
             name="subject_id"
             required
             rules={[
@@ -647,7 +627,7 @@ const ResourcesList = () => {
                   if (value || modalSubjectSearchText.trim()) {
                     return;
                   }
-                  throw new Error(t('pages.resources.validation.subjectRequired', {}, 'Please select subject'));
+                  throw new Error('Please select subject');
                 },
               },
             ]}
@@ -657,7 +637,7 @@ const ResourcesList = () => {
                 showSearch
                 allowClear
                 optionFilterProp="label"
-                placeholder={t('pages.resources.placeholders.subject', {}, 'Select subject')}
+                placeholder={'Select subject'}
                 style={{ flex: 1 }}
                 options={subjects.map((subject) => ({
                   label: `${subject.code} - ${subject.name}`,
@@ -673,12 +653,12 @@ const ResourcesList = () => {
                   setModalLectureSearchText('');
                 }}
               />
-              <Button onClick={() => openQuickCreateModal('subject')}>{t('buttons.create', {}, '+Create')}</Button>
+              <Button onClick={() => openQuickCreateModal('subject')}>{'+Create'}</Button>
             </Space.Compact>
           </Form.Item>
 
           <Form.Item
-            label={<>{t('pages.resources.fields.section', {}, 'Section')}</>}
+            label={<>{'Section'}</>}
             name="section_id"
             required
             rules={[
@@ -687,7 +667,7 @@ const ResourcesList = () => {
                   if (value || modalSectionSearchText.trim()) {
                     return;
                   }
-                  throw new Error(t('pages.resources.validation.sectionRequired', {}, 'Please select section'));
+                  throw new Error('Please select section');
                 },
               },
             ]}
@@ -701,8 +681,8 @@ const ResourcesList = () => {
                 optionFilterProp="label"
                 placeholder={
                   modalSubjectId
-                    ? t('pages.resources.placeholders.section', {}, 'Select section')
-                    : t('pages.resources.placeholders.sectionDisabled', {}, 'Select a subject first')
+                    ? 'Select section'
+                    : 'Select a subject first'
                 }
                 style={{ flex: 1 }}
                 options={modalSections.map((section) => ({
@@ -717,12 +697,12 @@ const ResourcesList = () => {
                   setModalLectureSearchText('');
                 }}
               />
-              <Button onClick={() => openQuickCreateModal('section')} disabled={!modalSubjectId}>{t('buttons.create', {}, '+Create')}</Button>
+              <Button onClick={() => openQuickCreateModal('section')} disabled={!modalSubjectId}>{'+Create'}</Button>
             </Space.Compact>
           </Form.Item>
 
           <Form.Item
-            label={<>{t('pages.resources.fields.lecture', {}, 'Lecture')}</>}
+            label={<>{'Lecture'}</>}
             name="lecture_id"
             required
             rules={[
@@ -731,7 +711,7 @@ const ResourcesList = () => {
                   if (value || modalLectureSearchText.trim()) {
                     return;
                   }
-                  throw new Error(t('pages.resources.validation.lectureRequired', {}, 'Please select lecture'));
+                  throw new Error('Please select lecture');
                 },
               },
             ]}
@@ -745,8 +725,8 @@ const ResourcesList = () => {
                 optionFilterProp="label"
                 placeholder={
                   modalSectionId
-                    ? t('pages.resources.placeholders.lecture', {}, 'Select lecture')
-                    : t('pages.resources.placeholders.lectureDisabled', {}, 'Select a section first')
+                    ? 'Select lecture'
+                    : 'Select a section first'
                 }
                 style={{ flex: 1 }}
                 options={modalLectures.map((lecture) => ({
@@ -759,37 +739,37 @@ const ResourcesList = () => {
                   setModalLectureSearchText('');
                 }}
               />
-              <Button onClick={() => openQuickCreateModal('lecture')} disabled={!modalSectionId}>{t('buttons.create', {}, '+Create')}</Button>
+              <Button onClick={() => openQuickCreateModal('lecture')} disabled={!modalSectionId}>{'+Create'}</Button>
             </Space.Compact>
           </Form.Item>
 
           <Form.Item
-            label={t('pages.resources.fields.label', {}, 'Button Label')}
+            label={'Button Label'}
             name="label"
-            rules={[{ required: true, message: t('pages.resources.validation.labelRequired', {}, 'Please enter label') }]}
+            rules={[{ required: true, message: 'Please enter label' }]}
           >
-            <Input placeholder={t('pages.resources.placeholders.label', {}, 'e.g. Slide, Video, Summary')} />
+            <Input placeholder={'e.g. Slide, Video, Summary'} />
           </Form.Item>
 
           <Form.Item
-            label={t('pages.resources.fields.type', {}, 'Resource Type')}
+            label={'Resource Type'}
             name="type"
-            rules={[{ required: true, message: t('pages.resources.validation.typeRequired', {}, 'Please select type') }]}
+            rules={[{ required: true, message: 'Please select type' }]}
           >
             <Select options={resourceTypeOptions} />
           </Form.Item>
 
           <Form.Item
-            label={t('pages.resources.fields.url', {}, 'URL / Video ID')}
+            label={'URL / Video ID'}
             name="url"
-            rules={[{ required: true, message: t('pages.resources.validation.urlRequired', {}, 'Please enter URL') }]}
+            rules={[{ required: true, message: 'Please enter URL' }]}
           >
             <Input
-              placeholder={t('pages.resources.placeholders.url', {}, 'URL or Video ID')}
+              placeholder={'URL or Video ID'}
               addonAfter={
                 <button
                   type="button"
-                  style={{ border: 0, background: 'transparent', cursor: 'pointer', color: '#60a5fa' }}
+                  style={{ border: 0, background: 'transparent', cursor: 'pointer', color: '#2f80ed' }}
                   onClick={() => {
                     const url = String(form.getFieldValue('url') ?? '').trim();
                     if (url) {
@@ -797,17 +777,17 @@ const ResourcesList = () => {
                     }
                   }}
                 >
-                  {t('pages.resources.testLink', {}, 'Test Link')}
+                  {'Test Link'}
                 </button>
               }
             />
           </Form.Item>
 
-          <Form.Item label={t('pages.resources.fields.orderIndex', {}, 'Display Order')} name="order_index">
+          <Form.Item label={'Display Order'} name="order_index">
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
 
-          <Form.Item label={t('pages.resources.fields.isActive', {}, 'Active')} name="is_active" valuePropName="checked">
+          <Form.Item label={'Active'} name="is_active" valuePropName="checked">
             <Switch />
           </Form.Item>
         </Form>
@@ -815,62 +795,62 @@ const ResourcesList = () => {
 
       {/* Quick Create Modals */}
       <Modal
-        title={t('pages.resources.titles.createSubject', {}, 'Create Subject')}
+        title={'Create Subject'}
         open={quickCreateType === 'subject'}
         onCancel={closeQuickCreateModal}
         onOk={handleQuickCreate}
-        okText={t('buttons.confirm', {}, 'Confirm')}
-        cancelText={t('buttons.cancel', {}, 'Cancel')}
+        okText={'Confirm'}
+        cancelText={'Cancel'}
         confirmLoading={isQuickCreateSubmitting}
         destroyOnClose
       >
         <Form form={quickCreateForm} layout="vertical">
           <Form.Item
-            label={<>{t('pages.subjects.fields.code', {}, 'Code')}</>}
+            label={<>{'Code'}</>}
             name="code"
             required
-            rules={[{ required: true, message: t('pages.subjects.validation.codeRequired', {}, 'Please enter code') }]}
+            rules={[{ required: true, message: 'Please enter code' }]}
           >
-            <Input placeholder={t('pages.subjects.placeholders.code', {}, 'e.g. CS101')} />
+            <Input placeholder={'e.g. CS101'} />
           </Form.Item>
           <Form.Item
-            label={<>{t('pages.subjects.fields.name', {}, 'Name')}</>}
+            label={<>{'Name'}</>}
             name="name"
             required
-            rules={[{ required: true, message: t('pages.subjects.validation.nameRequired', {}, 'Please enter name') }]}
+            rules={[{ required: true, message: 'Please enter name' }]}
           >
-            <Input placeholder={t('pages.subjects.placeholders.name', {}, 'Subject name')} />
+            <Input placeholder={'Subject name'} />
           </Form.Item>
           <Form.Item
-            label={<>{t('pages.subjects.fields.yearLevel', {}, 'Year Level')}</>}
+            label={<>{'Year Level'}</>}
             name="year_level"
             required
-            rules={[{ required: true, message: t('pages.subjects.validation.yearLevelRequired', {}, 'Please specify year level') }]}
+            rules={[{ required: true, message: 'Please specify year level' }]}
           >
-            <InputNumber min={1} max={6} placeholder={t('pages.subjects.placeholders.yearLevel', {}, '1-6')} style={{ width: '100%' }} />
+            <InputNumber min={1} max={6} placeholder={'1-6'} style={{ width: '100%' }} />
           </Form.Item>
         </Form>
       </Modal>
 
       <Modal
-        title={t('pages.resources.titles.createSection', {}, 'Create Section')}
+        title={'Create Section'}
         open={quickCreateType === 'section'}
         onCancel={closeQuickCreateModal}
         onOk={handleQuickCreate}
-        okText={t('buttons.confirm', {}, 'Confirm')}
-        cancelText={t('buttons.cancel', {}, 'Cancel')}
+        okText={'Confirm'}
+        cancelText={'Cancel'}
         confirmLoading={isQuickCreateSubmitting}
         destroyOnClose
       >
         <Form form={quickCreateForm} layout="vertical">
           <Form.Item
-            label={<>{t('pages.resources.fields.subject', {}, 'Subject')}</>}
+            label={<>{'Subject'}</>}
             name="subject_id"
             required
-            rules={[{ required: true, message: t('pages.resources.validation.subjectRequired', {}, 'Please select subject') }]}
+            rules={[{ required: true, message: 'Please select subject' }]}
           >
             <Select
-              placeholder={t('pages.resources.placeholders.subject', {}, 'Select subject')}
+              placeholder={'Select subject'}
               options={subjects.map((subject) => ({
                 label: `${subject.code} - ${subject.name}`,
                 value: subject.id,
@@ -878,35 +858,35 @@ const ResourcesList = () => {
             />
           </Form.Item>
           <Form.Item
-            label={<>{t('pages.sections.fields.name', {}, 'Name')}</>}
+            label={<>{'Name'}</>}
             name="name"
             required
-            rules={[{ required: true, message: t('pages.sections.validation.nameRequired', {}, 'Please enter name') }]}
+            rules={[{ required: true, message: 'Please enter name' }]}
           >
-            <Input placeholder={t('pages.sections.placeholders.name', {}, 'Section name')} />
+            <Input placeholder={'Section name'} />
           </Form.Item>
         </Form>
       </Modal>
 
       <Modal
-        title={t('pages.resources.titles.createLecture', {}, 'Create Lecture')}
+        title={'Create Lecture'}
         open={quickCreateType === 'lecture'}
         onCancel={closeQuickCreateModal}
         onOk={handleQuickCreate}
-        okText={t('buttons.confirm', {}, 'Confirm')}
-        cancelText={t('buttons.cancel', {}, 'Cancel')}
+        okText={'Confirm'}
+        cancelText={'Cancel'}
         confirmLoading={isQuickCreateSubmitting}
         destroyOnClose
       >
         <Form form={quickCreateForm} layout="vertical">
           <Form.Item
-            label={<>{t('pages.resources.fields.subject', {}, 'Subject')}</>}
+            label={<>{'Subject'}</>}
             name="subject_id"
             required
-            rules={[{ required: true, message: t('pages.resources.validation.subjectRequired', {}, 'Please select subject') }]}
+            rules={[{ required: true, message: 'Please select subject' }]}
           >
             <Select
-              placeholder={t('pages.resources.placeholders.subject', {}, 'Select subject')}
+              placeholder={'Select subject'}
               options={subjects.map((subject) => ({
                 label: `${subject.code} - ${subject.name}`,
                 value: subject.id,
@@ -917,14 +897,14 @@ const ResourcesList = () => {
             />
           </Form.Item>
           <Form.Item
-            label={<>{t('pages.resources.fields.section', {}, 'Section')}</>}
+            label={<>{'Section'}</>}
             name="section_id"
             required
-            rules={[{ required: true, message: t('pages.resources.validation.sectionRequired', {}, 'Please select section') }]}
+            rules={[{ required: true, message: 'Please select section' }]}
           >
             <Select
               disabled={!quickCreateSubjectId}
-              placeholder={t('pages.resources.placeholders.section', {}, 'Select section')}
+              placeholder={'Select section'}
               options={quickCreateSections.map((section) => ({
                 label: section.name,
                 value: section.id,
@@ -932,12 +912,12 @@ const ResourcesList = () => {
             />
           </Form.Item>
           <Form.Item
-            label={<>{t('pages.lectures.fields.title', {}, 'Title')}</>}
+            label={<>{'Title'}</>}
             name="title"
             required
-            rules={[{ required: true, message: t('pages.lectures.validation.titleRequired', {}, 'Please enter title') }]}
+            rules={[{ required: true, message: 'Please enter title' }]}
           >
-            <Input placeholder={t('pages.lectures.placeholders.title', {}, 'Lecture title')} />
+            <Input placeholder={'Lecture title'} />
           </Form.Item>
         </Form>
       </Modal>

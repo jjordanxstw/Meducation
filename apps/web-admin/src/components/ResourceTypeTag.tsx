@@ -16,29 +16,29 @@ type TagConfig = {
 const CONFIG: Record<string, TagConfig> = {
   [ResourceType.YOUTUBE]: {
     label: 'YouTube',
-    className: 'border-red-500/20 bg-red-500/15 text-red-400',
+    className: 'border-red-200 bg-red-50 text-red-600',
     icon: <YoutubeOutlined style={{ fontSize: 12 }} />,
   },
   [ResourceType.GDRIVE_VIDEO]: {
     label: 'GDrive Video',
-    className: 'border-blue-500/20 bg-blue-500/15 text-blue-400',
+    className: 'border-blue-200 bg-blue-50 text-blue-600',
     icon: <VideoCameraOutlined style={{ fontSize: 12 }} />,
   },
   [ResourceType.GDRIVE_PDF]: {
     label: 'GDrive PDF',
-    className: 'border-emerald-500/20 bg-emerald-500/15 text-emerald-400',
+    className: 'border-emerald-200 bg-emerald-50 text-emerald-600',
     icon: <FileTextOutlined style={{ fontSize: 12 }} />,
   },
   [ResourceType.EXTERNAL]: {
     label: 'External',
-    className: 'border-purple-500/20 bg-purple-500/15 text-purple-400',
+    className: 'border-purple-200 bg-purple-50 text-purple-600',
     icon: <ExportOutlined style={{ fontSize: 12 }} />,
   },
 };
 
 const FALLBACK: TagConfig = {
   label: 'Unknown',
-  className: 'border-white/10 bg-white/[0.06] text-white/60',
+  className: 'border-slate-200 bg-slate-50 text-slate-500',
   icon: <FileTextOutlined style={{ fontSize: 12 }} />,
 };
 

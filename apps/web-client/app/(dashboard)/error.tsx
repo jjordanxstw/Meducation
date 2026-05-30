@@ -3,13 +3,12 @@
 /**
  * Error Boundary for Dashboard
  * Catches runtime errors and provides a recovery UI
- * Uses locale-aware routing
  */
 
 import { useEffect } from 'react';
-import { Card, CardBody, Button } from '@nextui-org/react';
+import { Card, CardBody, Button } from '@heroui/react';
 import { FiAlertTriangle, FiRefreshCw, FiHome } from 'react-icons/fi';
-import { Link } from '@/i18n/routing';
+import Link from 'next/link';
 
 export default function DashboardError({
   error,
@@ -41,7 +40,7 @@ export default function DashboardError({
           </div>
 
           {error.digest && (
-            <p className="text-xs text-slate-400 dark:text-white/30 font-mono">
+            <p className="text-xs text-slate-400 font-mono">
               Error ID: {error.digest}
             </p>
           )}

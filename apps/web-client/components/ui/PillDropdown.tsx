@@ -49,7 +49,7 @@ export function PillDropdown({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         onClick={() => setIsOpen((open) => !open)}
-        className="flex items-center gap-2 pl-4 pr-3 py-2 rounded-full text-sm font-medium border transition bg-white dark:bg-white/[0.08] border-slate-200 dark:border-white/20 text-slate-700 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+        className="flex items-center gap-2 pl-4 pr-3 py-2 rounded-full text-sm font-medium border transition bg-white border-slate-200 text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
       >
         <span>{selectedOption?.label ?? value}</span>
         <FiChevronDown
@@ -77,7 +77,7 @@ export function PillDropdown({
                 className={`w-full rounded-xl px-3 py-2 text-left text-sm transition ${
                   isActive
                     ? 'bg-brand-subtle text-brand'
-                    : 'text-[var(--ink-2)] hover:bg-slate-100 dark:hover:bg-white/[0.08] hover:text-[var(--ink-1)]'
+                    : 'text-[var(--ink-2)] hover:bg-slate-100 hover:text-[var(--ink-1)]'
                 }`}
               >
                 {option.label}

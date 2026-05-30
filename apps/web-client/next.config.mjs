@@ -1,9 +1,6 @@
 import { existsSync } from 'node:fs';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import createNextIntlPlugin from 'next-intl/plugin';
-
-const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 function loadSimpleEnvFile(filePath) {
   const raw = readFileSync(filePath, 'utf8');
@@ -55,7 +52,7 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '2mb',
     },
-    optimizePackageImports: ['@nextui-org/react', 'react-icons', 'antd', '@ant-design/icons'],
+    optimizePackageImports: ['@heroui/react', 'react-icons', 'antd'],
   },
   // Proxy only backend v1 API requests to NestJS backend.
   // Keep /api/auth/* for NextAuth route handlers inside Next.js.
@@ -71,7 +68,7 @@ const nextConfig = {
       },
     ];
   },
-  devIndicators:false,
+  devIndicators: false,
 };
 
-export default withNextIntl(nextConfig);
+export default nextConfig;

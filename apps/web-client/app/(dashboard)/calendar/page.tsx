@@ -18,7 +18,7 @@ export default function CalendarPage() {
     <div className="flex items-center justify-center min-h-[400px]">
       <div className="text-center">
         <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-500 mx-auto mb-4" />
-        <p className="text-slate-500 dark:text-white/50 text-sm">Redirecting...</p>
+        <p className="text-slate-500 text-sm">Redirecting...</p>
       </div>
     </div>
   );

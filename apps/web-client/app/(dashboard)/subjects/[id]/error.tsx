@@ -6,7 +6,7 @@
  */
 
 import { useEffect } from 'react';
-import { Card, CardBody, Button } from '@nextui-org/react';
+import { Card, CardBody, Button } from '@heroui/react';
 import { FiAlertTriangle, FiRefreshCw, FiArrowLeft } from 'react-icons/fi';
 import Link from 'next/link';
 
@@ -45,7 +45,7 @@ export default function SubjectDetailError({
           </div>
 
           {error.digest && (
-            <p className="text-xs text-slate-400 dark:text-white/30 font-mono">
+            <p className="text-xs text-slate-400 font-mono">
               Error ID: {error.digest}
             </p>
           )}

@@ -33,7 +33,7 @@ const AuthLoadingFallback = () => (
       justifyContent: 'center',
       alignItems: 'center',
       minHeight: '100vh',
-      background: '#07131f',
+      background: '#f4f8ff',
     }}
   >
     <div className="spinner" />

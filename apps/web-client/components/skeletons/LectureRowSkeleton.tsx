@@ -1,10 +1,10 @@
-const base = 'bg-white/[0.06] animate-pulse rounded-lg';
+const base = 'bg-slate-100 animate-pulse rounded-lg';
 
 /** Loading placeholder for a lecture list row. */
 export function LectureRowSkeleton() {
   return (
     <div
-      className="flex items-center gap-3 rounded-lg border border-white/[0.08] bg-white/5 p-3"
+      className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3"
       role="status"
       aria-label="Loading lecture"
     >

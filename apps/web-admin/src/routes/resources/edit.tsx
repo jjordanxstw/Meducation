@@ -1,18 +1,9 @@
 /**
  * Resources Edit Page
  * Migrated from src/app/resources/edit/[id]/page.tsx
- */
-
-import { useList, useTranslate } from '@refinedev/core';
-import { Edit, useForm } from '@refinedev/antd';
-import { useParams } from 'react-router-dom';
-import { useEffect, useMemo } from 'react';
-import { Form, Input, InputNumber, Switch, Select } from 'antd';
-import { ResourceType } from '@medical-portal/shared';
-import type { Resource, Lecture, Section, Subject } from '@medical-portal/shared';
+ */import { useList } from '@refinedev/core';import { Edit, useForm } from '@refinedev/antd';import { useParams } from 'react-router-dom';import { useEffect, useMemo } from 'react';import { Form, Input, InputNumber, Switch, Select } from 'antd';import { ResourceType } from '@medical-portal/shared';import type { Resource, Lecture, Section, Subject } from '@medical-portal/shared';
 
 const ResourcesEdit = () => {
-  const t = useTranslate();
   const { id } = useParams<{ id: string }>();
   const { formProps, saveButtonProps } = useForm<Resource>({ id });
   const selectedSubjectId = Form.useWatch('subject_id', formProps.form);
@@ -20,10 +11,10 @@ const ResourcesEdit = () => {
   const selectedLectureId = Form.useWatch('lecture_id', formProps.form);
 
   const resourceTypeOptions = [
-    { label: `🎬 ${t('pages.resources.types.youtube', {}, 'YouTube')}`, value: ResourceType.YOUTUBE },
-    { label: `📹 ${t('pages.resources.types.gdriveVideo', {}, 'Google Drive Video')}`, value: ResourceType.GDRIVE_VIDEO },
-    { label: `📄 ${t('pages.resources.types.gdrivePdf', {}, 'Google Drive PDF')}`, value: ResourceType.GDRIVE_PDF },
-    { label: `🔗 ${t('pages.resources.types.external', {}, 'External Link')}`, value: ResourceType.EXTERNAL },
+    { label: `🎬 ${'YouTube'}`, value: ResourceType.YOUTUBE },
+    { label: `📹 ${'Google Drive Video'}`, value: ResourceType.GDRIVE_VIDEO },
+    { label: `📄 ${'Google Drive PDF'}`, value: ResourceType.GDRIVE_PDF },
+    { label: `🔗 ${'External Link'}`, value: ResourceType.EXTERNAL },
   ];
 
   const { data: lecturesData } = useList<Lecture>({
@@ -93,12 +84,12 @@ const ResourcesEdit = () => {
     <Edit saveButtonProps={saveButtonProps} recordItemId={id}>
       <Form {...formProps} layout="vertical" style={{ maxWidth: 600 }}>
         <Form.Item
-          label={t('pages.resources.fields.subject', {}, 'Subject')}
+          label={'Subject'}
           name="subject_id"
-          rules={[{ required: true, message: t('pages.resources.validation.subjectRequired', {}, 'Please select subject') }]}
+          rules={[{ required: true, message: 'Please select subject' }]}
         >
           <Select
-            placeholder={t('pages.resources.placeholders.subject', {}, 'Select subject')}
+            placeholder={'Select subject'}
             options={subjects.map((subject) => ({
               label: `${subject.code} - ${subject.name}`,
               value: subject.id,
@@ -113,12 +104,12 @@ const ResourcesEdit = () => {
         </Form.Item>
 
         <Form.Item
-          label={t('pages.resources.fields.section', {}, 'Section')}
+          label={'Section'}
           name="section_id"
-          rules={[{ required: true, message: t('pages.resources.validation.sectionRequired', {}, 'Please select section') }]}
+          rules={[{ required: true, message: 'Please select section' }]}
         >
           <Select
-            placeholder={t('pages.resources.placeholders.section', {}, 'Select section')}
+            placeholder={'Select section'}
             options={sectionOptions}
             disabled={!selectedSubjectId}
             onChange={() => formProps.form?.setFieldValue('lecture_id', undefined)}
@@ -128,7 +119,7 @@ const ResourcesEdit = () => {
         </Form.Item>
 
         <Form.Item
-          label={t('pages.resources.fields.lecture', {}, 'Lecture')}
+          label={'Lecture'}
           name="lecture_id"
           rules={[{ required: true }]}
         >
@@ -141,7 +132,7 @@ const ResourcesEdit = () => {
         </Form.Item>
 
         <Form.Item
-          label={t('pages.resources.fields.label', {}, 'Button Label')}
+          label={'Button Label'}
           name="label"
           rules={[{ required: true }]}
         >
@@ -149,7 +140,7 @@ const ResourcesEdit = () => {
         </Form.Item>
 
         <Form.Item
-          label={t('pages.resources.fields.type', {}, 'Resource Type')}
+          label={'Resource Type'}
           name="type"
           rules={[{ required: true }]}
         >
@@ -157,18 +148,18 @@ const ResourcesEdit = () => {
         </Form.Item>
 
         <Form.Item
-          label={t('pages.resources.fields.url', {}, 'URL / Video ID')}
+          label={'URL / Video ID'}
           name="url"
           rules={[{ required: true }]}
         >
           <Input />
         </Form.Item>
 
-        <Form.Item label={t('pages.resources.fields.orderIndex', {}, 'Display Order')} name="order_index">
+        <Form.Item label={'Display Order'} name="order_index">
           <InputNumber min={0} style={{ width: '100%' }} />
         </Form.Item>
 
-        <Form.Item label={t('pages.resources.fields.isActive', {}, 'Active')} name="is_active" valuePropName="checked">
+        <Form.Item label={'Active'} name="is_active" valuePropName="checked">
           <Switch />
         </Form.Item>
       </Form>

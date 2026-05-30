@@ -91,11 +91,11 @@ export const HERO_YEAR_ACCENTS = {
 export const HERO_TOKENS: Record<HeroThemeMode, HeroThemeTokens> = {
   light: {
     bg: {
-      canvas: '#f7f8fa',
-      canvasAlt: '#eef3fb',
+      canvas: '#f4f8ff',
+      canvasAlt: '#e9f1ff',
       surface: '#ffffff',
       surfaceElevated: '#ffffff',
-      muted: '#f3f5f9',
+      muted: '#eef3fb',
       inverse: '#0f172a',
     },
     text: {
@@ -141,10 +141,10 @@ export const HERO_TOKENS: Record<HeroThemeMode, HeroThemeTokens> = {
       full: '9999px',
     },
     admin: {
-      siderBg: '#12243c',
-      siderBgActive: 'rgba(255, 255, 255, 0.16)',
+      siderBg: '#ffffff',
+      siderBgActive: 'rgba(0, 112, 243, 0.10)',
       headerBg: '#ffffff',
-      layoutBg: '#f7f8fa',
+      layoutBg: '#f4f8ff',
     },
   },
   dark: {

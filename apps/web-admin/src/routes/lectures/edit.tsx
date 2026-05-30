@@ -1,20 +1,11 @@
 /**
  * Lectures Edit Page
  * Migrated from src/app/lectures/edit/[id]/page.tsx
- */
-
-import { useList, useTranslate } from '@refinedev/core';
-import { Edit, useForm } from '@refinedev/antd';
-import { useParams } from 'react-router-dom';
-import { useEffect, useMemo } from 'react';
-import { Form, Input, InputNumber, Switch, Select, DatePicker } from 'antd';
-import dayjs from 'dayjs';
-import type { Lecture, Section, Subject } from '@medical-portal/shared';
+ */import { useList } from '@refinedev/core';import { Edit, useForm } from '@refinedev/antd';import { useParams } from 'react-router-dom';import { useEffect, useMemo } from 'react';import { Form, Input, InputNumber, Switch, Select, DatePicker } from 'antd';import dayjs from 'dayjs';import type { Lecture, Section, Subject } from '@medical-portal/shared';
 
 const { TextArea } = Input;
 
 const LecturesEdit = () => {
-  const t = useTranslate();
   const { id } = useParams<{ id: string }>();
   const { formProps, saveButtonProps } = useForm<Lecture>({ id });
   const selectedSubjectId = Form.useWatch('subject_id', formProps.form);
@@ -58,9 +49,9 @@ const LecturesEdit = () => {
     <Edit saveButtonProps={saveButtonProps} recordItemId={id}>
       <Form {...formProps} layout="vertical" style={{ maxWidth: 600 }}>
         <Form.Item
-          label={t('pages.lectures.fields.subject', {}, 'Subject')}
+          label={'Subject'}
           name="subject_id"
-          rules={[{ required: true, message: t('pages.lectures.validation.subjectRequired', {}, 'Please select a subject') }]}
+          rules={[{ required: true, message: 'Please select a subject' }]}
         >
           <Select
             options={subjects.map((subject) => ({
@@ -74,9 +65,9 @@ const LecturesEdit = () => {
         </Form.Item>
 
         <Form.Item
-          label={t('pages.lectures.fields.section', {}, 'Section')}
+          label={'Section'}
           name="section_id"
-          rules={[{ required: true, message: t('pages.lectures.validation.sectionRequired', {}, 'Please select a section') }]}
+          rules={[{ required: true, message: 'Please select a section' }]}
         >
           <Select
             options={sectionOptions}
@@ -87,19 +78,19 @@ const LecturesEdit = () => {
         </Form.Item>
 
         <Form.Item
-          label={t('pages.lectures.fields.title', {}, 'Lecture Title')}
+          label={'Lecture Title'}
           name="title"
           rules={[{ required: true }]}
         >
           <Input />
         </Form.Item>
 
-        <Form.Item label={t('pages.lectures.fields.description', {}, 'Description')} name="description">
+        <Form.Item label={'Description'} name="description">
           <TextArea rows={3} />
         </Form.Item>
 
         <Form.Item
-          label={t('pages.lectures.fields.lectureDate', {}, 'Lecture Date')}
+          label={'Lecture Date'}
           name="lecture_date"
           getValueProps={(value) => ({
             value: value ? dayjs(value) : null,
@@ -109,15 +100,15 @@ const LecturesEdit = () => {
           <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
         </Form.Item>
 
-        <Form.Item label={t('pages.lectures.fields.lecturerName', {}, 'Lecturer')} name="lecturer_name">
+        <Form.Item label={'Lecturer'} name="lecturer_name">
           <Input />
         </Form.Item>
 
-        <Form.Item label={t('pages.lectures.fields.orderIndex', {}, 'Display Order')} name="order_index">
+        <Form.Item label={'Display Order'} name="order_index">
           <InputNumber min={0} style={{ width: '100%' }} />
         </Form.Item>
 
-        <Form.Item label={t('pages.lectures.fields.isActive', {}, 'Active')} name="is_active" valuePropName="checked">
+        <Form.Item label={'Active'} name="is_active" valuePropName="checked">
           <Switch />
         </Form.Item>
       </Form>

@@ -18,7 +18,7 @@ import {
   SelectItem,
   Divider,
   Chip,
-} from '@nextui-org/react';
+} from '@heroui/react';
 import { useAuthStore } from '@/stores/auth.store';
 import { api } from '@/lib/api';
 import { FiUser, FiMail, FiBook, FiSave, FiShield, FiCheck } from 'react-icons/fi';
@@ -142,7 +142,7 @@ export default function ProfilePage() {
 
       {/* Profile Card */}
       <Card className="glass-surface">
-        <CardHeader className="flex flex-col gap-4 bg-gradient-to-r from-white/30 to-sky-100/20 dark:from-slate-800/35 dark:to-sky-900/20 sm:flex-row sm:items-center sm:justify-between">
+        <CardHeader className="flex flex-col gap-4 bg-gradient-to-r from-white/30 to-sky-100/20 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-4">
             <Avatar
               isBordered

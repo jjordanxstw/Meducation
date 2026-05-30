@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardBody, Chip, Button } from '@nextui-org/react';
+import { Card, CardBody, Chip, Button } from '@heroui/react';
 import { FiBookOpen, FiClock, FiCheckCircle } from 'react-icons/fi';
 import Link from 'next/link';
 
@@ -17,16 +17,16 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="relative rounded-xl bg-white dark:bg-[var(--surface-1)] border border-slate-200 dark:border-white/[0.08] p-5 transition-all duration-200 hover:border-blue-300 dark:hover:border-primary-500/50 hover:shadow-lg dark:hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] cursor-default shadow-sm">
+    <div className="relative rounded-xl bg-white border border-slate-200 p-5 transition-all duration-200 hover:border-blue-300 hover:shadow-lg cursor-default shadow-sm">
       <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${iconBgColor} mb-4`}>
         {icon}
       </div>
-      <h3 className="font-semibold text-slate-900 dark:text-foreground text-base mb-2">{title}</h3>
-      <p className="text-sm text-slate-500 dark:text-default-500 mb-4">{description}</p>
+      <h3 className="font-semibold text-slate-900 text-base mb-2">{title}</h3>
+      <p className="text-sm text-slate-500 mb-4">{description}</p>
       {/* Coming Soon badge */}
       <Chip
         size="sm"
-        className="absolute bottom-4 right-4 bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-500 text-xs font-medium border border-amber-200 dark:border-amber-500/20"
+        className="absolute bottom-4 right-4 bg-amber-100 text-amber-600 text-xs font-medium border border-amber-200"
       >
         Coming Soon
       </Chip>
