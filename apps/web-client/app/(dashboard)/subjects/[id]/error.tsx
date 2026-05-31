@@ -26,51 +26,41 @@ export default function SubjectDetailError({
     error.message?.toLowerCase().includes('404');
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh] p-4">
-      <Card className="glass-surface max-w-md w-full">
+    <div className="flex min-h-[60vh] items-center justify-center p-4">
+      <Card shadow="none" className="w-full max-w-md border border-slate-200/70 bg-white shadow-subtle">
         <CardBody className="gap-4 p-6 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10">
-            <FiAlertTriangle className="h-7 w-7 text-amber-400" />
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-50">
+            <FiAlertTriangle className="h-7 w-7 text-amber-500" />
           </div>
 
           <div className="space-y-2">
-            <h2 className="text-lg font-semibold text-[var(--ink-1)]">
+            <h2 className="font-serif text-xl font-semibold tracking-tight text-slate-900">
               {isNotFound ? 'Subject Not Found' : 'Failed to Load Subject'}
             </h2>
-            <p className="text-sm text-[var(--ink-2)]">
+            <p className="text-sm text-slate-500">
               {isNotFound
                 ? 'This subject may have been removed or you don\'t have access to it.'
                 : 'An error occurred while loading this subject. Please try again.'}
             </p>
           </div>
 
-          {error.digest && (
-            <p className="text-xs text-slate-400 font-mono">
-              Error ID: {error.digest}
-            </p>
-          )}
+          {error.digest && <p className="font-mono text-xs text-slate-400">Error ID: {error.digest}</p>}
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row">
             {!isNotFound && (
-              <Button
-                color="primary"
-                variant="solid"
-                className="btn-precise flex-1"
-                startContent={<span className="icon-with-text"><FiRefreshCw className="h-4 w-4" /></span>}
-                onPress={reset}
-              >
+              <Button color="primary" className="flex-1" startContent={<FiRefreshCw className="h-4 w-4" />} onPress={reset}>
                 Try Again
               </Button>
             )}
-            <Link href="/subjects" className="flex-1">
-              <Button
-                variant="flat"
-                className="btn-precise w-full"
-                startContent={<span className="icon-with-text"><FiArrowLeft className="h-4 w-4" /></span>}
-              >
-                Back to Subjects
-              </Button>
-            </Link>
+            <Button
+              as={Link}
+              href="/subjects"
+              variant="flat"
+              className="flex-1"
+              startContent={<FiArrowLeft className="h-4 w-4" />}
+            >
+              Back to Subjects
+            </Button>
           </div>
         </CardBody>
       </Card>

@@ -29,7 +29,7 @@ export function HighlightText({
     <span className={className}>
       {parts.map((part, index) =>
         part.toLowerCase() === lowerQuery ? (
-          <mark key={index} className="rounded bg-blue-500/30 px-0.5 text-white">
+          <mark key={index} className="rounded bg-brand/15 px-0.5 text-brand">
             {part}
           </mark>
         ) : (

@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * Profile Page
- * Next.js adapted version
+ * Profile Page — view & edit personal information.
+ * HeroUI + Tailwind only.
  */
 
 import { useEffect, useState } from 'react';
@@ -133,16 +133,16 @@ export default function ProfilePage() {
   }
 
   return (
-    <PageTransition className="mx-auto max-w-4xl space-y-6">
+    <PageTransition className="mx-auto max-w-3xl space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--ink-1)]">Profile</h1>
-        <p className="text-base text-[var(--ink-2)]">Manage your personal information</p>
+        <h1 className="font-serif text-3xl font-semibold tracking-tight text-slate-900">Profile</h1>
+        <p className="text-base text-slate-500">Manage your personal information.</p>
       </div>
 
-      {/* Profile Card */}
-      <Card className="glass-surface">
-        <CardHeader className="flex flex-col gap-4 bg-gradient-to-r from-white/30 to-sky-100/20 sm:flex-row sm:items-center sm:justify-between">
+      {/* Profile card */}
+      <Card shadow="none" className="overflow-hidden border border-slate-200/70 bg-white shadow-subtle">
+        <CardHeader className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div className="flex min-w-0 items-center gap-4">
             <Avatar
               isBordered
@@ -150,19 +150,19 @@ export default function ProfilePage() {
               name={profile?.full_name || user?.name}
               src={user?.picture}
               size="lg"
-              className="ring-4 ring-white shadow-md"
+              className="ring-2 ring-white"
             />
-            <div className="flex-1 min-w-0">
-              <h2 className="text-xl sm:text-2xl font-bold text-[var(--ink-1)] line-clamp-1">
+            <div className="min-w-0 flex-1">
+              <h2 className="line-clamp-1 font-serif text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                 {profile?.full_name || user?.name}
               </h2>
-              <p className="truncate text-sm text-[var(--ink-2)]">{user?.email}</p>
+              <p className="truncate text-sm text-slate-500">{user?.email}</p>
             </div>
           </div>
           <Chip
             variant="flat"
             color={profile?.role === 'admin' ? 'warning' : 'primary'}
-            startContent={<span className="icon-with-text"><FiShield className="h-3 w-3" /></span>}
+            startContent={<FiShield className="h-3 w-3" />}
           >
             {profile?.role ? getRoleLabel(profile.role) : 'Student'}
           </Chip>
@@ -170,8 +170,8 @@ export default function ProfilePage() {
 
         <Divider />
 
-        <CardBody className="gap-6">
-          {/* Email (Read-only) */}
+        <CardBody className="gap-6 p-6">
+          {/* Email (read-only) */}
           <Input
             label="Email"
             labelPlacement="outside"
@@ -179,12 +179,11 @@ export default function ProfilePage() {
             value={user?.email || ''}
             isReadOnly
             isDisabled
-            variant="flat"
-            startContent={<span className="icon-with-text"><FiMail className="h-4 w-4" /></span>}
+            startContent={<FiMail className="h-4 w-4 text-slate-400" />}
             description="Email cannot be changed"
           />
 
-          {/* Full Name */}
+          {/* Full name */}
           {isEditing ? (
             <Input
               label="Full Name"
@@ -199,21 +198,19 @@ export default function ProfilePage() {
               isInvalid={!!nameError}
               errorMessage={nameError}
               maxLength={MAX_NAME}
-              startContent={<span className="icon-with-text"><FiUser className="h-4 w-4" /></span>}
+              startContent={<FiUser className="h-4 w-4 text-slate-400" />}
             />
           ) : (
             <Input
               label="Full Name"
               labelPlacement="outside"
-              placeholder="Your full name"
               value={profile?.full_name || ''}
               isReadOnly
-              variant="flat"
-              startContent={<span className="icon-with-text"><FiUser className="h-4 w-4" /></span>}
+              startContent={<FiUser className="h-4 w-4 text-slate-400" />}
             />
           )}
 
-          {/* Year Level */}
+          {/* Year level */}
           {isEditing ? (
             <Select
               label="Year Level"
@@ -223,66 +220,46 @@ export default function ProfilePage() {
               onSelectionChange={(keys) =>
                 setFormData((prev) => ({ ...prev, year_level: Array.from(keys)[0] as string }))
               }
-              startContent={<span className="icon-with-text"><FiBook className="h-4 w-4" /></span>}
+              startContent={<FiBook className="h-4 w-4 text-slate-400" />}
             >
               {YEAR_LEVELS.map((year) => (
-                <SelectItem key={year.toString()}>
-                  {getYearLevelLabel(year)}
-                </SelectItem>
+                <SelectItem key={year.toString()}>{getYearLevelLabel(year)}</SelectItem>
               ))}
             </Select>
           ) : (
             <Input
               label="Year Level"
               labelPlacement="outside"
-              placeholder="Year level"
               value={profile?.year_level ? getYearLevelLabel(profile.year_level) : '-'}
               isReadOnly
-              variant="flat"
-              startContent={<span className="icon-with-text"><FiBook className="h-4 w-4" /></span>}
+              startContent={<FiBook className="h-4 w-4 text-slate-400" />}
             />
           )}
 
           {/* Student ID */}
           {profile?.student_id && (
-            <Input
-              label="Student ID"
-              labelPlacement="outside"
-              placeholder="Student ID"
-              value={profile.student_id}
-              isReadOnly
-              variant="flat"
-            />
+            <Input label="Student ID" labelPlacement="outside" value={profile.student_id} isReadOnly />
           )}
 
           <Divider />
 
-          {/* Action Buttons */}
+          {/* Actions */}
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             {isEditing ? (
               <>
-                <Button
-                  variant="flat"
-                  className="btn-precise w-full justify-center sm:w-auto"
-                  isDisabled={isSaving}
-                  onPress={cancelEdit}
-                >
+                <Button variant="flat" className="w-full justify-center sm:w-auto" isDisabled={isSaving} onPress={cancelEdit}>
                   Cancel
                 </Button>
                 <Button
                   color={saveState === 'success' ? 'success' : 'primary'}
                   startContent={
-                    isSaving ? undefined : (
-                      <span className="icon-with-text">
-                        {saveState === 'success' ? (
-                          <FiCheck className="h-4 w-4" />
-                        ) : (
-                          <FiSave className="h-4 w-4" />
-                        )}
-                      </span>
+                    isSaving ? undefined : saveState === 'success' ? (
+                      <FiCheck className="h-4 w-4" />
+                    ) : (
+                      <FiSave className="h-4 w-4" />
                     )
                   }
-                  className="btn-precise w-full justify-center sm:w-auto"
+                  className="w-full justify-center sm:w-auto"
                   onPress={handleSave}
                   isLoading={isSaving}
                 >
@@ -296,12 +273,7 @@ export default function ProfilePage() {
                 </Button>
               </>
             ) : (
-              <Button
-                color="primary"
-                variant="flat"
-                className="btn-precise w-full justify-center sm:w-auto"
-                onPress={() => setIsEditing(true)}
-              >
+              <Button color="primary" variant="flat" className="w-full justify-center sm:w-auto" onPress={() => setIsEditing(true)}>
                 Edit Profile
               </Button>
             )}
@@ -309,15 +281,15 @@ export default function ProfilePage() {
         </CardBody>
       </Card>
 
-      {/* Account Info Card */}
-      <Card className="glass-surface">
-        <CardHeader>
-          <h3 className="text-lg font-bold text-[var(--ink-1)]">Account Information</h3>
+      {/* Account info */}
+      <Card shadow="none" className="border border-slate-200/70 bg-white shadow-subtle">
+        <CardHeader className="p-5 pb-0">
+          <h3 className="font-serif text-lg font-semibold tracking-tight text-slate-900">Account Information</h3>
         </CardHeader>
-        <CardBody>
+        <CardBody className="p-5">
           <div className="flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-sm text-[var(--ink-2)]">Account Created</span>
-            <span className="text-sm font-medium">
+            <span className="text-sm text-slate-500">Account Created</span>
+            <span className="text-sm font-medium text-slate-900">
               {profile?.created_at
                 ? new Date(profile.created_at).toLocaleDateString('en-US', {
                     year: 'numeric',
@@ -329,8 +301,8 @@ export default function ProfilePage() {
           </div>
           <Divider />
           <div className="flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-sm text-[var(--ink-2)]">Account Type</span>
-            <span className="text-sm font-medium">
+            <span className="text-sm text-slate-500">Account Type</span>
+            <span className="text-sm font-medium text-slate-900">
               {profile?.role ? getRoleLabel(profile.role) : 'Student'}
             </span>
           </div>

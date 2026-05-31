@@ -50,7 +50,7 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen w-full bg-[#f4f8ff]">
       {/* Left branding panel (desktop only) */}
-      <div className="relative hidden w-3/5 flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-[#2f80ed] to-[#1b66cc] md:flex">
+      <div className="relative hidden w-3/5 flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-[#1d4ed8] to-[#1e40af] md:flex">
         <div className="pointer-events-none absolute -left-16 -top-16 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 right-0 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
         <div className="relative flex flex-col items-center gap-3 text-center">
@@ -68,7 +68,7 @@ export function LoginPage() {
           {/* Mobile brand (left panel hidden) */}
           <div className="mb-6 text-center md:text-left">
             <div className="mb-3 flex items-center justify-center gap-2 md:hidden">
-              <BookOutlined style={{ fontSize: 28, color: '#2f80ed' }} />
+              <BookOutlined style={{ fontSize: 28, color: '#1d4ed8' }} />
               <span className="text-lg font-bold text-slate-900">Meducation Admin</span>
             </div>
             <h2 className="text-xl font-semibold text-slate-900">Welcome back</h2>

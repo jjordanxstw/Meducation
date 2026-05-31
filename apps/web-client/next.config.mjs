@@ -52,7 +52,7 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '2mb',
     },
-    optimizePackageImports: ['@heroui/react', 'react-icons', 'antd'],
+    optimizePackageImports: ['@heroui/react', 'react-icons'],
   },
   // Proxy only backend v1 API requests to NestJS backend.
   // Keep /api/auth/* for NextAuth route handlers inside Next.js.

@@ -25,7 +25,7 @@ const teamMembers = [
 // Team member card component
 function TeamMemberCard({ member }: { member: typeof teamMembers[0] }) {
   return (
-    <div className="snap-center shrink-0 w-[220px] rounded-2xl bg-white border border-slate-200 p-5 cursor-pointer transition-all duration-300 ease-out hover:scale-105 hover:z-1 group relative">
+    <div className="snap-center shrink-0 w-[220px] rounded-2xl bg-white border border-slate-200/70 shadow-subtle p-5 cursor-pointer transition-all duration-300 ease-out hover:scale-105 hover:z-1 group relative">
       {/* Profile Image */}
       <div className="w-full aspect-square rounded-xl bg-slate-100 mb-4 overflow-hidden">
         {member.image ? (
@@ -43,7 +43,7 @@ function TeamMemberCard({ member }: { member: typeof teamMembers[0] }) {
       <p className="text-xs text-slate-500 mt-0.5">{member.role}</p>
 
       {/* Hover overlay */}
-      <div className="absolute inset-0 rounded-2xl bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      <div className="absolute inset-0 rounded-2xl bg-brand/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
     </div>
   );
 }
@@ -111,7 +111,7 @@ export default function AboutUsPage() {
     <PageTransition className="space-y-6">
       {/* Header */}
       <section className="text-center py-6">
-        <h1 className="text-3xl font-bold text-slate-900">
+        <h1 className="font-serif text-4xl font-semibold tracking-tight text-slate-900">
           About Us
         </h1>
         <p className="text-slate-500 mt-2 text-sm">
@@ -170,19 +170,17 @@ export default function AboutUsPage() {
             aria-label={`Go to ${member.name}`}
             aria-selected={index === current}
             className={`h-1.5 rounded-full transition-[width,background-color] duration-300 ease-out ${
-              index === current ? 'w-5 bg-blue-500' : 'w-1.5 bg-slate-300 hover:bg-slate-400'
+              index === current ? 'w-5 bg-brand' : 'w-1.5 bg-slate-300 hover:bg-slate-400'
             }`}
           />
         ))}
       </div>
 
       {/* Additional Info Section */}
-      <Card className="glass-card mt-8">
+      <Card shadow="none" className="mt-8 border border-slate-200/70 bg-white shadow-subtle">
         <div className="p-5">
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">
-            Our Mission
-          </h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
+          <h3 className="mb-2 font-serif text-xl font-semibold tracking-tight text-slate-900">Our Mission</h3>
+          <p className="text-sm leading-relaxed text-slate-600">
             We are a dedicated team of developers, designers, and educators working together to
             create the best learning experience for medical students. Our goal is to make
             medical education more accessible, organized, and engaging through technology.
@@ -191,11 +189,9 @@ export default function AboutUsPage() {
       </Card>
 
       {/* Contact Section */}
-      <Card className="glass-card">
+      <Card shadow="none" className="border border-slate-200/70 bg-white shadow-subtle">
         <div className="p-5">
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">
-            Get in Touch
-          </h3>
+          <h3 className="mb-2 font-serif text-xl font-semibold tracking-tight text-slate-900">Get in Touch</h3>
           <p className="text-sm text-slate-600">
             Have questions or feedback? We&apos;d love to hear from you. Reach out to us through
             the MedPi Portal team.

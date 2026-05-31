@@ -1,4 +1,4 @@
-import { Layout, Typography, Avatar, theme } from 'antd';
+import { Layout, Typography, theme } from 'antd';
 import { useGetIdentity } from '@refinedev/core';
 
 type AdminIdentity = {
@@ -10,11 +10,9 @@ export const AppLayoutHeader = () => {
   const { token } = theme.useToken();
   const { data: user } = useGetIdentity<AdminIdentity>();
 
-  if (!user?.name && !user?.avatar) {
+  if (!user?.name) {
     return null;
   }
-
-  const initial = user?.name?.slice(0, 1).toUpperCase() ?? 'A';
 
   return (
     <Layout.Header
@@ -32,12 +30,7 @@ export const AppLayoutHeader = () => {
         borderBottom: `1px solid ${token.colorBorderSecondary}`,
       }}
     >
-      {user?.name && <Typography.Text strong>{user.name}</Typography.Text>}
-      {user?.avatar ? (
-        <Avatar src={user.avatar} alt={user?.name} />
-      ) : (
-        <Avatar style={{ backgroundColor: token.colorPrimary }}>{initial}</Avatar>
-      )}
+      <Typography.Text strong>{user.name}</Typography.Text>
     </Layout.Header>
   );
 };

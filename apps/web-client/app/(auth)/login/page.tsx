@@ -99,58 +99,35 @@ function LoginContent() {
   const isSigningIn = status === 'loading' || isRedirecting;
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 p-3 sm:p-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f5f8fe] p-3 sm:p-4">
       {/* Animated gradient orbs — atmospheric depth */}
       <div
-        className="pointer-events-none absolute left-[-4rem] top-[-4rem] h-96 w-96 rounded-full blur-3xl"
-        style={{
-          background: 'radial-gradient(circle at 35% 35%, rgba(0,112,243,0.20), transparent 70%)',
-          animation: 'login-float 6s ease-in-out infinite',
-        }}
+        className="pointer-events-none absolute left-[-4rem] top-[-4rem] h-96 w-96 animate-float rounded-full bg-[radial-gradient(circle_at_35%_35%,rgba(47,128,237,0.14),transparent_70%)] blur-3xl"
       />
       <div
-        className="pointer-events-none absolute bottom-[-5rem] right-[-4rem] h-96 w-96 rounded-full blur-3xl"
-        style={{
-          background: 'radial-gradient(circle at 50% 50%, rgba(0,112,243,0.20), transparent 70%)',
-          animation: 'login-float 6s ease-in-out infinite',
-          animationDelay: '3s',
-        }}
+        className="pointer-events-none absolute bottom-[-5rem] right-[-4rem] h-96 w-96 animate-float rounded-full bg-[radial-gradient(circle_at_50%_50%,rgba(47,128,237,0.1),transparent_70%)] blur-3xl [animation-delay:3s]"
       />
 
       <div className="relative w-full max-w-[420px]">
       {/* Main card */}
-      <div className="relative w-full rounded-2xl border border-slate-200 bg-white/95 p-8 shadow-xl shadow-slate-200/50 backdrop-blur-xl">
-        {/* Top shine line */}
-        <div
-          className="absolute left-0 right-0 top-0 h-px rounded-t-2xl"
-          style={{
-            background: 'linear-gradient(90deg, transparent, rgba(0,0,0,0.05), transparent)',
-          }}
-        />
-        <div
-          className="absolute left-0 right-0 top-0 hidden h-px rounded-t-2xl"
-          style={{
-            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)',
-          }}
-        />
-
+      <div className="relative w-full rounded-3xl border border-slate-200/70 bg-white/95 p-8 shadow-lift backdrop-blur-xl">
         {/* Logo and Title */}
         <div className="flex flex-col items-center gap-5 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 shadow-lg shadow-blue-900/50 border border-blue-500/30 ring-4 ring-blue-500/10">
-            <span className="text-xl font-bold text-white">L</span>
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand shadow-lg shadow-brand/30 ring-4 ring-brand/10">
+            <span className="font-serif text-2xl font-semibold text-white">M</span>
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">MedPi Portal</h1>
+            <h1 className="font-serif text-3xl font-semibold tracking-tight text-slate-900">MedPi Portal</h1>
             <p className="mt-1.5 text-sm text-slate-500">Secure sign-in for medical students</p>
           </div>
         </div>
 
         {/* Notice Banner */}
-        <div className="mt-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+        <div className="mt-6 rounded-xl border border-brand/20 bg-brand-subtle px-4 py-3">
           <div className="flex items-start gap-3">
-            <FiShield className="h-[18px] w-[18px] shrink-0 text-blue-600 mt-0.5" />
+            <FiShield className="h-[18px] w-[18px] shrink-0 text-brand mt-0.5" />
             <div className="min-w-0 text-left">
-              <p className="text-sm font-semibold text-blue-700">For Medical Students Only</p>
+              <p className="text-sm font-semibold text-brand">For Medical Students Only</p>
               <p className="mt-0.5 text-xs text-slate-500">
                 Sign in with your @student.mahidol.edu Google account
               </p>
@@ -181,7 +158,7 @@ function LoginContent() {
         >
           {isSigningIn ? (
             <>
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500" />
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-brand" />
               {isRedirecting ? 'Redirecting…' : 'Continue with Google'}
             </>
           ) : (
@@ -205,18 +182,6 @@ function LoginContent() {
       </p>
       </div>
 
-      {/* CSS keyframes for the floating gradient orbs */}
-      <style jsx global>{`
-        @keyframes login-float {
-          0%,
-          100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-20px);
-          }
-        }
-      `}</style>
     </div>
   );
 }
@@ -225,8 +190,8 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 p-3 sm:p-4">
-          <div className="w-full max-w-[420px] rounded-2xl border border-slate-200 bg-white/95 p-8 text-center shadow-xl">
+        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f5f8fe] p-3 sm:p-4">
+          <div className="w-full max-w-[420px] rounded-2xl border border-slate-200/70 bg-white/95 p-8 text-center shadow-lift">
             <p className="text-sm font-medium text-slate-500">Loading sign-in screen...</p>
           </div>
         </div>

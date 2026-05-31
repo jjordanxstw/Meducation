@@ -83,7 +83,7 @@ const ResourcesList = () => {
 
   const typeAccent: Record<string, string> = {
     [ResourceType.YOUTUBE]: '#dc2626',
-    [ResourceType.GDRIVE_VIDEO]: '#2f80ed',
+    [ResourceType.GDRIVE_VIDEO]: '#1d4ed8',
     [ResourceType.GDRIVE_PDF]: '#16a34a',
     [ResourceType.EXTERNAL]: '#7c3aed',
   };
@@ -769,7 +769,7 @@ const ResourcesList = () => {
               addonAfter={
                 <button
                   type="button"
-                  style={{ border: 0, background: 'transparent', cursor: 'pointer', color: '#2f80ed' }}
+                  style={{ border: 0, background: 'transparent', cursor: 'pointer', color: '#1d4ed8' }}
                   onClick={() => {
                     const url = String(form.getFieldValue('url') ?? '').trim();
                     if (url) {

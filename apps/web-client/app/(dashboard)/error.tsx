@@ -23,47 +23,35 @@ export default function DashboardError({
   }, [error]);
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh] p-4">
-      <Card className="glass-surface max-w-md w-full">
+    <div className="flex min-h-[60vh] items-center justify-center p-4">
+      <Card shadow="none" className="w-full max-w-md border border-slate-200/70 bg-white shadow-subtle">
         <CardBody className="gap-4 p-6 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10">
-            <FiAlertTriangle className="h-7 w-7 text-red-400" />
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+            <FiAlertTriangle className="h-7 w-7 text-red-500" />
           </div>
 
           <div className="space-y-2">
-            <h2 className="text-lg font-semibold text-[var(--ink-1)]">
-              Something went wrong
-            </h2>
-            <p className="text-sm text-[var(--ink-2)]">
+            <h2 className="font-serif text-xl font-semibold tracking-tight text-slate-900">Something went wrong</h2>
+            <p className="text-sm text-slate-500">
               An unexpected error occurred. Please try again or return to the home page.
             </p>
           </div>
 
-          {error.digest && (
-            <p className="text-xs text-slate-400 font-mono">
-              Error ID: {error.digest}
-            </p>
-          )}
+          {error.digest && <p className="font-mono text-xs text-slate-400">Error ID: {error.digest}</p>}
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <Button
-              color="primary"
-              variant="solid"
-              className="btn-precise flex-1"
-              startContent={<span className="icon-with-text"><FiRefreshCw className="h-4 w-4" /></span>}
-              onPress={reset}
-            >
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+            <Button color="primary" className="flex-1" startContent={<FiRefreshCw className="h-4 w-4" />} onPress={reset}>
               Try Again
             </Button>
-            <Link href="/" className="flex-1">
-              <Button
-                variant="flat"
-                className="btn-precise w-full"
-                startContent={<span className="icon-with-text"><FiHome className="h-4 w-4" /></span>}
-              >
-                Go Home
-              </Button>
-            </Link>
+            <Button
+              as={Link}
+              href="/"
+              variant="flat"
+              className="flex-1"
+              startContent={<FiHome className="h-4 w-4" />}
+            >
+              Go Home
+            </Button>
           </div>
         </CardBody>
       </Card>

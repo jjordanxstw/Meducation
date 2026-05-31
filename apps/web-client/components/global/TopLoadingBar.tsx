@@ -68,9 +68,11 @@ export function TopLoadingBar() {
   return (
     <div
       aria-hidden="true"
-      className={`top-loading-bar ${isBusy ? 'top-loading-bar--active' : ''}`}
+      className={`pointer-events-none fixed inset-x-0 top-0 z-[9999] h-0.5 overflow-hidden transition-opacity duration-200 ${
+        isBusy ? 'opacity-100' : 'opacity-0'
+      }`}
     >
-      <div className="top-loading-bar__indeterminate" />
+      <div className="h-full w-full animate-top-loading bg-gradient-to-r from-transparent via-brand to-transparent" />
     </div>
   );
 }

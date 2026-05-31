@@ -18,8 +18,9 @@ const config: Config = {
         'ink-3': light.text.muted,
         'border-subtle': light.border.subtle,
         'border-default': light.border.default,
-        brand: light.brand.primary,
-        'brand-hover': light.brand.primaryHover,
+        // web-admin uses a dark-blue brand accent (shared tokens stay light for web-client).
+        brand: '#1d4ed8',
+        'brand-hover': '#1e40af',
         'brand-subtle': light.brand.primarySubtle,
         primary: {
           50: HERO_BRAND.blue[50],

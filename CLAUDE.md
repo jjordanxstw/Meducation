@@ -59,8 +59,8 @@ The portal should feel like a premium, production-grade experience — not a gen
 #### Cards
 - White surfaces (`bg-white`, `bg-[var(--bg-surface)]`)
 - Soft slate borders (`border-slate-200`, `border-[var(--border-subtle)]`)
-- Subtle shadows (`shadow-[var(--shadow-subtle)]` / `--shadow-sm`); lift gently on hover
-- Optional colored accent bars for differentiation (4px gradient tops)
+- Subtle shadows (`shadow-subtle` / `shadow-soft`); lift gently on hover (`-translate-y-1` + brand border)
+- Hairline borders (`border-slate-200/70`); **no gradient accent bars** — differentiation comes from a single restrained brand accent and editorial typography
 
 #### Floating UI (Dropdowns, Modals, Sheets)
 - **Solid white/elevated surfaces** (`bg-[var(--bg-surface-elevated)]`)
@@ -69,17 +69,16 @@ The portal should feel like a premium, production-grade experience — not a gen
 - Light scrim overlays for modals (`bg-slate-900/20 backdrop-blur-sm`)
 
 #### Typography Scale
-- Page titles: `text-2xl font-bold`, slate-900
-- Section headings: `text-lg font-semibold`, slate-900
-- Body text: `text-sm text-slate-600` (`var(--ink-2)`)
+- **Editorial serif display for headings.** Page titles `font-serif text-3xl/4xl font-semibold tracking-tight`, slate-900; section headings `font-serif text-lg/2xl font-semibold tracking-tight`, slate-900
+- Body text: `text-sm text-slate-600` (`var(--ink-2)`) — sans
 - Labels/captions: `text-xs text-slate-400` (`var(--ink-3)`)
-- Font: Noto Sans (loaded via `next/font` in web-client, `@fontsource/noto-sans` in web-admin)
+- Fonts (web-client, via `next/font`): **Noto Serif** for display/headings (`font-serif`), **Noto Sans** for body/UI (`font-sans`), **Noto Serif Thai** for Thai content. The Latin faces have no Thai glyphs, so Thai text falls through to Noto Serif Thai automatically in every context — no per-string tagging. web-admin still uses `@fontsource/noto-sans`.
 
 #### Color Usage
 - Primary blue (`#2f80ed`): Active states, CTAs, links, emphasis
 - Slate text ramp: `slate-900` → `slate-600` → `slate-400` for primary/secondary/muted
-- Subject accent colors: Blue, Purple, Emerald, Amber, Rose gradients (top bars)
-- Status colors: Red (danger/errors), Amber (warnings/coming-soon), Green (success)
+- **Single brand accent** (`brand` / `brand-subtle`) — no multi-color/rainbow card bars
+- Status colors: Red (danger/errors), Amber (warnings/coming-soon), Green (success); calendar event types (exam=red, lecture=blue, holiday=green, event=purple) are kept only where the color carries meaning
 
 #### Empty States
 - 48px icon at ~35% opacity in the brand blue or slate, centered
@@ -87,8 +86,12 @@ The portal should feel like a premium, production-grade experience — not a gen
 - Helpful subtext (`text-sm text-slate-500`)
 - Optional CTA as a subtle bordered button
 
+#### App Shell
+- **Desktop (≥ lg):** fixed left **sidebar** (brand wordmark, primary nav, bottom user block) + slim sticky top bar with search; content in a centered `max-w-6xl` column
+- **Mobile/tablet (< lg):** top bar (menu + brand + avatar) opens a slide-over **drawer**; persistent **bottom nav** for primary destinations
+
 #### Mobile Considerations
-- Collapsed navigation in a drawer (< md breakpoint) + bottom nav bar
+- Collapsed navigation in a slide-over drawer (< lg breakpoint) + bottom nav bar
 - Stacked layouts on narrow screens
 - Touch-friendly tap targets (min 44px)
 - Solid white surfaces on all mobile overlays

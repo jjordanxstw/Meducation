@@ -125,7 +125,7 @@ function defaultRangeFor(preset: Exclude<RangePreset, 'custom'>): [Dayjs, Dayjs]
 }
 
 const KPI_DEFINITIONS = [
-  { key: 'subjects' as const, accent: '#2f80ed', icon: <BookOutlined />, label: 'Subjects' },
+  { key: 'subjects' as const, accent: '#1d4ed8', icon: <BookOutlined />, label: 'Subjects' },
   { key: 'sections' as const, accent: '#7c3aed', icon: <UnorderedListOutlined />, label: 'Sections' },
   { key: 'lectures' as const, accent: '#0891b2', icon: <ReadOutlined />, label: 'Lectures' },
   { key: 'resources' as const, accent: '#ea580c', icon: <FileTextOutlined />, label: 'Resources' },
@@ -135,7 +135,7 @@ const KPI_DEFINITIONS = [
 
 const EVENT_COLORS: Record<string, string> = {
   exam: '#dc2626',
-  lecture: '#2f80ed',
+  lecture: '#1d4ed8',
   holiday: '#d97706',
   event: '#16a34a',
 };
@@ -376,7 +376,7 @@ const DashboardPage = () => {
                   height: 26,
                   borderRadius: '50%',
                   background: 'rgba(47, 128, 237, 0.12)',
-                  color: '#2f80ed',
+                  color: '#1d4ed8',
                   fontWeight: 600,
                   fontSize: 12,
                 }}
@@ -414,7 +414,7 @@ const DashboardPage = () => {
       {/* Welcome / refresh banner */}
       <Card
         bordered={false}
-        style={{ background: 'linear-gradient(135deg, #2f80ed 0%, #1b66cc 100%)', color: '#fff' }}
+        style={{ background: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)', color: '#fff' }}
       >
         <Row align="middle" justify="space-between" gutter={[12, 12]} wrap>
           <Col xs={24} md={16}>
@@ -603,7 +603,7 @@ const DashboardPage = () => {
             seriesField="series"
             smooth
             height={260}
-            color={['#2f80ed', '#7c3aed', '#16a34a']}
+            color={['#1d4ed8', '#7c3aed', '#16a34a']}
             point={{ size: 3, shape: 'circle' }}
             xAxis={{ tickCount: 6 }}
             yAxis={{ minInterval: 1 }}
@@ -627,7 +627,7 @@ const DashboardPage = () => {
                 xField="year"
                 yField="count"
                 height={280}
-                color="#2f80ed"
+                color="#1d4ed8"
                 columnStyle={{ radius: [6, 6, 0, 0] }}
                 label={{
                   position: 'top',

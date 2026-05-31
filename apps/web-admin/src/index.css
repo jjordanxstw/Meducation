@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --brand: #2f80ed;
-  --brand-hover: #1b66cc;
+  --brand: #1d4ed8;
+  --brand-hover: #1e40af;
   --bg-canvas: #f4f8ff;
   --bg-surface: #ffffff;
   --ink-1: #0f172a;
@@ -12,7 +12,7 @@
   --ink-3: #64748b;
   --border-subtle: rgba(15, 23, 42, 0.07);
   --border-default: rgba(15, 23, 42, 0.12);
-  --sider-active: rgba(47, 128, 237, 0.10);
+  --sider-active: rgba(255, 255, 255, 0.14);
   --font-sans: 'Noto Sans', system-ui, sans-serif;
 }
 
@@ -77,9 +77,39 @@ h1, h2, h3, h4, h5, h6 {
   scrollbar-width: none;
 }
 
-/* === Sidebar (Refine ThemedLayout) — light surface === */
+/* === Sidebar (Refine ThemedLayout) — dark-navy surface === */
+/* ThemedLayout's Sider paints its own light background, so force the navy here. */
+.ant-layout-sider,
+.ant-layout-sider .ant-layout-sider-children,
+.ant-layout-sider .ant-menu {
+  background: #0f2147 !important;
+}
+
 .ant-layout-sider {
-  border-right: 1px solid var(--border-subtle) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Sidebar wordmark/labels readable on navy. */
+.ant-layout-sider .ant-menu-item,
+.ant-layout-sider .ant-menu-submenu-title {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.ant-layout-sider .ant-menu-item:hover,
+.ant-layout-sider .ant-menu-submenu-title:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Keep nav icons + selected labels light against the navy background. */
+.ant-layout-sider .ant-menu-item .anticon,
+.ant-layout-sider .ant-menu-submenu-title .anticon {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.ant-layout-sider .ant-menu-item-selected,
+.ant-layout-sider .ant-menu-item-selected .anticon {
+  color: #ffffff !important;
 }
 
 .ant-layout-sider .ant-menu {
@@ -191,6 +221,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 992px) {
+  /* On mobile the sider is a slide-over drawer, so the collapse arrow is moot. */
+  .admin-sider-collapse {
+    display: none !important;
+  }
+
   .refine-layout .ant-layout-content {
     padding: 12px;
   }

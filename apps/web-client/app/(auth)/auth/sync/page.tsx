@@ -185,33 +185,27 @@ function AuthSyncContent() {
 
   if (syncError) {
     return (
-      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-glass-canvas p-3 sm:p-4">
-        <div className="glass-orb-a pointer-events-none left-[-6%] top-[-10%]" />
-        <div className="glass-orb-b pointer-events-none bottom-[-12%] right-[-4%]" />
-        <div className="w-full max-w-md space-y-5 rounded-2xl border border-red-500/20 bg-red-500/10 p-6 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/15">
-            <FiAlertCircle className="h-7 w-7 text-red-400" />
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f4f8ff] p-3 sm:p-4">
+        <div className="w-full max-w-md space-y-5 rounded-3xl border border-red-200 bg-white p-6 text-center shadow-xl shadow-red-500/5">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50">
+            <FiAlertCircle className="h-7 w-7 text-red-500" />
           </div>
           <div className="space-y-1.5">
-            <h2 className="text-lg font-semibold text-[var(--ink-1)]">Connection failed</h2>
-            <p className="text-sm text-[var(--ink-2)]">
+            <h2 className="text-lg font-semibold text-slate-900">Connection failed</h2>
+            <p className="text-sm text-slate-500">
               We couldn&apos;t reach the server. Check your internet connection and try again.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               color="primary"
-              className="btn-precise w-full justify-center"
-              startContent={<span className="icon-with-text"><FiRefreshCw className="h-4 w-4" /></span>}
+              className="w-full justify-center"
+              startContent={<FiRefreshCw className="h-4 w-4" />}
               onPress={handleRetry}
             >
               Try Again
             </Button>
-            <Button
-              variant="light"
-              className="btn-precise w-full justify-center text-[var(--ink-2)]"
-              onPress={handleBackToLogin}
-            >
+            <Button variant="light" className="w-full justify-center text-slate-600" onPress={handleBackToLogin}>
               Back to Login
             </Button>
           </div>
@@ -221,16 +215,14 @@ function AuthSyncContent() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-glass-canvas">
-      <div className="glass-orb-a pointer-events-none left-[-6%] top-[-10%]" />
-      <div className="glass-orb-b pointer-events-none bottom-[-12%] right-[-4%]" />
-      <div className="glass-card rounded-2xl px-10 py-8 text-center">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f4f8ff]">
+      <div className="rounded-3xl border border-slate-200/70 bg-white px-10 py-8 text-center shadow-lift">
         {/* Animated logo with pulse ring */}
         <div className="relative mx-auto mb-5 flex h-12 w-12 items-center justify-center">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-20" />
-          <FiBook className="relative h-12 w-12 text-blue-500" />
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-20" />
+          <FiBook className="relative h-12 w-12 text-brand" />
         </div>
-        <p className="text-sm font-medium text-[var(--ink-2)] transition-opacity duration-300">
+        <p className="text-sm font-medium text-slate-500 transition-opacity duration-300">
           {syncSteps[stepIndex]}
         </p>
       </div>
@@ -242,9 +234,9 @@ export default function AuthSyncPage() {
   return (
     <Suspense
       fallback={
-        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-glass-canvas">
-          <div className="glass-card rounded-2xl px-8 py-6 text-center">
-            <p className="text-sm font-medium text-[var(--ink-2)]">Checking your session...</p>
+        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f4f8ff]">
+          <div className="rounded-3xl border border-slate-200/70 bg-white px-8 py-6 text-center shadow-lift">
+            <p className="text-sm font-medium text-slate-500">Checking your session...</p>
           </div>
         </div>
       }

@@ -4,611 +4,110 @@
 
 :root {
   color-scheme: light;
-  --app-shell-max: 72rem;
-  --app-shell-gutter: clamp(0.75rem, 2.4vw, 1.5rem);
-  --bg-canvas: #f4f8ff;
-  --bg-canvas-alt: #e9f1ff;
+
+  /* ---- Editorial design tokens (web-client only) ---- */
+
+  /* Brand — a single, restrained light-blue accent. */
+  --brand: #2f80ed;
+  --brand-hover: #1b66cc;
+  --brand-active: #1857ad;
+  --brand-weak: rgba(47, 128, 237, 0.1);
+  --brand-ring: rgba(47, 128, 237, 0.35);
+
+  /* Surfaces */
+  --bg-canvas: #f5f8fe;
   --bg-surface: #ffffff;
   --bg-surface-elevated: #ffffff;
-  --bg-muted: #eef3fb;
-  --bg-inverse: #0f172a;
+  --bg-muted: #f1f5fb;
+
+  /* Ink ramp (slate) */
   --ink-1: #0f172a;
   --ink-2: #475569;
-  --ink-3: #64748b;
-  --brand-primary: #2f80ed;
-  --brand-primary-hover: #1b66cc;
-  --brand-primary-active: #1450a3;
-  --brand-primary-subtle: rgba(47, 128, 237, 0.12);
-  --brand-primary-ring: rgba(47, 128, 237, 0.36);
-  --border-subtle: rgba(15, 23, 42, 0.08);
-  --border-default: rgba(15, 23, 42, 0.14);
-  --border-strong: rgba(15, 23, 42, 0.22);
-  --top-loader-color-1: rgba(47, 128, 237, 0.92);
-  --top-loader-color-2: rgba(27, 102, 204, 0.92);
-  --glass-rgb: 255, 255, 255;
-  --glass-strong-alpha: 0.84;
-  --glass-soft-alpha: 0.72;
-  --glass-border-alpha: 0.48;
-  --glass-shadow: 0 22px 52px rgba(15, 23, 42, 0.14);
-  --surface-0: var(--bg-surface);
-  --surface-1: var(--bg-surface-elevated);
-  --surface-border: var(--border-default);
+  --ink-3: #94a3b8;
 
-  /* Design Tokens */
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.25rem;
+  /* Hairline borders */
+  --border-subtle: rgba(15, 23, 42, 0.07);
+  --border-default: rgba(15, 23, 42, 0.12);
 
-  --shadow-subtle: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.06);
-  --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.1), 0 1px 3px rgba(15, 23, 42, 0.06);
-  --shadow-md: 0 6px 18px rgba(15, 23, 42, 0.12), 0 2px 4px rgba(15, 23, 42, 0.06);
-  --shadow-lg: 0 14px 34px rgba(15, 23, 42, 0.16), 0 6px 10px rgba(15, 23, 42, 0.08);
-  --shadow-xl: 0 22px 52px rgba(15, 23, 42, 0.2), 0 10px 18px rgba(15, 23, 42, 0.1);
+  /* Soft, editorial shadows — never heavy black */
+  --shadow-subtle: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 10px 24px rgba(15, 23, 42, 0.08), 0 3px 8px rgba(15, 23, 42, 0.05);
+  --shadow-lg: 0 22px 48px rgba(15, 23, 42, 0.12), 0 8px 16px rgba(15, 23, 42, 0.07);
 
-  /* Card border standard */
-  --card-border: var(--border-subtle);
-  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
-  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --orb-a: rgba(0, 112, 243, 0.12);
-  --orb-b: rgba(14, 165, 233, 0.1);
-  --orb-c: rgba(59, 130, 246, 0.08);
+  /* Type stacks — Thai falls through to Noto Serif Thai automatically. */
+  --font-sans-stack: var(--font-noto-sans), var(--font-noto-serif-thai), 'Noto Sans',
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-serif-stack: var(--font-noto-serif), var(--font-noto-serif-thai), Georgia,
+    'Times New Roman', serif;
 }
 
-@layer utilities {
-  .bg-glass-canvas {
-    background:
-      radial-gradient(circle at 16% 18%, var(--orb-a), transparent 36%),
-      radial-gradient(circle at 82% 22%, var(--orb-b), transparent 44%),
-      radial-gradient(circle at 68% 78%, var(--orb-c), transparent 39%),
-      linear-gradient(158deg, var(--bg-canvas) 0%, var(--bg-canvas-alt) 54%, var(--bg-muted) 100%);
-  }
-
-  .glass-orb-a {
-    position: absolute;
-    width: clamp(280px, 38vw, 520px);
-    height: clamp(280px, 38vw, 520px);
-    border-radius: 9999px;
-    filter: blur(14px);
-    background: radial-gradient(circle at 35% 35%, var(--orb-a), rgba(59, 130, 246, 0));
-  }
-
-  .glass-orb-b {
-    position: absolute;
-    width: clamp(240px, 30vw, 420px);
-    height: clamp(240px, 30vw, 420px);
-    border-radius: 9999px;
-    filter: blur(16px);
-    background: radial-gradient(circle at 50% 50%, var(--orb-b), rgba(59, 130, 246, 0));
-  }
-
-  .glass-card {
-    background: rgba(var(--glass-rgb), var(--glass-strong-alpha));
-    border: 1px solid rgba(255, 255, 255, var(--glass-border-alpha));
-    box-shadow: var(--glass-shadow);
-    backdrop-filter: blur(8px) saturate(120%);
-  }
-
-  .glass-soft {
-    background: rgba(var(--glass-rgb), var(--glass-soft-alpha));
-    border: 1px solid rgba(255, 255, 255, calc(var(--glass-border-alpha) - 0.08));
-    backdrop-filter: blur(6px) saturate(115%);
-  }
-
-  .glass-surface {
-    background: var(--surface-0);
-    border: 1px solid var(--card-border);
-    box-shadow: var(--shadow-md);
-    backdrop-filter: blur(6px);
-    transition: transform 0.2s var(--ease-out-quart), box-shadow 0.2s var(--ease-out-quart);
-    cursor: pointer;
-  }
-
-  .glass-surface:hover {
-    box-shadow: var(--shadow-lg), 0 10px 30px rgba(0, 0, 0, 0.2);
-  }
-
-  .glass-surface-strong {
-    background: var(--surface-1);
-    border: 1px solid var(--surface-border);
-    box-shadow: var(--shadow-lg);
-    backdrop-filter: blur(8px);
-  }
-
-  /* Flat card variants */
-  .card-flat {
-    background: var(--surface-0);
-    border: 1px solid var(--card-border);
-    box-shadow: var(--shadow-subtle);
-  }
-
-  .card-flat-hover {
-    background: var(--surface-1);
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--card-border);
-  }
-
-  /* Transition utilities */
-  .transition-smooth {
-    transition: all 0.2s ease-in-out;
-  }
-
-  .transition-smooth-hover {
-    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
-  }
-
-  .icon-circle-btn {
-    width: 2.5rem;
-    height: 2.5rem;
-    min-width: 2.5rem;
-    min-height: 2.5rem;
-    padding: 0;
-    border-radius: 9999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-  }
-
-  .icon-circle-btn > svg {
-    width: 1rem;
-    height: 1rem;
-    flex-shrink: 0;
-  }
-
-  .icon-with-text {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1rem;
-    height: 1rem;
-    flex-shrink: 0;
-    line-height: 1;
-  }
-
-  .icon-with-text > svg {
-    width: 1rem;
-    height: 1rem;
-    flex-shrink: 0;
-  }
-
-  .btn-precise {
-    border-radius: var(--radius-md);
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    white-space: normal;
-    gap: 0.5rem;
-    min-height: 2.5rem;
-    transition: transform 0.15s var(--ease-out-quart), box-shadow 0.15s var(--ease-out-quart), background 0.15s var(--ease-out-quart);
-  }
-
-  .btn-precise svg {
-    width: 1rem;
-    height: 1rem;
-    flex-shrink: 0;
-    vertical-align: middle;
-  }
-
-  .btn-precise:hover {
-    transform: translateY(-1px);
-  }
-
-  .btn-precise:active {
-    transform: translateY(0);
-  }
-
-  /* Page content container */
-  .page-container {
-    max-width: 72rem;
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-  }
-
-  /* Empty state component */
-  .empty-state {
-    text-align: center;
-    padding: 3rem 1.5rem;
-  }
-
-  .empty-state-icon {
-    width: 48px;
-    height: 48px;
-    margin: 0 auto 1rem;
-    opacity: 0.4;
-  }
-
-  .empty-state-heading {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--ink-1);
-    margin-bottom: 0.25rem;
-  }
-
-  .empty-state-subtext {
-    font-size: 0.875rem;
-    color: var(--ink-3);
-  }
-
-  /* Typography scale */
-  .page-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    line-height: 1.2;
-  }
-
-  .section-heading {
-    font-size: 1.125rem;
-    font-weight: 600;
-    line-height: 1.4;
-  }
-
-  .body-text {
-    font-size: 0.875rem;
-    color: var(--ink-2);
-    line-height: 1.5;
-  }
-
-  /* Coming Soon badge - consistent across app */
-  .coming-soon-badge {
-    padding: 0.25rem 0.625rem;
-    border-radius: 9999px;
-    background: rgba(245, 158, 11, 0.1);
-    color: #fbbf24;
-    font-size: 0.75rem;
-    font-weight: 500;
-    border: 1px solid rgba(245, 158, 11, 0.2);
-  }
-
-  /* Hide scrollbar while keeping scroll (horizontal pill rows, carousels) */
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* Custom scrollbar */
-  .scrollbar-thin {
-    scrollbar-width: thin;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  .scrollbar-thumb-white\/20::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.2);
-    border-radius: 3px;
-  }
-
-  .scrollbar-thumb-white\/20::-webkit-scrollbar-thumb:hover {
-    background: rgba(148, 163, 184, 0.35);
-  }
-
-  .scrollbar-track-transparent::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  /* === HARDENING UTILITIES === */
-
-  /* Focus visible for custom elements */
-  .focus-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2;
-  }
-
-  /* Prevent flex children from overflowing */
-  .flex-min-width-0 {
-    min-width: 0;
-  }
-
-  /* Prevent grid children from overflowing */
-  .grid-min-size-0 {
-    min-width: 0;
-    min-height: 0;
-  }
-
-  /* Screen reader only (visible on focus) */
-  .sr-only-focusable {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  .sr-only-focusable:focus,
-  .sr-only-focusable:focus-within {
-    position: static;
-    width: auto;
-    height: auto;
-    padding: inherit;
-    margin: inherit;
-    overflow: visible;
-    clip: auto;
-    white-space: normal;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
-/*
- * Typography
- * ------------------------------------------------------------
- * - Latin glyphs (English) use Noto Sans.
- * - Thai glyphs use Sarabun (designed by Suppakit Chalermlarp).
- *
- * We declare both faces in the body font stack and rely on the browser's
- * per-glyph fallback ordering: Noto Sans (Latin only) is consulted first,
- * the browser then falls through to Sarabun for any glyphs Noto Sans does
- * not provide (notably the Thai script). Both fonts are loaded by
- * `next/font/google` in `app/layout.tsx`, and exposed through the
- * `--font-noto-sans` and `--font-sarabun` CSS variables.
- */
 body {
-  font-family:
-    var(--font-noto-sans),
-    var(--font-sarabun),
-    'Noto Sans',
-    'Sarabun',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
+  font-family: var(--font-sans-stack);
   -webkit-font-smoothing: antialiased;
-  background:
-    radial-gradient(circle at 8% 8%, var(--orb-a), transparent 35%),
-    radial-gradient(circle at 86% 20%, var(--orb-b), transparent 38%),
-    linear-gradient(160deg, var(--bg-canvas) 0%, var(--bg-canvas-alt) 44%, var(--bg-muted) 100%);
-  color: var(--ink-1);
+  text-rendering: optimizeLegibility;
   min-height: 100vh;
-  transition: background 260ms ease, color 260ms ease;
+  /* Calm, faint blue-tinted editorial canvas. */
+  background-color: var(--bg-canvas);
+  background-image: radial-gradient(
+    44rem 44rem at 12% -12%,
+    rgba(47, 128, 237, 0.05),
+    transparent 60%
+  );
+  background-attachment: fixed;
+  color: var(--ink-1);
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family:
-    var(--font-noto-sans),
-    var(--font-sarabun),
-    'Noto Sans',
-    'Sarabun',
-    sans-serif;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+/* Serif display face for headings. Apply via `font-serif`/`.font-display`. */
+.font-display {
+  font-family: var(--font-serif-stack);
+  letter-spacing: -0.018em;
 }
 
-/* Anything explicitly marked as Thai content prefers Sarabun directly. */
-:lang(th),
-[lang='th'] {
-  font-family:
-    var(--font-sarabun),
-    'Sarabun',
-    var(--font-noto-sans),
-    sans-serif;
+/* Brand text selection. */
+::selection {
+  background: rgba(47, 128, 237, 0.18);
+  color: var(--ink-1);
 }
 
-/* Custom scrollbar */
+/* Consistent, calm focus ring for keyboard users. */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Slim, unobtrusive scrollbars. */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
-  border-radius: 3px;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.2);
-  border-radius: 3px;
+  background: rgba(100, 116, 139, 0.28);
+  border-radius: 9999px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.35);
+  background: rgba(100, 116, 139, 0.45);
 }
 
-/* FullCalendar styles */
-.fc {
-  font-family:
-    var(--font-noto-sans),
-    var(--font-sarabun),
-    'Noto Sans',
-    'Sarabun',
-    sans-serif !important;
+/* Hide scrollbar while keeping scroll (horizontal chip rows, carousels). */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
-.fc .fc-toolbar-title {
-  font-family:
-    var(--font-noto-sans),
-    var(--font-sarabun),
-    'Noto Sans',
-    'Sarabun',
-    sans-serif !important;
-  font-weight: 600;
-  font-size: 1.35rem !important;
-  color: var(--ink-1);
-}
-
-.fc .fc-button {
-  border: 1px solid var(--surface-border) !important;
-  border-radius: var(--radius-md) !important;
-  padding: 8px 14px !important;
-  font-weight: 500 !important;
-  font-size: 0.875rem !important;
-  transition: all 0.2s ease !important;
-  background: var(--surface-0) !important;
-  color: var(--ink-1) !important;
-  box-shadow: var(--shadow-subtle) !important;
-}
-
-.fc .fc-button:hover:not(:disabled) {
-  background: var(--surface-1) !important;
-  box-shadow: var(--shadow-sm) !important;
-  transform: translateY(-1px) !important;
-}
-
-.fc .fc-button:active:not(:disabled) {
-  transform: translateY(0) !important;
-}
-
-.fc .fc-button-primary {
-  background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-hover) 100%) !important;
-  color: white !important;
-  border-color: transparent !important;
-}
-
-.fc .fc-button-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--brand-primary-hover) 0%, var(--brand-primary-active) 100%) !important;
-  box-shadow: var(--shadow-md) !important;
-}
-
-/* Calendar header row - subtle styling */
-.fc .fc-col-header-cell {
-  background: var(--bg-muted) !important;
-}
-
-.fc .fc-col-header-cell-cushion {
-  color: var(--ink-3) !important;
-  font-size: 0.75rem !important;
-  font-weight: 500 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-}
-
-/* Calendar cell borders - subtle */
-.fc .fc-theme-standard td,
-.fc .fc-theme-standard th,
-.fc .fc-theme-standard .fc-scrollgrid {
-  border-color: var(--border-subtle) !important;
-}
-
-/* Today's date - blue circle */
-.fc .fc-daygrid-day.fc-day-today {
-  background-color: transparent !important;
-}
-
-.fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 28px !important;
-  height: 28px !important;
-  border-radius: 50% !important;
-  background: #2563eb !important;
-  color: white !important;
-  font-weight: 600 !important;
-}
-
-.fc .fc-event {
-  border-radius: var(--radius-sm) !important;
-  font-size: 0.8rem !important;
-  padding: 3px 6px !important;
-  box-shadow: var(--shadow-subtle) !important;
-}
-
-.fc .fc-daygrid-event {
-  margin: 1px 2px !important;
-}
-
-.fc .fc-daygrid-day-number,
-.fc .fc-list-day-text,
-.fc .fc-list-day-side-text,
-.fc .fc-list-event-title {
-  color: var(--ink-1) !important;
-}
-
-.fc .fc-list,
-.fc .fc-list-table,
-.fc .fc-view-harness,
-.fc .fc-scrollgrid {
-  background: transparent !important;
-}
-
-/* Watermark styles */
-.watermark-container {
-  position: relative;
-  overflow: hidden;
-}
-
-.watermark-overlay {
-  position: absolute;
-  pointer-events: none;
-  user-select: none;
-  z-index: 9999;
-  font-family:
-    var(--font-noto-sans),
-    var(--font-sarabun),
-    'Noto Sans',
-    'Sarabun',
-    sans-serif;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-  white-space: nowrap;
-}
-
-/* Animations */
-@keyframes watermark-float {
-  0%, 100% { transform: translate(0, 0) rotate(-15deg); }
-  25% { transform: translate(5%, 3%) rotate(-12deg); }
-  50% { transform: translate(10%, 0) rotate(-18deg); }
-  75% { transform: translate(5%, -3%) rotate(-12deg); }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pageFadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Animation classes - respect reduced motion preferences */
-@media (prefers-reduced-motion: no-preference) {
-  .animate-fade-in {
-    animation: fadeIn 0.5s ease-in-out;
-  }
-
-  .animate-slide-up {
-    animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    opacity: 0;
-  }
-
-  .animate-page-in {
-    animation: pageFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .watermark-animated {
-    animation: watermark-float 30s ease-in-out infinite;
-  }
-}
-
-/* Reduced motion: instant transitions, no animations */
+/* Respect reduced-motion: disable entrance animations and transitions. */
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-in,
-  .animate-slide-up,
-  .animate-page-in {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  .watermark-animated {
-    animation: none !important;
-  }
-
-  /* Reduce transitions to instant */
   *,
   *::before,
   *::after {
@@ -618,119 +117,3 @@ h1, h2, h3, h4, h5, h6 {
     scroll-behavior: auto !important;
   }
 }
-
-.top-loading-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  z-index: 9999;
-  opacity: 0;
-  transition: opacity 160ms ease;
-  pointer-events: none;
-}
-
-.top-loading-bar--active {
-  opacity: 1;
-}
-
-.top-loading-bar__indeterminate {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, rgba(2, 132, 199, 0) 0%, var(--top-loader-color-2) 42%, var(--top-loader-color-1) 60%, rgba(2, 132, 199, 0) 100%);
-  transform-origin: left;
-  animation: top-loading-indeterminate 1s linear infinite;
-}
-
-@keyframes top-loading-indeterminate {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-/* Calendar custom styles */
-.fc-custom .fc-scrollgrid {
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-
-.fc-custom .fc-daygrid-day-frame {
-  min-height: 52px;
-}
-
-.fc-custom .fc-event {
-  border-radius: var(--radius-sm) !important;
-  padding: 4px 8px !important;
-  font-size: 0.8rem !important;
-}
-
-.fc-custom .fc-timegrid-slot {
-  height: 48px !important;
-}
-
-/* === FLOATING UI (HeroUI dropdowns, popovers, modals) === */
-
-[data-slot="content"] {
-  box-shadow: var(--shadow-lg) !important;
-}
-
-[data-slot="menu"] {
-  background: var(--bg-surface-elevated) !important;
-  border: 1px solid var(--border-subtle) !important;
-  border-radius: 0.75rem !important;
-  box-shadow: var(--shadow-lg) !important;
-}
-
-[data-slot="popover-content"] {
-  background: var(--bg-surface-elevated) !important;
-  border: 1px solid var(--border-subtle) !important;
-  border-radius: 0.75rem !important;
-  box-shadow: var(--shadow-lg) !important;
-}
-
-[data-slot="base"] {
-  background: var(--bg-surface-elevated) !important;
-  border: 1px solid var(--border-subtle) !important;
-  border-radius: 1rem !important;
-  box-shadow: var(--shadow-lg) !important;
-}
-
-/* Modal overlay/backdrop */
-[data-slot="backdrop"] {
-  background: rgba(15, 23, 42, 0.2) !important;
-  backdrop-filter: blur(4px) !important;
-}
-
-/* Tooltip */
-[data-slot="tooltip-content"] {
-  background: #1e293b !important;
-  border: 1px solid rgba(15, 23, 42, 0.1) !important;
-  border-radius: 0.5rem !important;
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2) !important;
-}
-
-  /* === MICRO-INTERACTION UTILITIES === */
-
-  /* Hover lift effect */
-  .hover-lift {
-    transition: transform 0.15s var(--ease-out-quart), box-shadow 0.15s var(--ease-out-quart);
-  }
-
-  .hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-  }
-
-  /* Press feedback */
-  .press-feedback:active {
-    transform: scale(0.98);
-  }
-
-  /* Focus glow */
-  .focus-glow:focus-visible {
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-  }

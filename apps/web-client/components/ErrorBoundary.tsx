@@ -60,7 +60,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       >
         <FiAlertTriangle className="h-12 w-12 text-slate-400" aria-hidden="true" />
         <div className="space-y-1">
-          <h2 className="text-lg font-semibold text-slate-900">Something went wrong</h2>
+          <h2 className="font-serif text-xl font-semibold tracking-tight text-slate-900">Something went wrong</h2>
           <p className="text-sm text-slate-500">
             An unexpected error occurred while rendering this page.
           </p>
@@ -68,7 +68,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         <button
           type="button"
           onClick={this.reset}
-          className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-subtle transition hover:border-brand/40 hover:bg-brand-subtle hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           Try again
         </button>

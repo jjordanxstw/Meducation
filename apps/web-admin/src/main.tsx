@@ -65,7 +65,7 @@ const Root: React.FC = () => {
         ...RefineThemes.Blue,
         algorithm: antdTheme.defaultAlgorithm,
         token: {
-          colorPrimary: tokens.brand.primary,
+          colorPrimary: '#1d4ed8',
           colorBgBase: tokens.bg.canvas,
           colorBgContainer: tokens.bg.surface,
           colorBgElevated: tokens.bg.surfaceElevated,
@@ -75,8 +75,8 @@ const Root: React.FC = () => {
           colorText: tokens.text.primary,
           colorTextSecondary: tokens.text.secondary,
           colorTextTertiary: tokens.text.muted,
-          colorLink: tokens.text.link,
-          colorLinkHover: tokens.text.linkHover,
+          colorLink: '#1d4ed8',
+          colorLinkHover: '#1e40af',
           colorSuccess: tokens.state.success.fg,
           colorWarning: tokens.state.warning.fg,
           colorError: tokens.state.danger.fg,
@@ -89,7 +89,17 @@ const Root: React.FC = () => {
           Layout: {
             bodyBg: tokens.admin.layoutBg,
             headerBg: tokens.admin.headerBg,
-            siderBg: tokens.admin.siderBg,
+            // Dark-navy sidebar (web-admin only; shared tokens stay light).
+            siderBg: '#0f2147',
+            triggerBg: '#0f2147',
+          },
+          Menu: {
+            itemBg: 'transparent',
+            itemColor: 'rgba(255, 255, 255, 0.72)',
+            itemHoverBg: 'rgba(255, 255, 255, 0.08)',
+            itemHoverColor: '#ffffff',
+            itemSelectedBg: 'rgba(255, 255, 255, 0.14)',
+            itemSelectedColor: '#ffffff',
           },
           Card: {
             borderRadiusLG: 16,

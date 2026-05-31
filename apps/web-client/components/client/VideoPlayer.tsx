@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * Video Player Component with Watermark Overlay
- * Next.js adapted version
+ * Video Player Component with Watermark Overlay.
+ * HeroUI + Tailwind only.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -127,18 +127,18 @@ export function VideoPlayer({ resource, lectureTitle }: VideoPlayerProps) {
   return (
     <div
       ref={containerRef}
-      className="watermark-container group glass-surface-strong relative w-full aspect-video overflow-hidden rounded-2xl bg-black"
+      className="group relative aspect-video w-full overflow-hidden rounded-2xl bg-black"
     >
       {/* Error state — iframe failed or timed out */}
       {errored ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0d1b2e] text-center">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900 text-center">
           <FiVideoOff className="h-12 w-12 text-white/40" />
           <p className="text-sm font-medium text-white/80">Video unavailable</p>
           <a
             href={resource.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-400 hover:text-blue-300"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-300 hover:text-primary-200"
           >
             Open in new tab
             <FiExternalLink className="h-3.5 w-3.5" />
@@ -147,9 +147,7 @@ export function VideoPlayer({ resource, lectureTitle }: VideoPlayerProps) {
       ) : (
         <>
           {/* Loading skeleton until the iframe fires onLoad */}
-          {!loaded && (
-            <div className="absolute inset-0 animate-pulse rounded-lg bg-white/[0.06]" aria-hidden />
-          )}
+          {!loaded && <div className="absolute inset-0 animate-pulse bg-slate-800" aria-hidden />}
 
           {/* Video iframe */}
           <iframe
@@ -177,9 +175,9 @@ export function VideoPlayer({ resource, lectureTitle }: VideoPlayerProps) {
       {/* Watermark Overlay */}
       {!errored && watermarkConfig && (
         <>
-          {/* Multiple watermark layers for better coverage */}
+          {/* Floating watermark layer */}
           <div
-            className="watermark-overlay watermark-animated"
+            className="pointer-events-none absolute z-10 animate-watermark select-none whitespace-nowrap [text-shadow:1px_1px_2px_rgba(0,0,0,0.5)]"
             style={{
               top: `${watermarkPosition.y}%`,
               left: `${watermarkPosition.x}%`,
@@ -194,14 +192,8 @@ export function VideoPlayer({ resource, lectureTitle }: VideoPlayerProps) {
 
           {/* Static corner watermark */}
           <div
-            className="watermark-overlay"
-            style={{
-              bottom: '10px',
-              right: '10px',
-              fontSize: '12px',
-              opacity: 0.4,
-              color: 'rgba(255, 255, 255, 0.6)',
-            }}
+            className="pointer-events-none absolute bottom-2.5 right-2.5 z-10 select-none text-xs text-white/60 [text-shadow:1px_1px_2px_rgba(0,0,0,0.5)]"
+            style={{ opacity: 0.4 }}
           >
             {watermarkConfig.email}
           </div>
@@ -209,8 +201,8 @@ export function VideoPlayer({ resource, lectureTitle }: VideoPlayerProps) {
       )}
 
       {/* Anti-screen-capture message (visible on screenshots) */}
-      <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-0 hover:opacity-5 transition-opacity">
-        <div className="text-white text-4xl font-bold transform -rotate-45">
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity hover:opacity-5">
+        <div className="-rotate-45 text-4xl font-bold text-white">
           {watermarkConfig?.text || 'CONFIDENTIAL'}
         </div>
       </div>
