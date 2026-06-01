@@ -43,6 +43,7 @@
   "pnpm": {
     "overrides": {
       "zod": "4.4.3",
+      "caniuse-lite": "^1.0.30001793",
       "axios": "^1.16.0",
       "minimatch": "^9.0.7",
       "rollup": "^4.59.0",

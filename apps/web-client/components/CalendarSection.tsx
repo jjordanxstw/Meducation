@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
@@ -121,6 +122,7 @@ const toMinutes = (t?: string | null) => {
 const HOUR_WIDTH = 88; // px per hour on the axis
 const LANE_HEIGHT = 56; // px per stacked event row
 const LANE_GAP = 8;
+const AXIS_PAD = 28; // gutter so first/last hour labels aren't clipped
 
 /**
  * Horizontal day timeline: an hour axis with timed events positioned by start
@@ -142,6 +144,7 @@ function HorizontalDayTimeline({ events }: { events: EventWithSubject[] }) {
   const hourCount = endHour - startHour;
   const winStart = startHour * 60;
   const trackWidth = hourCount * HOUR_WIDTH;
+  const containerWidth = trackWidth + AXIS_PAD * 2;
   const hours = Array.from({ length: hourCount + 1 }, (_, i) => startHour + i);
 
   // Greedy lane assignment (interval partitioning) so overlaps stack vertically.
@@ -159,14 +162,14 @@ function HorizontalDayTimeline({ events }: { events: EventWithSubject[] }) {
 
   return (
     <div className="overflow-x-auto pb-1">
-      <div style={{ width: trackWidth }} className="min-w-full">
+      <div style={{ width: containerWidth }} className="min-w-full">
         {/* Hour axis */}
         <div className="relative mb-1 h-4">
           {hours.map((h) => (
             <span
               key={h}
               className="absolute -translate-x-1/2 text-[10px] font-medium tabular-nums text-slate-400"
-              style={{ left: (h - startHour) * HOUR_WIDTH }}
+              style={{ left: AXIS_PAD + (h - startHour) * HOUR_WIDTH }}
             >
               {String(h).padStart(2, '0')}:00
             </span>
@@ -179,13 +182,13 @@ function HorizontalDayTimeline({ events }: { events: EventWithSubject[] }) {
             <span
               key={h}
               className="absolute bottom-0 top-0 w-px bg-slate-200/70"
-              style={{ left: (h - startHour) * HOUR_WIDTH }}
+              style={{ left: AXIS_PAD + (h - startHour) * HOUR_WIDTH }}
               aria-hidden
             />
           ))}
           {placed.map(({ ev, s, e, lane }) => {
             const color = ev.color || FALLBACK_COLOR;
-            const left = ((s - winStart) / 60) * HOUR_WIDTH;
+            const left = AXIS_PAD + ((s - winStart) / 60) * HOUR_WIDTH;
             const width = Math.max(((e - s) / 60) * HOUR_WIDTH, 60);
             const top = 8 + lane * (LANE_HEIGHT + LANE_GAP);
             return (
@@ -516,11 +519,14 @@ export function CalendarSection() {
 
       {/* Day timeline — one click shows every event with full details */}
       <Dialog open={showDayModal} onOpenChange={setShowDayModal}>
-        <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
           {dayClickDate && (
             <>
               <DialogHeader>
                 <DialogTitle>{dayClickDate.format('dddd, D MMMM YYYY')}</DialogTitle>
+                <DialogDescription className="sr-only">
+                  Schedule and all-day events for {dayClickDate.format('dddd, D MMMM YYYY')}
+                </DialogDescription>
               </DialogHeader>
 
               {dayEvents.length === 0 ? (
