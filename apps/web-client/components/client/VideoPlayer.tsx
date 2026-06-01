@@ -1,16 +1,14 @@
 'use client';
 
 /**
- * Video Player Component with Watermark Overlay.
+ * Video Player Component.
  * Tailwind only.
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { VideoOff, Maximize2, ExternalLink } from 'lucide-react';
-import { api } from '@/lib/api';
 import { getYouTubeEmbedUrl, ResourceType } from '@medical-portal/shared';
-import type { Resource, WatermarkConfig } from '@medical-portal/shared';
+import type { Resource } from '@medical-portal/shared';
 
 interface VideoPlayerProps {
   resource: Resource;
@@ -56,7 +54,6 @@ function normalizeYouTubeVideoId(value: string): string | null {
 
 export function VideoPlayer({ resource, lectureTitle }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [watermarkPosition, setWatermarkPosition] = useState({ x: 30, y: 20 });
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
 
@@ -81,28 +78,6 @@ export function VideoPlayer({ resource, lectureTitle }: VideoPlayerProps) {
   const handleFullscreen = () => {
     void containerRef.current?.requestFullscreen?.();
   };
-
-  // Fetch watermark configuration
-  const { data: watermarkData } = useQuery({
-    queryKey: ['watermark'],
-    queryFn: () => api.auth.watermark(),
-  });
-
-  const watermarkConfig: WatermarkConfig | null = watermarkData?.data?.data?.config || null;
-
-  // Update watermark position periodically for floating effect
-  useEffect(() => {
-    if (watermarkConfig?.position === 'random') {
-      const interval = setInterval(() => {
-        setWatermarkPosition({
-          x: Math.random() * 60 + 20,
-          y: Math.random() * 60 + 20,
-        });
-      }, 15000); // Change position every 15 seconds
-
-      return () => clearInterval(interval);
-    }
-  }, [watermarkConfig]);
 
   const getVideoUrl = () => {
     if (resource.type === ResourceType.YOUTUBE) {
@@ -171,41 +146,6 @@ export function VideoPlayer({ resource, lectureTitle }: VideoPlayerProps) {
           </button>
         </>
       )}
-
-      {/* Watermark Overlay */}
-      {!errored && watermarkConfig && (
-        <>
-          {/* Floating watermark layer */}
-          <div
-            className="pointer-events-none absolute z-10 animate-watermark select-none whitespace-nowrap [text-shadow:1px_1px_2px_rgba(0,0,0,0.5)]"
-            style={{
-              top: `${watermarkPosition.y}%`,
-              left: `${watermarkPosition.x}%`,
-              fontSize: `${watermarkConfig.fontSize || 14}px`,
-              opacity: watermarkConfig.opacity || 0.3,
-              color: watermarkConfig.color || 'rgba(255, 255, 255, 0.5)',
-              transform: `rotate(${watermarkConfig.rotation || -15}deg)`,
-            }}
-          >
-            {watermarkConfig.text}
-          </div>
-
-          {/* Static corner watermark */}
-          <div
-            className="pointer-events-none absolute bottom-2.5 right-2.5 z-10 select-none text-xs text-white/60 [text-shadow:1px_1px_2px_rgba(0,0,0,0.5)]"
-            style={{ opacity: 0.4 }}
-          >
-            {watermarkConfig.email}
-          </div>
-        </>
-      )}
-
-      {/* Anti-screen-capture message (visible on screenshots) */}
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity hover:opacity-5">
-        <div className="-rotate-45 text-4xl font-bold text-white">
-          {watermarkConfig?.text || 'CONFIDENTIAL'}
-        </div>
-      </div>
     </div>
   );
 }

@@ -54,6 +54,12 @@ function eventTimeLabel(event: CalendarEvent): string {
   if (!event.start_time) return 'All day';
   const start = fmtTime(event.start_time);
   const end = fmtTime(event.end_time);
+  // Cross-day timed event: spell out the dates so "14:00 – 03:30" isn't ambiguous.
+  if (event.end_date && event.end_date !== event.start_date) {
+    const sd = dayjs(event.start_date).format('D MMM');
+    const ed = dayjs(event.end_date).format('D MMM');
+    return end ? `${sd} ${start} → ${ed} ${end}` : `${sd} ${start} →`;
+  }
   return end ? `${start} – ${end}` : start;
 }
 
@@ -91,7 +97,9 @@ function EventDetailCard({
             <MapPin size={12} /> {event.location}
           </span>
         )}
-        {multiDay && end && (
+        {/* All-day events show their span here; timed multi-day events already
+            carry the dates in their time label above. */}
+        {!event.start_time && multiDay && end && (
           <span>
             {start.format('D MMM')} – {end.format('D MMM')}
           </span>
@@ -119,23 +127,40 @@ const toMinutes = (t?: string | null) => {
   return h * 60 + m;
 };
 
-const HOUR_WIDTH = 88; // px per hour on the axis
+const MIN_HOUR_WIDTH = 44; // floor px per hour before the track starts scrolling
 const LANE_HEIGHT = 56; // px per stacked event row
 const LANE_GAP = 8;
-const AXIS_PAD = 28; // gutter so first/last hour labels aren't clipped
 
 /**
  * Horizontal day timeline: an hour axis with timed events positioned by start
- * time and sized by duration. Overlapping events stack into lanes so nothing
- * sits on top of another; the track scrolls horizontally on small screens.
+ * time and sized by duration. The track is fluid — it fills the modal width and
+ * the hour columns shrink with it; only below a readable minimum width does it
+ * start scrolling horizontally. Overlapping events stack into lanes.
+ *
+ * Cross-day events are clamped to the viewed day's 00:00–24:00 window: on the
+ * start day they run from their start time to midnight (continues →), on the
+ * end day from midnight to their end time (→ continued), with a full bar on any
+ * day fully inside the span.
  */
-function HorizontalDayTimeline({ events }: { events: EventWithSubject[] }) {
+function HorizontalDayTimeline({ day, events }: { day: Dayjs; events: EventWithSubject[] }) {
   if (events.length === 0) return null;
+  const DAY_END = 24 * 60;
 
   const items = events.map((ev) => {
-    const s = toMinutes(ev.start_time);
-    const e = Math.max(ev.end_time ? toMinutes(ev.end_time) : s + 60, s + 30);
-    return { ev, s, e };
+    const startsBeforeToday = dayjs(ev.start_date).isBefore(day, 'day');
+    const endsAfterToday = !!ev.end_date && dayjs(ev.end_date).isAfter(day, 'day');
+
+    const s = startsBeforeToday ? 0 : toMinutes(ev.start_time);
+    let e = endsAfterToday
+      ? DAY_END
+      : ev.end_time
+        ? toMinutes(ev.end_time)
+        : startsBeforeToday
+          ? DAY_END
+          : s + 60;
+    e = Math.max(e, s + 30); // keep a minimum renderable width
+    e = Math.min(e, DAY_END);
+    return { ev, s, e, contBefore: startsBeforeToday, contAfter: endsAfterToday };
   });
 
   const startHour = Math.floor(Math.min(...items.map((i) => i.s)) / 60);
@@ -143,9 +168,9 @@ function HorizontalDayTimeline({ events }: { events: EventWithSubject[] }) {
   if (endHour - startHour < 3) endHour = startHour + 3; // keep a readable minimum span
   const hourCount = endHour - startHour;
   const winStart = startHour * 60;
-  const trackWidth = hourCount * HOUR_WIDTH;
-  const containerWidth = trackWidth + AXIS_PAD * 2;
-  const hours = Array.from({ length: hourCount + 1 }, (_, i) => startHour + i);
+  const span = hourCount * 60; // window width in minutes (positions are % of this)
+  const minTrackWidth = hourCount * MIN_HOUR_WIDTH;
+  const hourCells = Array.from({ length: hourCount }, (_, i) => startHour + i);
 
   // Greedy lane assignment (interval partitioning) so overlaps stack vertically.
   const laneEnds: number[] = [];
@@ -162,44 +187,59 @@ function HorizontalDayTimeline({ events }: { events: EventWithSubject[] }) {
 
   return (
     <div className="overflow-x-auto pb-1">
-      <div style={{ width: containerWidth }} className="min-w-full">
-        {/* Hour axis */}
-        <div className="relative mb-1 h-4">
-          {hours.map((h) => (
-            <span
-              key={h}
-              className="absolute -translate-x-1/2 text-[10px] font-medium tabular-nums text-slate-400"
-              style={{ left: AXIS_PAD + (h - startHour) * HOUR_WIDTH }}
-            >
+      {/* Fluid: fills the modal width; only scrolls once columns hit the floor. */}
+      <div className="w-full" style={{ minWidth: minTrackWidth }}>
+        {/* Hour axis — one label per hour column, left-aligned at its gridline */}
+        <div className="mb-1 flex">
+          {hourCells.map((h) => (
+            <div key={h} className="min-w-0 flex-1 pl-1 text-[10px] font-medium tabular-nums text-slate-400">
               {String(h).padStart(2, '0')}:00
-            </span>
+            </div>
           ))}
         </div>
 
         {/* Track */}
         <div className="relative rounded-xl border border-slate-200/70 bg-slate-50/40" style={{ height: trackHeight }}>
-          {hours.map((h) => (
-            <span
-              key={h}
-              className="absolute bottom-0 top-0 w-px bg-slate-200/70"
-              style={{ left: AXIS_PAD + (h - startHour) * HOUR_WIDTH }}
-              aria-hidden
-            />
-          ))}
-          {placed.map(({ ev, s, e, lane }) => {
+          {/* Hour gridlines (equal flex columns) */}
+          <div className="absolute inset-0 flex" aria-hidden>
+            {hourCells.map((h) => (
+              <div key={h} className="min-w-0 flex-1 border-l border-slate-200/60 first:border-l-0" />
+            ))}
+          </div>
+
+          {placed.map(({ ev, s, e, lane, contBefore, contAfter }) => {
             const color = ev.color || FALLBACK_COLOR;
-            const left = AXIS_PAD + ((s - winStart) / 60) * HOUR_WIDTH;
-            const width = Math.max(((e - s) / 60) * HOUR_WIDTH, 60);
+            const leftPct = ((s - winStart) / span) * 100;
+            const widthPct = ((e - s) / span) * 100;
             const top = 8 + lane * (LANE_HEIGHT + LANE_GAP);
+            // Day-relative time text with continuation arrows for cross-day events.
+            const timeText =
+              contBefore && contAfter
+                ? 'All day'
+                : contBefore
+                  ? fmtTime(ev.end_time)
+                    ? `→ ${fmtTime(ev.end_time)}`
+                    : 'continued'
+                  : contAfter
+                    ? `${fmtTime(ev.start_time)} →`
+                    : eventTimeLabel(ev);
             return (
               <div
                 key={ev.id}
                 title={`${eventTimeLabel(ev)} · ${ev.title}`}
                 className="absolute overflow-hidden rounded-lg border border-slate-200 bg-white px-2 py-1 shadow-subtle"
-                style={{ left, width, top, height: LANE_HEIGHT, borderLeftWidth: 3, borderLeftColor: color }}
+                style={{
+                  left: `${leftPct}%`,
+                  width: `${widthPct}%`,
+                  minWidth: 56,
+                  top,
+                  height: LANE_HEIGHT,
+                  borderLeftWidth: 3,
+                  borderLeftColor: color,
+                }}
               >
                 <p className="truncate text-xs font-semibold text-slate-800">{ev.title}</p>
-                <p className="truncate text-[10px] tabular-nums text-slate-500">{eventTimeLabel(ev)}</p>
+                <p className="truncate text-[10px] tabular-nums text-slate-500">{timeText}</p>
                 {ev.location && <p className="truncate text-[10px] text-slate-400">{ev.location}</p>}
               </div>
             );
@@ -519,7 +559,7 @@ export function CalendarSection() {
 
       {/* Day timeline — one click shows every event with full details */}
       <Dialog open={showDayModal} onOpenChange={setShowDayModal}>
-        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+        <DialogContent className="max-h-[85vh] max-w-5xl overflow-y-auto">
           {dayClickDate && (
             <>
               <DialogHeader>
@@ -549,7 +589,7 @@ export function CalendarSection() {
                     <div className="space-y-3">
                       <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Schedule</p>
                       {/* Horizontal timeline overview */}
-                      <HorizontalDayTimeline events={timedEvents} />
+                      <HorizontalDayTimeline day={dayClickDate} events={timedEvents} />
                       {/* Full detail cards — every event's info without extra clicks */}
                       <div className="space-y-2">
                         {timedEvents.map((ev) => (
