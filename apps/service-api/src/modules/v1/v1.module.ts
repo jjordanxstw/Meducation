@@ -7,6 +7,7 @@ import { LecturesModule } from './lectures/lectures.module';
 import { ResourcesModule } from './resources/resources.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
+import { TeamMembersModule } from './team-members/team-members.module';
 import { ProfilesModule } from './profiles/profiles.module';
 import { AuditModule } from './audit/audit.module';
 import { StatisticsModule } from './statistics/statistics.module';
@@ -21,6 +22,7 @@ import { StatisticsModule } from './statistics/statistics.module';
     ResourcesModule,
     CalendarModule,
     AnnouncementsModule,
+    TeamMembersModule,
     ProfilesModule,
     AuditModule,
     StatisticsModule,

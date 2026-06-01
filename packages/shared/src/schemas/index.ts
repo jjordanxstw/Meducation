@@ -174,3 +174,29 @@ export type CreateAnnouncementInput = z.infer<typeof createAnnouncementSchema>;
 
 export const updateAnnouncementSchema = createAnnouncementSchema.partial();
 export type UpdateAnnouncementInput = z.infer<typeof updateAnnouncementSchema>;
+
+// ---------------------------------------------------------------------------
+// Team member
+// ---------------------------------------------------------------------------
+// Optional contact/social fields accept a valid value, an empty string (a
+// cleared field from the admin form), or null. The service maps blanks to null.
+const optionalEmail = z.union([z.string().trim().email(), z.literal('')]).nullable().optional();
+const optionalLink = z.union([z.string().trim().url(), z.literal('')]).nullable().optional();
+const optionalText = z.string().trim().nullable().optional();
+
+export const createTeamMemberSchema = z.object({
+  full_name: z.string().trim().min(1, 'Please enter a name'),
+  role: z.string().trim().min(1, 'Please enter a role'),
+  bio: optionalText,
+  avatar_url: optionalLink,
+  email: optionalEmail,
+  linkedin_url: optionalLink,
+  github_url: optionalLink,
+  instagram_url: optionalLink,
+  order_index: z.number().int().nonnegative().optional(),
+  is_active: z.boolean().optional(),
+});
+export type CreateTeamMemberInput = z.infer<typeof createTeamMemberSchema>;
+
+export const updateTeamMemberSchema = createTeamMemberSchema.partial();
+export type UpdateTeamMemberInput = z.infer<typeof updateTeamMemberSchema>;

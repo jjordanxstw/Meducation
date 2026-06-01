@@ -162,10 +162,11 @@ export class AuthController {
     // Set httpOnly cookies
     const cookieOptions = this.getBaseCookieOptions(refreshTokenResult.expiresAt);
 
-    // Set access token cookie (short-lived, 15min)
+    // Access token cookie — lifetime matches the access token's TTL (JWT_EXPIRES_IN);
+    // it silently renews via /auth/refresh until the 7-day refresh token expires.
     res.cookie('student_access_token', tokenResult.accessToken, {
       ...cookieOptions,
-      maxAge: 15 * 60 * 1000,
+      maxAge: tokenResult.expiresIn * 1000,
     });
 
     // Set refresh token cookie (long-lived, 7 days)
@@ -317,41 +318,32 @@ export class AuthController {
       throw new AppException(ErrorCode.AUTH_REFRESH_TOKEN_MISSING);
     }
 
-    const requestInfo = extractRequestInfo(req);
-
-    // Rotate refresh token (revoke old, create new)
-    const rotationResult = await this.refreshTokenService.rotateRefreshToken(
-      refreshToken,
-      requestInfo
-    );
-
-    // Get user info to sign new access token
-    const tokenInfo = await this.refreshTokenService.verifyRefreshToken(rotationResult.token);
-    if (!tokenInfo) {
-      throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'refresh' }, 'Invalid refresh token');
+    // Resolve the session from the opaque refresh token's DB record. (The
+    // refresh token is random — not a JWT — so it can't be decoded; we look it
+    // up and load the user by id.) Validate before rotating so a bad token is
+    // never consumed.
+    const verified = await this.refreshTokenService.verifyRefreshToken(refreshToken);
+    if (!verified) {
+      throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'refresh' }, 'Invalid or expired refresh token');
     }
 
-    // Get user info from session
-    const sessionPayload = await this.authService.verifySessionToken(refreshToken);
-    if (!sessionPayload || !sessionPayload.sub) {
-      throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, { tokenType: 'session' }, 'Invalid session');
-    }
-
-    // Re-verify Google token to get latest user info
-    const user = await this.authService.getSessionFromCookie(refreshToken);
+    const user = await this.authService.getUserById(verified.userId);
     if (!user) {
       throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'user' }, 'User not found');
     }
 
-    // Generate new access token
+    const requestInfo = extractRequestInfo(req);
+
+    // Rotate the refresh token (revoke old, issue new) and mint a fresh access token.
+    const rotationResult = await this.refreshTokenService.rotateRefreshToken(refreshToken, requestInfo);
     const tokenResult = await this.authService.issueToken(user);
 
-    // Set new cookies
+    // Set new cookies — access cookie lifetime matches the access token's TTL.
     const cookieOptions = this.getBaseCookieOptions(rotationResult.expiresAt);
 
     res.cookie('student_access_token', tokenResult.accessToken, {
       ...cookieOptions,
-      maxAge: 15 * 60 * 1000,
+      maxAge: tokenResult.expiresIn * 1000,
     });
 
     res.cookie('student_refresh_token', rotationResult.token, cookieOptions);

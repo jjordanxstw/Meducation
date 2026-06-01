@@ -420,6 +420,38 @@ export class AuthService {
   }
 
   /**
+   * Load the session user straight from the profiles table by id.
+   *
+   * Used by the refresh flow: the refresh token is an opaque random string (not
+   * a JWT), so the user is resolved from its DB record's userId rather than by
+   * decoding the token. Re-applies the email-domain allowlist as defense-in-depth.
+   */
+  async getUserById(userId: string): Promise<UserWithoutPassword | null> {
+    const { data: profile, error } = await this.supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error || !profile) {
+      return null;
+    }
+
+    if (!this.isAllowedEmail(profile.email, profile.role)) {
+      this.logger.warn(`Blocked session refresh for disallowed email domain. userId=${userId}`);
+      return null;
+    }
+
+    return {
+      id: profile.id,
+      email: profile.email,
+      name: profile.full_name,
+      picture: (profile as { avatar_url?: string | null }).avatar_url ?? undefined,
+      profile: profile as Profile,
+    };
+  }
+
+  /**
    * Issue token for user
    */
   async issueToken(user: UserWithoutPassword): Promise<AuthTokenDto> {

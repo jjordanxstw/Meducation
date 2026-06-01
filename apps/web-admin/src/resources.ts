@@ -11,6 +11,7 @@ import {
   Tags,
   Megaphone,
   Users,
+  UsersRound,
   ScrollText,
 } from 'lucide-react';
 
@@ -61,6 +62,16 @@ export const buildResources = () => [
     meta: {
       label: 'Announcements',
       icon: React.createElement(Megaphone),
+    },
+  },
+  {
+    name: 'team-members',
+    list: '/team-members',
+    create: '/team-members/create',
+    edit: '/team-members/edit/:id',
+    meta: {
+      label: 'Team Members',
+      icon: React.createElement(UsersRound),
     },
   },
   {

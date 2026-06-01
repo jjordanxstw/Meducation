@@ -26,6 +26,7 @@ const ADMIN_RESOURCE_SET = new Set([
   'calendar',
   'event-types',
   'announcements',
+  'team-members',
   'profiles',
   'audit-logs',
 ]);

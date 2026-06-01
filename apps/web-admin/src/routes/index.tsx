@@ -21,6 +21,9 @@ import EventTypesEdit from './event-types/edit';
 import AnnouncementsList from './announcements';
 import AnnouncementsCreate from './announcements/create';
 import AnnouncementsEdit from './announcements/edit';
+import TeamMembersList from './team-members';
+import TeamMembersCreate from './team-members/create';
+import TeamMembersEdit from './team-members/edit';
 import ProfilesList from './profiles';
 import ProfilesEdit from './profiles/edit';
 import ProfilesShow from './profiles/show';
@@ -87,6 +90,9 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
       { path: 'announcements', element: <AnnouncementsList /> },
       { path: 'announcements/create', element: <AnnouncementsCreate /> },
       { path: 'announcements/edit/:id', element: <AnnouncementsEdit /> },
+      { path: 'team-members', element: <TeamMembersList /> },
+      { path: 'team-members/create', element: <TeamMembersCreate /> },
+      { path: 'team-members/edit/:id', element: <TeamMembersEdit /> },
       { path: 'profiles', element: <ProfilesList /> },
       { path: 'profiles/edit/:id', element: <ProfilesEdit /> },
       { path: 'profiles/show/:id', element: <ProfilesShow /> },

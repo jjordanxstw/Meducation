@@ -21,6 +21,9 @@ export const queryKeys = {
   calendar: {
     events: (month: string) => ['calendar', 'events', month] as const,
   },
+  teamMembers: {
+    all: () => ['teamMembers'] as const,
+  },
   profile: {
     me: () => ['profile', 'me'] as const,
   },

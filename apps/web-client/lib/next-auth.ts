@@ -26,7 +26,10 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: 'jwt',
-    maxAge: 60 * 60 * 24, // 24h session ceiling
+    // Align with the backend refresh token (7 days) so the session lifetime is
+    // consistent end-to-end; the backend access cookie renews silently via
+    // /auth/refresh within this window.
+    maxAge: 60 * 60 * 24 * 7, // 7 days
   },
   callbacks: {
     // Defense-in-depth domain allowlist before the backend ever sees the token.

@@ -207,6 +207,27 @@ export const ERROR_DEFINITIONS: Record<ErrorCode, ErrorDefinition> = {
     category: 'RESOURCE',
     httpStatus: 400,
   },
+  [ErrorCode.TEAM_MEMBER_NOT_FOUND]: {
+    code: ErrorCode.TEAM_MEMBER_NOT_FOUND,
+    i18nKey: 'errors.teamMember.notFound',
+    defaultMessage: 'Team member not found',
+    category: 'RESOURCE',
+    httpStatus: 404,
+  },
+  [ErrorCode.TEAM_MEMBER_OPERATION_FAILED]: {
+    code: ErrorCode.TEAM_MEMBER_OPERATION_FAILED,
+    i18nKey: 'errors.teamMember.operationFailed',
+    defaultMessage: 'Team member operation failed',
+    category: 'RESOURCE',
+    httpStatus: 400,
+  },
+  [ErrorCode.TEAM_MEMBER_UPLOAD_FAILED]: {
+    code: ErrorCode.TEAM_MEMBER_UPLOAD_FAILED,
+    i18nKey: 'errors.teamMember.uploadFailed',
+    defaultMessage: 'Failed to upload avatar image',
+    category: 'RESOURCE',
+    httpStatus: 400,
+  },
   [ErrorCode.SYSTEM_INTERNAL_ERROR]: {
     code: ErrorCode.SYSTEM_INTERNAL_ERROR,
     i18nKey: 'errors.system.internalError',

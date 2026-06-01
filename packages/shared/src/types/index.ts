@@ -291,6 +291,44 @@ export interface CreateAnnouncementDto {
 export interface UpdateAnnouncementDto extends Partial<CreateAnnouncementDto> {}
 
 // =====================================================
+// TEAM MEMBER
+// =====================================================
+
+/**
+ * Person who built the portal, surfaced on the public About Us page and managed
+ * via admin CRUD. `is_active` hides a member from the public page without
+ * deleting them; `order_index` controls public display order. Social fields are
+ * nullable — the About page only renders an icon when its link is present.
+ */
+export interface TeamMember extends BaseEntity {
+  full_name: string;
+  role: string;
+  bio: string | null;
+  avatar_url: string | null;
+  email: string | null;
+  linkedin_url: string | null;
+  github_url: string | null;
+  instagram_url: string | null;
+  order_index: number;
+  is_active: boolean;
+}
+
+export interface CreateTeamMemberDto {
+  full_name: string;
+  role: string;
+  bio?: string | null;
+  avatar_url?: string | null;
+  email?: string | null;
+  linkedin_url?: string | null;
+  github_url?: string | null;
+  instagram_url?: string | null;
+  order_index?: number;
+  is_active?: boolean;
+}
+
+export interface UpdateTeamMemberDto extends Partial<CreateTeamMemberDto> {}
+
+// =====================================================
 // AUDIT LOG
 // =====================================================
 
