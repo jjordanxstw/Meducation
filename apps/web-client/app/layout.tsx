@@ -1,36 +1,28 @@
 import type { Metadata, Viewport } from 'next';
-import { Noto_Sans, Noto_Serif, Noto_Serif_Thai } from 'next/font/google';
+import { Lato, IBM_Plex_Sans_Thai_Looped } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { NetworkStatus } from '@/components/NetworkStatus';
 import { Providers } from './providers';
 import './globals.css';
 
 /**
- * Type system for the editorial-premium UI:
- * - Noto Sans  → body / UI (Latin)
- * - Noto Serif → display headings (Latin)
- * - Noto Serif Thai → all Thai content (back-end data is authored in Thai;
- *   the Latin fonts above have no Thai glyphs, so the browser falls through
- *   to this face automatically wherever a Thai character appears).
+ * Two-font system:
+ * - Lato → all Latin UI + headings.
+ * - IBM Plex Sans Thai Looped → all Thai content (back-end data is authored in
+ *   Thai; Lato has no Thai glyphs, so the browser falls through to this face
+ *   automatically wherever a Thai character appears).
  */
-const notoSans = Noto_Sans({
-  weight: ['300', '400', '500', '600', '700'],
+const lato = Lato({
+  weight: ['300', '400', '700', '900'],
   subsets: ['latin', 'latin-ext'],
-  variable: '--font-noto-sans',
+  variable: '--font-lato',
   display: 'swap',
 });
 
-const notoSerif = Noto_Serif({
-  weight: ['400', '500', '600', '700'],
-  subsets: ['latin', 'latin-ext'],
-  variable: '--font-noto-serif',
-  display: 'swap',
-});
-
-const notoSerifThai = Noto_Serif_Thai({
+const ibmThai = IBM_Plex_Sans_Thai_Looped({
   weight: ['400', '500', '600', '700'],
   subsets: ['thai'],
-  variable: '--font-noto-serif-thai',
+  variable: '--font-ibm-thai',
   display: 'swap',
 });
 
@@ -53,7 +45,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${notoSans.variable} ${notoSerif.variable} ${notoSerifThai.variable} font-sans antialiased`}
+        className={`${lato.variable} ${ibmThai.variable} font-sans antialiased`}
       >
         <NetworkStatus />
         <Providers>{children}</Providers>

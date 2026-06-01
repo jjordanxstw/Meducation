@@ -1,11 +1,10 @@
-import { Card, CardBody, Skeleton } from '@heroui/react';
-
-const cardClass = 'border border-slate-200/70 bg-white shadow-subtle';
+import { Card, CardBody } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function CalendarCardSkeleton() {
   return (
-    <Card shadow="none" className={cardClass}>
-      <CardBody className="p-4 sm:p-6">
+    <Card>
+      <CardBody className="p-4 pt-4 sm:p-6 sm:pt-6">
         <div className="space-y-4">
           <Skeleton className="h-8 w-48 rounded-lg" />
           <Skeleton className="h-[520px] rounded-xl" />
@@ -23,8 +22,8 @@ export function ProfileSkeleton() {
         <Skeleton className="h-5 w-64 rounded-lg" />
       </div>
 
-      <Card shadow="none" className={cardClass}>
-        <CardBody className="gap-6 p-6">
+      <Card>
+        <CardBody className="flex flex-col gap-6 p-6 pt-6">
           <div className="flex items-center gap-4">
             <Skeleton className="h-16 w-16 rounded-full" />
             <div className="flex-1 space-y-2">

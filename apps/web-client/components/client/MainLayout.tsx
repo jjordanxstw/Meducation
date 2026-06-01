@@ -4,53 +4,49 @@
  * MainLayout — protected app shell.
  * Editorial-premium sidebar workspace. English-only, single light theme.
  * Desktop: fixed left sidebar + slim top bar. Mobile: top bar + slide-over
- * drawer + bottom nav. HeroUI + Tailwind only.
+ * drawer + bottom nav. Tailwind + Radix primitives only.
  */
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import {
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
-  Avatar,
-  Input,
-  Drawer,
-  DrawerContent,
-  DrawerBody,
-  useDisclosure,
-} from '@heroui/react';
-import { useState, useCallback, type FormEvent } from 'react';
+import { usePathname } from 'next/navigation';
+import { useState, useCallback } from 'react';
 import { signOut, useSession } from 'next-auth/react';
 import {
-  FiHome,
-  FiLayers,
-  FiBookOpen,
-  FiUser,
-  FiUsers,
-  FiLogOut,
-  FiCalendar,
-  FiSearch,
-  FiMenu,
-  FiSettings,
-} from 'react-icons/fi';
+  Home,
+  Layers,
+  BookOpen,
+  User,
+  Users,
+  LogOut,
+  Menu,
+  type LucideIcon,
+} from 'lucide-react';
 import { api } from '@/lib/api';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
-const NAV_ITEMS = [
-  { name: 'Home', href: '/', icon: FiHome },
-  { name: 'Subjects', href: '/subjects', icon: FiLayers },
-  { name: 'Learning Hub', href: '/learning-hub', icon: FiBookOpen },
-  { name: 'Calendar', href: '/#calendar', icon: FiCalendar },
-  { name: 'About Us', href: '/about-us', icon: FiUsers },
+type NavItem = { name: string; href: string; icon: LucideIcon };
+
+const NAV_ITEMS: NavItem[] = [
+  { name: 'Home', href: '/', icon: Home },
+  { name: 'Subjects', href: '/subjects', icon: Layers },
+  { name: 'Learning Hub', href: '/learning-hub', icon: BookOpen },
+  { name: 'About Us', href: '/about-us', icon: Users },
 ];
 
 // Bottom navigation (mobile/tablet) — quick access to primary destinations.
-const BOTTOM_NAV = [
-  { name: 'Home', href: '/', icon: FiHome },
-  { name: 'Subjects', href: '/subjects', icon: FiLayers },
-  { name: 'Calendar', href: '/#calendar', icon: FiCalendar },
-  { name: 'Profile', href: '/about-me', icon: FiUser },
+const BOTTOM_NAV: NavItem[] = [
+  { name: 'Home', href: '/', icon: Home },
+  { name: 'Subjects', href: '/subjects', icon: Layers },
+  { name: 'Learning Hub', href: '/learning-hub', icon: BookOpen },
+  { name: 'Profile', href: '/about-me', icon: User },
 ];
 
 function isRouteActive(pathname: string, href: string): boolean {
@@ -68,18 +64,13 @@ function getInitials(name: string | undefined | null): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-// Brand wordmark — flat brand mark, serif lockup, single accent (no gradient).
+// Brand wordmark — text-only lockup, single accent (no badge/icon).
 function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
-    <Link href="/" className="flex items-center gap-2.5" aria-label="MedPi Portal home">
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-white shadow-subtle ring-1 ring-brand/20">
-        <span className="font-serif text-lg font-semibold leading-none">M</span>
+    <Link href="/" className="flex items-center" aria-label="MedPi Portal home">
+      <span className="font-serif text-lg font-semibold tracking-tight text-slate-900">
+        MedPi <span className="text-brand">{compact ? '' : 'Portal'}</span>
       </span>
-      {!compact && (
-        <span className="font-serif text-lg font-semibold tracking-tight text-slate-900">
-          MedPi <span className="text-brand">Portal</span>
-        </span>
-      )}
     </Link>
   );
 }
@@ -90,6 +81,7 @@ function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: (
     <nav className="flex-1 space-y-1 px-3 py-4" aria-label="Primary">
       {NAV_ITEMS.map((item) => {
         const active = isRouteActive(pathname, item.href);
+        const Icon = item.icon;
         return (
           <Link
             key={item.href}
@@ -102,7 +94,7 @@ function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: (
                 : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             }`}
           >
-            <item.icon className={`h-[18px] w-[18px] ${active ? 'text-brand' : 'text-slate-400'}`} />
+            <Icon className={`h-[18px] w-[18px] ${active ? 'text-brand' : 'text-slate-400'}`} />
             {item.name}
           </Link>
         );
@@ -133,12 +125,10 @@ function UserBlock({
           onClick={onNavigate}
           className="flex min-w-0 flex-1 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
-          <Avatar
-            size="sm"
-            name={getInitials(name)}
-            src={image}
-            classNames={{ base: 'bg-brand shrink-0', name: 'text-white font-semibold text-xs' }}
-          />
+          <Avatar size="sm">
+            {image ? <AvatarImage src={image} alt={name} /> : null}
+            <AvatarFallback className="text-xs">{getInitials(name)}</AvatarFallback>
+          </Avatar>
           <span className="min-w-0">
             <span className="block truncate text-sm font-semibold text-slate-900">{name}</span>
             <span className="block truncate text-xs text-slate-400">{email}</span>
@@ -150,7 +140,7 @@ function UserBlock({
           aria-label="Log out"
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
-          <FiLogOut className="h-4 w-4" />
+          <LogOut className="h-4 w-4" />
         </button>
       </div>
     </div>
@@ -159,11 +149,9 @@ function UserBlock({
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [query, setQuery] = useState('');
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
   const { data: session } = useSession();
-  const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
 
   const handleLogout = useCallback(async () => {
     if (isLoggingOut) return;
@@ -175,15 +163,6 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       setIsLoggingOut(false);
     }
   }, [isLoggingOut]);
-
-  const handleSearch = useCallback(
-    (event: FormEvent) => {
-      event.preventDefault();
-      const q = query.trim();
-      router.push(q ? `/subjects?q=${encodeURIComponent(q)}` : '/subjects');
-    },
-    [query, router],
-  );
 
   const userName = session?.user?.name || 'Learner';
   const userEmail = session?.user?.email || '';
@@ -216,82 +195,55 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             {/* Mobile: menu + brand */}
             <button
               type="button"
-              onClick={onOpen}
+              onClick={() => setDrawerOpen(true)}
               aria-label="Open menu"
               className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:hidden"
             >
-              <FiMenu className="h-5 w-5" />
+              <Menu className="h-5 w-5" />
             </button>
             <div className="lg:hidden">
               <BrandMark compact />
             </div>
 
-            {/* Search (sm+) */}
-            <form onSubmit={handleSearch} className="ml-1 hidden flex-1 sm:block sm:max-w-sm">
-              <Input
-                aria-label="Search subjects"
-                value={query}
-                onValueChange={setQuery}
-                placeholder="Search subjects…"
-                radius="full"
-                size="sm"
-                startContent={<FiSearch className="h-4 w-4 text-slate-400" />}
-                classNames={{
-                  inputWrapper:
-                    'h-10 bg-slate-100/70 border border-transparent shadow-none data-[hover=true]:bg-slate-100 group-data-[focus=true]:border-brand/50 group-data-[focus=true]:bg-white',
-                  input: 'text-sm',
-                }}
-              />
-            </form>
-
-            <div className="flex-1 sm:hidden" />
-
-            {/* Right: mobile search shortcut + avatar menu */}
-            <Link
-              href="/subjects"
-              aria-label="Search subjects"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:hidden"
-            >
-              <FiSearch className="h-5 w-5" />
-            </Link>
-
-            <Dropdown placement="bottom-end">
-              <DropdownTrigger>
+            {/* Right: avatar menu (flush to the far end) */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <button
                   type="button"
                   aria-label="Open user menu"
-                  className="rounded-full outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+                  className="ml-auto rounded-full outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
                 >
-                  <Avatar
-                    size="sm"
-                    name={getInitials(userName)}
-                    src={userImage}
-                    classNames={{ base: 'bg-brand', name: 'text-white font-semibold text-xs' }}
-                  />
+                  <Avatar size="sm">
+                    {userImage ? <AvatarImage src={userImage} alt={userName} /> : null}
+                    <AvatarFallback className="text-xs">{getInitials(userName)}</AvatarFallback>
+                  </Avatar>
                 </button>
-              </DropdownTrigger>
-              <DropdownMenu aria-label="User actions" variant="flat">
-                <DropdownItem key="profile-info" isReadOnly className="h-14 gap-2 opacity-100" textValue="Signed in">
-                  <p className="font-semibold text-slate-900">{userName}</p>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" aria-label="User actions" className="min-w-56">
+                <div className="px-2.5 py-2">
+                  <p className="text-sm font-semibold text-slate-900">{userName}</p>
                   <p className="truncate text-xs text-slate-500">{userEmail || '-'}</p>
-                </DropdownItem>
-                <DropdownItem key="about-me" href="/about-me" startContent={<FiUser className="h-4 w-4" />}>
-                  About Me
-                </DropdownItem>
-                <DropdownItem key="profile" href="/profile" startContent={<FiSettings className="h-4 w-4" />}>
-                  Edit Profile
-                </DropdownItem>
-                <DropdownItem
-                  key="logout"
-                  color="danger"
-                  className="text-danger"
-                  startContent={<FiLogOut className="h-4 w-4" />}
-                  onPress={() => void handleLogout()}
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/about-me">
+                    <User className="h-4 w-4" />
+                    About Me
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="danger"
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    void handleLogout();
+                  }}
                 >
+                  <LogOut className="h-4 w-4" />
                   {isLoggingOut ? 'Signing out…' : 'Log out'}
-                </DropdownItem>
-              </DropdownMenu>
-            </Dropdown>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
@@ -320,6 +272,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       >
         {BOTTOM_NAV.map((item) => {
           const active = isRouteActive(pathname, item.href);
+          const Icon = item.icon;
           return (
             <Link
               key={item.href}
@@ -329,7 +282,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 active ? 'text-brand' : 'text-slate-400'
               }`}
             >
-              <item.icon className="h-5 w-5" />
+              <Icon className="h-5 w-5" />
               <span className={active ? 'font-semibold leading-none' : 'leading-none'}>{item.name}</span>
             </Link>
           );
@@ -337,30 +290,22 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* Mobile slide-over drawer */}
-      <Drawer
-        isOpen={isOpen}
-        onOpenChange={onOpenChange}
-        placement="left"
-        size="xs"
-        hideCloseButton
-        classNames={{ base: 'bg-white' }}
-      >
-        <DrawerContent>
-          <DrawerBody className="flex flex-col gap-0 p-0">
-            <div className="flex h-16 items-center px-5">
-              <BrandMark />
-            </div>
-            <SidebarNav pathname={pathname} onNavigate={onClose} />
-            <UserBlock
-              name={userName}
-              email={userEmail}
-              image={userImage}
-              onNavigate={onClose}
-              onLogout={() => void handleLogout()}
-            />
-          </DrawerBody>
-        </DrawerContent>
-      </Drawer>
+      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <SheetContent side="left" className="p-0">
+          <SheetTitle>Navigation</SheetTitle>
+          <div className="flex h-16 items-center px-5">
+            <BrandMark />
+          </div>
+          <SidebarNav pathname={pathname} onNavigate={() => setDrawerOpen(false)} />
+          <UserBlock
+            name={userName}
+            email={userEmail}
+            image={userImage}
+            onNavigate={() => setDrawerOpen(false)}
+            onLogout={() => void handleLogout()}
+          />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

@@ -6,8 +6,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Card } from '@heroui/react';
-import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { Card } from '@/components/ui/card';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { PageTransition } from '@/components/PageTransition';
 
 // Team member data - customize with actual team members
@@ -53,24 +53,33 @@ export default function AboutUsPage() {
   const [current, setCurrent] = useState(0);
   const currentRef = useRef(0);
   const pointerStartX = useRef<number | null>(null);
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
     currentRef.current = current;
   }, [current]);
 
-  // Scroll a given card index into view and mark it active.
+  // Scroll a card index into view (wrapping so the carousel loops endlessly).
   const goTo = useCallback((index: number) => {
-    const clamped = Math.max(0, Math.min(index, teamMembers.length - 1));
-    setCurrent(clamped);
+    const len = teamMembers.length;
+    const wrapped = ((index % len) + len) % len;
+    setCurrent(wrapped);
     const el = scrollRef.current;
-    const child = el?.children[clamped] as HTMLElement | undefined;
+    const child = el?.children[wrapped] as HTMLElement | undefined;
     if (el && child) {
-      el.scrollTo({ left: child.offsetLeft - el.clientLeft - 48, behavior: 'smooth' });
+      el.scrollTo({ left: child.offsetLeft - el.offsetLeft, behavior: 'smooth' });
     }
   }, []);
 
   const goNext = useCallback(() => goTo(currentRef.current + 1), [goTo]);
   const goPrev = useCallback(() => goTo(currentRef.current - 1), [goTo]);
+
+  // Auto-advance every 3s; pause while the user is interacting with the slider.
+  useEffect(() => {
+    if (paused) return;
+    const id = window.setInterval(goNext, 3000);
+    return () => window.clearInterval(id);
+  }, [goNext, paused]);
 
   // Keyboard navigation while the page is active.
   useEffect(() => {
@@ -119,30 +128,31 @@ export default function AboutUsPage() {
         </p>
       </section>
 
-      {/* Team Member Slider */}
-      <div className="relative">
+      {/* Team Member Slider — arrows sit outside the scroll track */}
+      <div
+        className="flex items-center gap-3"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onFocusCapture={() => setPaused(true)}
+        onBlurCapture={() => setPaused(false)}
+      >
         {/* Left Arrow Button */}
         <button
           onClick={goPrev}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white border border-slate-200 shadow-md flex items-center justify-center hover:bg-slate-50 transition"
-          aria-label="Scroll left"
+          className="shrink-0 w-10 h-10 rounded-full bg-white border border-slate-200 shadow-md flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:text-brand transition"
+          aria-label="Previous"
         >
-          <FiChevronLeft size={18} />
+          <ChevronLeft size={18} />
         </button>
 
-        {/* Scrollable Cards Container with right-edge fade mask */}
+        {/* Scrollable Cards Container */}
         <div
           ref={scrollRef}
           onScroll={handleScroll}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
-          className="flex gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory px-12 py-4 scrollbar-hide"
-          style={{
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-            maskImage: 'linear-gradient(to right, black 80%, transparent)',
-            WebkitMaskImage: 'linear-gradient(to right, black 80%, transparent)',
-          }}
+          className="flex min-w-0 flex-1 gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory py-4 scrollbar-hide"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {teamMembers.map((member, index) => (
             <TeamMemberCard key={index} member={member} />
@@ -152,15 +162,15 @@ export default function AboutUsPage() {
         {/* Right Arrow Button */}
         <button
           onClick={goNext}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white border border-slate-200 shadow-md flex items-center justify-center hover:bg-slate-50 transition"
-          aria-label="Scroll right"
+          className="shrink-0 w-10 h-10 rounded-full bg-white border border-slate-200 shadow-md flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:text-brand transition"
+          aria-label="Next"
         >
-          <FiChevronRight size={18} />
+          <ChevronRight size={18} />
         </button>
       </div>
 
       {/* Dot indicators */}
-      <div className="flex items-center justify-center gap-1.5" role="tablist" aria-label="Team members">
+      <div className="flex items-center justify-center gap-2" role="tablist" aria-label="Team members">
         {teamMembers.map((member, index) => (
           <button
             key={index}
@@ -169,15 +179,15 @@ export default function AboutUsPage() {
             onClick={() => goTo(index)}
             aria-label={`Go to ${member.name}`}
             aria-selected={index === current}
-            className={`h-1.5 rounded-full transition-[width,background-color] duration-300 ease-out ${
-              index === current ? 'w-5 bg-brand' : 'w-1.5 bg-slate-300 hover:bg-slate-400'
+            className={`h-2 rounded-full transition-all duration-300 ease-out ${
+              index === current ? 'w-6 bg-brand' : 'w-2 bg-slate-300 hover:bg-slate-400'
             }`}
           />
         ))}
       </div>
 
       {/* Additional Info Section */}
-      <Card shadow="none" className="mt-8 border border-slate-200/70 bg-white shadow-subtle">
+      <Card className="mt-8">
         <div className="p-5">
           <h3 className="mb-2 font-serif text-xl font-semibold tracking-tight text-slate-900">Our Mission</h3>
           <p className="text-sm leading-relaxed text-slate-600">
@@ -189,7 +199,7 @@ export default function AboutUsPage() {
       </Card>
 
       {/* Contact Section */}
-      <Card shadow="none" className="border border-slate-200/70 bg-white shadow-subtle">
+      <Card>
         <div className="p-5">
           <h3 className="mb-2 font-serif text-xl font-semibold tracking-tight text-slate-900">Get in Touch</h3>
           <p className="text-sm text-slate-600">

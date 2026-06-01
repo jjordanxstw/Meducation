@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { FiLock } from 'react-icons/fi';
+import { Lock } from 'lucide-react';
 
 export default function ForbiddenPage() {
   return (
@@ -7,7 +7,7 @@ export default function ForbiddenPage() {
       role="main"
       className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center"
     >
-      <FiLock className="h-12 w-12 text-slate-400" aria-hidden="true" />
+      <Lock className="h-12 w-12 text-slate-400" aria-hidden="true" />
       <div className="space-y-1">
         <h1 className="font-serif text-3xl font-semibold tracking-tight text-slate-900">Access denied</h1>
         <p className="text-sm text-slate-500">

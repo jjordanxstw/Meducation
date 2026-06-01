@@ -139,6 +139,7 @@ export class AuthService {
     email: string,
     name: string,
     role?: UserRole,
+    picture?: string,
   ): Promise<Profile | null> {
     if (!this.isAllowedEmail(email, role)) {
       this.logger.warn(
@@ -147,7 +148,42 @@ export class AuthService {
       return null;
     }
 
-    return this.getOrCreateProfile(userId, email, name);
+    return this.getOrCreateProfile(userId, email, name, picture);
+  }
+
+  /**
+   * Best-effort derivation of student_id / year_level from a Mahidol student
+   * email. Mahidol student emails encode a 7-digit student id whose first two
+   * digits are the admission year in the Buddhist Era (e.g. `6312345` → admitted
+   * B.E. 2563 → 2020 C.E.). Anything that doesn't match degrades to nulls — it
+   * must never block sign-in.
+   *
+   * NOTE: the exact local-part scheme should be verified against a real account;
+   * the parsing is intentionally defensive.
+   */
+  private deriveStudentInfo(email: string): { studentId: string | null; yearLevel: number | null } {
+    const local = (email.split('@')[0] ?? '').toLowerCase();
+    const match = local.match(/(\d{7,})/);
+    if (!match) {
+      return { studentId: null, yearLevel: null };
+    }
+
+    const studentId = match[1];
+    const beShort = parseInt(studentId.slice(0, 2), 10);
+    if (Number.isNaN(beShort)) {
+      return { studentId, yearLevel: null };
+    }
+
+    // 2-digit Buddhist Era year → full C.E. year (e.g. 63 → 2563 BE → 2020 CE).
+    const admissionYearCE = 2500 + beShort - 543;
+    const now = new Date();
+    // Thai academic year starts ~August; approximate the boundary by month.
+    const academicYear = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+    let yearLevel = academicYear - admissionYearCE + 1;
+    if (!Number.isFinite(yearLevel) || yearLevel < 1) yearLevel = 1;
+    if (yearLevel > 6) yearLevel = 6;
+
+    return { studentId, yearLevel };
   }
 
   /**
@@ -156,12 +192,14 @@ export class AuthService {
    * @param userId - Google OAuth subject identifier (unique per Google account)
     * @param email - User's email address
    * @param name - User's display name from Google profile
+   * @param picture - Google profile picture URL (used for avatar_url)
    * @returns Profile object if successful, null if creation fails
    */
   async getOrCreateProfile(
     userId: string,
     email: string,
-    name: string
+    name: string,
+    picture?: string,
   ): Promise<Profile | null> {
     try {
       // Try to get existing profile
@@ -172,22 +210,47 @@ export class AuthService {
         .single();
 
       if (existingProfile) {
+        // Keep the avatar in sync with the latest Google picture.
+        if (picture && existingProfile.avatar_url !== picture) {
+          const { data: refreshed } = await this.supabaseAdmin
+            .from('profiles')
+            .update({ avatar_url: picture })
+            .eq('id', userId)
+            .select()
+            .single();
+          if (refreshed) return refreshed as Profile;
+        }
         return existingProfile as Profile;
       }
 
       // Create new profile if doesn't exist
       if (fetchError && fetchError.code === 'PGRST116') {
-        const { data: newProfile, error: createError } = await this.supabaseAdmin
+        const { studentId, yearLevel } = this.deriveStudentInfo(email);
+        const baseProfile = {
+          id: userId,
+          email,
+          full_name: name,
+          role: 'student' as UserRole,
+          year_level: yearLevel ?? 1,
+          avatar_url: picture ?? null,
+        };
+
+        let { data: newProfile, error: createError } = await this.supabaseAdmin
           .from('profiles')
-          .insert({
-            id: userId,
-            email,
-            full_name: name,
-            role: 'student' as UserRole,
-            year_level: 1,
-          })
+          .insert({ ...baseProfile, student_id: studentId })
           .select()
           .single();
+
+        // A derived student_id can collide with another account; never let that
+        // block sign-in — retry without it.
+        if (createError && createError.code === '23505' && studentId) {
+          this.logger.warn(`Derived student_id collided; creating profile without it for user ${userId}`);
+          ({ data: newProfile, error: createError } = await this.supabaseAdmin
+            .from('profiles')
+            .insert(baseProfile)
+            .select()
+            .single());
+        }
 
         if (createError) {
           // Detailed error logging for constraint violations
@@ -266,7 +329,8 @@ export class AuthService {
     const profile = await this.getOrCreateProfile(
       payload.sub,
       payload.email,
-      payload.name || payload.email.split('@')[0]
+      payload.name || payload.email.split('@')[0],
+      payload.picture,
     );
 
     if (!profile) {
@@ -307,7 +371,9 @@ export class AuthService {
     const profile = await this.getOrCreateProfileWithValidation(
       String(sessionPayload.sub),
       String(sessionPayload.email || ''),
-      String(sessionPayload.name || '')
+      String(sessionPayload.name || ''),
+      undefined,
+      sessionPayload.picture ? String(sessionPayload.picture) : undefined,
     );
 
     if (!profile) {
@@ -335,7 +401,9 @@ export class AuthService {
     const profile = await this.getOrCreateProfileWithValidation(
       payload.sub,
       payload.email,
-      payload.name || payload.email.split('@')[0]
+      payload.name || payload.email.split('@')[0],
+      undefined,
+      payload.picture,
     );
 
     if (!profile) {

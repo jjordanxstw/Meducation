@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
-import { Button } from 'antd';
+import { Button } from '@/components/ui/button';
 
 interface AdminEmptyStateProps {
-  /** An Ant Design icon element, e.g. <DatabaseOutlined />. */
+  /** An icon element, e.g. <Database className="size-12" />. */
   icon: ReactNode;
   title: string;
   subtitle?: string;
@@ -19,24 +19,12 @@ interface AdminEmptyStateProps {
  */
 export function AdminEmptyState({ icon, title, subtitle, action }: AdminEmptyStateProps) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        padding: '48px 24px',
-        textAlign: 'center',
-      }}
-    >
-      <span style={{ fontSize: 48, color: 'var(--brand)', opacity: 0.35, lineHeight: 1 }}>
-        {icon}
-      </span>
-      <span style={{ fontWeight: 600, color: 'var(--ink-1)' }}>{title}</span>
-      {subtitle ? <span style={{ fontSize: 14, color: 'var(--ink-3)' }}>{subtitle}</span> : null}
+    <div className="flex flex-col items-center justify-center gap-2 px-6 py-12 text-center">
+      <span className="text-brand opacity-35 [&_svg]:size-12">{icon}</span>
+      <span className="font-semibold text-slate-900">{title}</span>
+      {subtitle ? <span className="text-sm text-slate-400">{subtitle}</span> : null}
       {action ? (
-        <Button type="primary" onClick={action.onClick} style={{ marginTop: 8 }}>
+        <Button className="mt-2" size="sm" onClick={action.onClick}>
           {action.label}
         </Button>
       ) : null}

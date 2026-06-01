@@ -2,37 +2,40 @@
 
 /**
  * Subject Detail Page — sections accordion + lecture cards + video modal.
- * HeroUI + Tailwind only.
+ * Tailwind + Radix primitives only.
  */
 
 import React from 'react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import {
-  Button,
   Accordion,
   AccordionItem,
-  Skeleton,
-  Chip,
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  useDisclosure,
-  type Selection,
-} from '@heroui/react';
+  AccordionTrigger,
+  AccordionContent,
+} from '@/components/ui/accordion';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { useState } from 'react';
 import axios from 'axios';
 import { useSubjectDetail } from '@/hooks/use-subjects';
 import {
-  FiArrowLeft,
-  FiCalendar,
-  FiUser,
-  FiPlay,
-  FiFileText,
-  FiExternalLink,
-  FiVideo,
-  FiAlertCircle,
-} from 'react-icons/fi';
+  ArrowLeft,
+  Calendar,
+  User,
+  Play,
+  FileText,
+  ExternalLink,
+  Video,
+  AlertCircle,
+} from 'lucide-react';
 import { formatDateThai, ResourceType } from '@medical-portal/shared';
 import type { LectureWithResources, Resource } from '@medical-portal/shared';
 import { VideoPlayer } from '@/components/client/VideoPlayer';
@@ -43,13 +46,13 @@ function lectureTypeIcon(lecture: LectureWithResources) {
   switch (type) {
     case ResourceType.YOUTUBE:
     case ResourceType.GDRIVE_VIDEO:
-      return <FiVideo className="h-4 w-4" />;
+      return <Video className="h-4 w-4" />;
     case ResourceType.GDRIVE_PDF:
-      return <FiFileText className="h-4 w-4" />;
+      return <FileText className="h-4 w-4" />;
     case ResourceType.EXTERNAL:
-      return <FiExternalLink className="h-4 w-4" />;
+      return <ExternalLink className="h-4 w-4" />;
     default:
-      return <FiFileText className="h-4 w-4" />;
+      return <FileText className="h-4 w-4" />;
   }
 }
 
@@ -58,13 +61,13 @@ function ResourceButton({ resource, onClick }: { resource: Resource; onClick: ()
     switch (resource.type) {
       case ResourceType.YOUTUBE:
       case ResourceType.GDRIVE_VIDEO:
-        return <FiPlay className="h-3.5 w-3.5" />;
+        return <Play className="h-3.5 w-3.5" />;
       case ResourceType.GDRIVE_PDF:
-        return <FiFileText className="h-3.5 w-3.5" />;
+        return <FileText className="h-3.5 w-3.5" />;
       case ResourceType.EXTERNAL:
-        return <FiExternalLink className="h-3.5 w-3.5" />;
+        return <ExternalLink className="h-3.5 w-3.5" />;
       default:
-        return <FiFileText className="h-3.5 w-3.5" />;
+        return <FileText className="h-3.5 w-3.5" />;
     }
   };
 
@@ -81,13 +84,13 @@ function ResourceButton({ resource, onClick }: { resource: Resource; onClick: ()
 }
 
 function LectureCard({ lecture }: { lecture: LectureWithResources }) {
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [isOpen, setIsOpen] = useState(false);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
 
   const handleResourceClick = (resource: Resource) => {
     if (resource.type === ResourceType.YOUTUBE || resource.type === ResourceType.GDRIVE_VIDEO) {
       setSelectedResource(resource);
-      onOpen();
+      setIsOpen(true);
     } else {
       window.open(resource.url, '_blank', 'noopener,noreferrer');
     }
@@ -109,14 +112,16 @@ function LectureCard({ lecture }: { lecture: LectureWithResources }) {
             )}
             <div className="flex flex-wrap gap-2 text-sm">
               {lecture.lecture_date && (
-                <Chip size="sm" variant="flat" startContent={<FiCalendar className="h-3 w-3" />}>
+                <Badge variant="neutral">
+                  <Calendar className="h-3 w-3" />
                   {formatDateThai(lecture.lecture_date)}
-                </Chip>
+                </Badge>
               )}
               {lecture.lecturer_name && (
-                <Chip size="sm" variant="flat" startContent={<FiUser className="h-3 w-3" />}>
+                <Badge variant="neutral">
+                  <User className="h-3 w-3" />
                   {lecture.lecturer_name}
-                </Chip>
+                </Badge>
               )}
             </div>
           </div>
@@ -130,27 +135,21 @@ function LectureCard({ lecture }: { lecture: LectureWithResources }) {
               />
             ))}
             {(!lecture.resources || lecture.resources.length === 0) && (
-              <Chip size="sm" variant="flat">
-                No Files
-              </Chip>
+              <Badge variant="neutral">No Files</Badge>
             )}
           </div>
         </div>
       </div>
 
-      <Modal size="4xl" isOpen={isOpen} onClose={onClose} scrollBehavior="inside">
-        <ModalContent>
-          <ModalHeader>
-            <div className="flex flex-col gap-1">
-              <span className="line-clamp-2 font-serif text-lg font-semibold tracking-tight">{lecture.title}</span>
-              <span className="text-sm font-sans text-slate-500">{selectedResource?.label}</span>
-            </div>
-          </ModalHeader>
-          <ModalBody className="pb-6">
-            {selectedResource && <VideoPlayer resource={selectedResource} lectureTitle={lecture.title} />}
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="line-clamp-2">{lecture.title}</DialogTitle>
+            <DialogDescription>{selectedResource?.label}</DialogDescription>
+          </DialogHeader>
+          {selectedResource && <VideoPlayer resource={selectedResource} lectureTitle={lecture.title} />}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -160,9 +159,8 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
   const { data: subject = null, isLoading, isError, error, refetch } = useSubjectDetail(id);
 
   const firstSectionId = subject?.sections?.[0]?.id;
-  const [openKeys, setOpenKeys] = useState<Selection | null>(null);
-  const effectiveOpenKeys: Selection =
-    openKeys ?? new Set<string>(firstSectionId ? [firstSectionId] : []);
+  const [openKeys, setOpenKeys] = useState<string[] | null>(null);
+  const effectiveOpenKeys = openKeys ?? (firstSectionId ? [firstSectionId] : []);
 
   if (isLoading) {
     return (
@@ -196,23 +194,18 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
     return (
       <PageTransition className="mx-auto max-w-2xl">
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-slate-200/70 bg-white py-16 text-center shadow-subtle">
-          <FiAlertCircle className="h-12 w-12 text-red-400" />
+          <AlertCircle className="h-12 w-12 text-red-400" />
           <div className="space-y-1">
             <h3 className="font-serif text-xl font-semibold text-slate-900">{title}</h3>
             <p className="text-sm text-slate-500">{message}</p>
           </div>
           <div className="mt-2 flex flex-col items-center gap-3 sm:flex-row">
-            <Button color="primary" onPress={() => void refetch()}>
-              Try Again
-            </Button>
-            <Button
-              as={Link}
-              href="/subjects"
-              variant="light"
-              className="text-slate-600"
-              startContent={<FiArrowLeft className="h-4 w-4" />}
-            >
-              Back to Subjects
+            <Button onClick={() => void refetch()}>Try Again</Button>
+            <Button asChild variant="ghost">
+              <Link href="/subjects">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Subjects
+              </Link>
             </Button>
           </div>
         </div>
@@ -223,23 +216,18 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
   return (
     <PageTransition className="mx-auto max-w-4xl space-y-6">
       {/* Back button */}
-      <Button
-        as={Link}
-        href="/subjects"
-        variant="bordered"
-        radius="full"
-        size="sm"
-        className="border-slate-200 text-slate-600"
-        startContent={<FiArrowLeft className="h-4 w-4" />}
-      >
-        Back to Subjects
+      <Button asChild variant="secondary" size="sm" className="rounded-full text-slate-600">
+        <Link href="/subjects">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Subjects
+        </Link>
       </Button>
 
       {/* Subject header */}
       <div className="rounded-2xl border border-slate-200/70 bg-white p-6 shadow-subtle">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-subtle text-brand">
-            <FiVideo className="h-7 w-7" />
+            <Video className="h-7 w-7" />
           </div>
           <div className="min-w-0 flex-1 space-y-2">
             <span className="inline-block rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600">
@@ -268,24 +256,16 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
       {/* Sections */}
       {subject.sections && subject.sections.length > 0 ? (
         <Accordion
-          selectionMode="multiple"
-          selectedKeys={effectiveOpenKeys}
-          onSelectionChange={(keys) => setOpenKeys(keys)}
-          variant="splitted"
-          className="gap-3 px-0"
-          itemClasses={{
-            base: 'border border-slate-200/70 bg-white shadow-none rounded-2xl',
-            trigger: 'py-3',
-            title: 'text-sm font-semibold text-slate-900',
-          }}
+          type="multiple"
+          value={effectiveOpenKeys}
+          onValueChange={(keys) => setOpenKeys(keys)}
+          className="flex flex-col gap-3"
         >
           {subject.sections.map((section, index) => {
-            const isOpen = effectiveOpenKeys === 'all' || effectiveOpenKeys.has(section.id);
+            const isOpen = effectiveOpenKeys.includes(section.id);
             return (
-              <AccordionItem
-                key={section.id}
-                aria-label={section.name}
-                title={
+              <AccordionItem key={section.id} value={section.id}>
+                <AccordionTrigger aria-label={section.name}>
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-subtle text-sm font-bold text-brand">
                       {index + 1}
@@ -297,24 +277,23 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
                       </p>
                     </div>
                   </div>
-                }
-              >
-                <div className="mb-3 mt-1">
+                </AccordionTrigger>
+                <AccordionContent>
                   {section.lectures?.map((lecture) => <LectureCard key={lecture.id} lecture={lecture} />)}
                   {(!section.lectures || section.lectures.length === 0) && (
                     <div className="rounded-xl border border-dashed border-slate-200 py-12 text-center">
-                      <FiVideo className="mx-auto mb-3 h-10 w-10 text-slate-300" />
+                      <Video className="mx-auto mb-3 h-10 w-10 text-slate-300" />
                       <p className="font-medium text-slate-500">No lectures in this section yet</p>
                     </div>
                   )}
-                </div>
+                </AccordionContent>
               </AccordionItem>
             );
           })}
         </Accordion>
       ) : (
         <div className="rounded-2xl border border-slate-200/70 bg-white py-16 text-center shadow-subtle">
-          <FiVideo className="mx-auto mb-4 h-16 w-16 text-slate-300" />
+          <Video className="mx-auto mb-4 h-16 w-16 text-slate-300" />
           <h3 className="mb-2 font-serif text-xl font-semibold text-slate-900">No content available</h3>
           <p className="text-slate-500">This subject doesn&apos;t have content yet. Please check back later.</p>
         </div>

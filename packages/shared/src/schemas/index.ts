@@ -7,11 +7,13 @@
  * runtime contracts cannot drift apart.
  */
 import { z } from 'zod';
-import { UserRole, ResourceType, EventType } from '../types';
+import { UserRole, ResourceType } from '../types';
 
 export const userRoleSchema = z.nativeEnum(UserRole);
 export const resourceTypeSchema = z.nativeEnum(ResourceType);
-export const eventTypeSchema = z.nativeEnum(EventType);
+// Event types are admin-managed (event_types table), so the calendar event's
+// `type` is a free-form name referencing event_types.name — not a fixed enum.
+export const eventTypeSchema = z.string().trim().min(1);
 
 const isoDate = z.string().min(1);
 const optionalUrl = z.string().url().optional();
@@ -116,12 +118,16 @@ export type UpdateResourceInput = z.infer<typeof updateResourceSchema>;
 // ---------------------------------------------------------------------------
 // Calendar event
 // ---------------------------------------------------------------------------
+const timeOfDay = z.string().regex(/^\d{2}:\d{2}$/, 'Use a time like 09:00');
+
 export const createCalendarEventSchema = z
   .object({
     title: z.string().min(1),
     description: z.string().optional(),
     start_date: z.string().min(1),
     end_date: z.string().optional(),
+    start_time: timeOfDay.optional(),
+    end_time: timeOfDay.optional(),
     type: eventTypeSchema,
     subject_id: z.string().uuid().optional(),
     location: z.string().optional(),
@@ -130,8 +136,30 @@ export const createCalendarEventSchema = z
   .refine(
     (v) => !v.end_date || v.end_date >= v.start_date,
     { message: 'end_date must be on or after start_date', path: ['end_date'] },
-  );
+  )
+  .refine((v) => !v.end_time || !!v.start_time, {
+    message: 'Set a start time before an end time',
+    path: ['end_time'],
+  });
 export type CreateCalendarEventInput = z.infer<typeof createCalendarEventSchema>;
+
+// ---------------------------------------------------------------------------
+// Calendar event type (admin-managed)
+// ---------------------------------------------------------------------------
+const hexColor = z
+  .string()
+  .trim()
+  .regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, 'Color must be a hex value like #2f80ed');
+
+export const createCalendarEventTypeSchema = z.object({
+  name: z.string().trim().min(1, 'Please enter a type name'),
+  color: hexColor.optional(),
+  sort_order: z.number().int().optional(),
+});
+export type CreateCalendarEventTypeInput = z.infer<typeof createCalendarEventTypeSchema>;
+
+export const updateCalendarEventTypeSchema = createCalendarEventTypeSchema.partial();
+export type UpdateCalendarEventTypeInput = z.infer<typeof updateCalendarEventTypeSchema>;
 
 // ---------------------------------------------------------------------------
 // Announcement

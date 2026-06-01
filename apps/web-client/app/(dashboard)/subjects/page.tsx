@@ -2,14 +2,15 @@
 
 /**
  * Subjects Page — list all subjects, filter by year, search.
- * HeroUI + Tailwind only.
+ * Tailwind + Radix primitives only.
  */
 
 import { useState, Suspense, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
-import { Input, Skeleton } from '@heroui/react';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthStore } from '@/stores/auth.store';
-import { FiSearch, FiBook, FiX } from 'react-icons/fi';
+import { Search, Book, X } from 'lucide-react';
 import { SubjectCard } from '@/components/ui/SubjectCard';
 import { PageTransition } from '@/components/PageTransition';
 import { DataFreshnessDot } from '@/components/ui/DataFreshnessDot';
@@ -131,9 +132,8 @@ function SubjectsContent() {
           aria-label="Search subjects"
           placeholder="Search subjects…"
           value={searchQuery}
-          onValueChange={setSearchQuery}
-          radius="lg"
-          startContent={<FiSearch className="h-4 w-4 text-slate-400" />}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          startContent={<Search className="h-4 w-4" />}
           endContent={
             searchQuery ? (
               <button
@@ -142,15 +142,11 @@ function SubjectsContent() {
                 onClick={() => setSearchQuery('')}
                 className="flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
               >
-                <FiX className="h-3.5 w-3.5" />
+                <X className="h-3.5 w-3.5" />
               </button>
             ) : null
           }
-          classNames={{
-            inputWrapper:
-              'bg-white border border-slate-200/80 shadow-subtle data-[hover=true]:border-slate-300 group-data-[focus=true]:border-brand/60',
-          }}
-          className="w-full sm:w-72"
+          wrapperClassName="w-full sm:w-72"
         />
       </div>
 
@@ -188,7 +184,7 @@ function SubjectsContent() {
       ) : (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200/70 bg-white px-6 py-16 text-center shadow-subtle">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-subtle">
-            <FiBook className="h-6 w-6 text-brand" />
+            <Book className="h-6 w-6 text-brand" />
           </div>
           <h3 className="font-serif text-xl font-semibold text-slate-900">No subjects found</h3>
           <p className="text-sm text-slate-500">
@@ -202,7 +198,7 @@ function SubjectsContent() {
               onClick={() => setSearchQuery('')}
               className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
             >
-              <FiX className="h-3.5 w-3.5" />
+              <X className="h-3.5 w-3.5" />
               Clear search
             </button>
           )}

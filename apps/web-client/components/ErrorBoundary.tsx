@@ -1,7 +1,7 @@
 'use client';
 
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { FiAlertTriangle } from 'react-icons/fi';
+import { AlertTriangle } from 'lucide-react';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -58,7 +58,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         role="alert"
         className="flex min-h-[40vh] flex-col items-center justify-center gap-4 p-8 text-center"
       >
-        <FiAlertTriangle className="h-12 w-12 text-slate-400" aria-hidden="true" />
+        <AlertTriangle className="h-12 w-12 text-slate-400" aria-hidden="true" />
         <div className="space-y-1">
           <h2 className="font-serif text-xl font-semibold tracking-tight text-slate-900">Something went wrong</h2>
           <p className="text-sm text-slate-500">

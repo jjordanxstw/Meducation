@@ -5,13 +5,14 @@
 
 import React from 'react';
 import {
-  BarChartOutlined,
-  DatabaseOutlined,
-  CalendarOutlined,
-  NotificationOutlined,
-  TeamOutlined,
-  AuditOutlined,
-} from '@ant-design/icons';
+  LayoutDashboard,
+  Database,
+  CalendarDays,
+  Tags,
+  Megaphone,
+  Users,
+  ScrollText,
+} from 'lucide-react';
 
 export const buildResources = () => [
   {
@@ -19,7 +20,7 @@ export const buildResources = () => [
     list: '/dashboard',
     meta: {
       label: 'Dashboard',
-      icon: React.createElement(BarChartOutlined),
+      icon: React.createElement(LayoutDashboard),
     },
   },
   {
@@ -29,7 +30,7 @@ export const buildResources = () => [
     edit: '/resources/edit/:id',
     meta: {
       label: 'Resources',
-      icon: React.createElement(DatabaseOutlined),
+      icon: React.createElement(Database),
     },
   },
   {
@@ -39,7 +40,17 @@ export const buildResources = () => [
     edit: '/calendar/edit/:id',
     meta: {
       label: 'Calendar',
-      icon: React.createElement(CalendarOutlined),
+      icon: React.createElement(CalendarDays),
+    },
+  },
+  {
+    name: 'event-types',
+    list: '/event-types',
+    create: '/event-types/create',
+    edit: '/event-types/edit/:id',
+    meta: {
+      label: 'Event Types',
+      icon: React.createElement(Tags),
     },
   },
   {
@@ -49,7 +60,7 @@ export const buildResources = () => [
     edit: '/announcements/edit/:id',
     meta: {
       label: 'Announcements',
-      icon: React.createElement(NotificationOutlined),
+      icon: React.createElement(Megaphone),
     },
   },
   {
@@ -59,7 +70,7 @@ export const buildResources = () => [
     show: '/profiles/show/:id',
     meta: {
       label: 'Profiles',
-      icon: React.createElement(TeamOutlined),
+      icon: React.createElement(Users),
     },
   },
   {
@@ -67,7 +78,7 @@ export const buildResources = () => [
     list: '/audit-logs',
     meta: {
       label: 'Audit Logs',
-      icon: React.createElement(AuditOutlined),
+      icon: React.createElement(ScrollText),
     },
   },
 ];

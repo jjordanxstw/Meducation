@@ -42,7 +42,6 @@ const SAFE_REDIRECT_EXACT_PATHS = new Set([
   '/',
   '/subjects',
   '/calendar',
-  '/profile',
   '/acdm',
   '/learning-hub',
   '/about-me',
@@ -350,11 +349,9 @@ export const api = {
       apiClient.get(`/announcements/${id}`),
   },
 
-  // Profile
+  // Profile — read-only from the client; students cannot edit their profile.
   profile: {
     get: (id: string) => apiClient.get(`/profiles/${id}`),
-    update: (id: string, data: Record<string, unknown>) =>
-      apiClient.patch(`/profiles/${id}`, data),
   },
 };
 

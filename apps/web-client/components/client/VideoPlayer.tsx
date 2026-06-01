@@ -2,12 +2,12 @@
 
 /**
  * Video Player Component with Watermark Overlay.
- * HeroUI + Tailwind only.
+ * Tailwind only.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FiVideoOff, FiMaximize2, FiExternalLink } from 'react-icons/fi';
+import { VideoOff, Maximize2, ExternalLink } from 'lucide-react';
 import { api } from '@/lib/api';
 import { getYouTubeEmbedUrl, ResourceType } from '@medical-portal/shared';
 import type { Resource, WatermarkConfig } from '@medical-portal/shared';
@@ -132,7 +132,7 @@ export function VideoPlayer({ resource, lectureTitle }: VideoPlayerProps) {
       {/* Error state — iframe failed or timed out */}
       {errored ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900 text-center">
-          <FiVideoOff className="h-12 w-12 text-white/40" />
+          <VideoOff className="h-12 w-12 text-white/40" />
           <p className="text-sm font-medium text-white/80">Video unavailable</p>
           <a
             href={resource.url}
@@ -141,7 +141,7 @@ export function VideoPlayer({ resource, lectureTitle }: VideoPlayerProps) {
             className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-300 hover:text-primary-200"
           >
             Open in new tab
-            <FiExternalLink className="h-3.5 w-3.5" />
+            <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </div>
       ) : (
@@ -167,7 +167,7 @@ export function VideoPlayer({ resource, lectureTitle }: VideoPlayerProps) {
             aria-label="Fullscreen"
             className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-black/50 text-white/80 opacity-0 backdrop-blur-sm transition-opacity duration-200 hover:bg-black/70 hover:text-white group-hover:opacity-100"
           >
-            <FiMaximize2 className="h-4 w-4" />
+            <Maximize2 className="h-4 w-4" />
           </button>
         </>
       )}

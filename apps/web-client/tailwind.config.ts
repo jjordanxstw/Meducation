@@ -1,32 +1,16 @@
 import type { Config } from 'tailwindcss';
-import { heroui } from '@heroui/react';
-import { HERO_TOKENS } from '@medical-portal/shared';
+import tailwindcssAnimate from 'tailwindcss-animate';
+import { HERO_BRAND, HERO_TOKENS } from '@medical-portal/shared';
 
 const light = HERO_TOKENS.light;
 
-/**
- * Editorial light-blue accent — web-client local. We intentionally do NOT edit
- * `@medical-portal/shared` here so web-admin keeps its current palette; this is
- * the single source of truth for the student portal's blue.
- */
-const BRAND = {
-  50: '#eef5ff',
-  100: '#d9e8ff',
-  200: '#bcd6ff',
-  300: '#8fbbff',
-  400: '#5e97f7',
-  500: '#2f80ed',
-  600: '#1b66cc',
-  700: '#1857ad',
-  800: '#194a8c',
-  900: '#1a3f73',
-} as const;
+/** Editorial light-blue accent — single source of truth lives in @medical-portal/shared. */
+const BRAND = HERO_BRAND.blue;
 
 const config: Config = {
   content: [
     './app/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {
@@ -53,13 +37,14 @@ const config: Config = {
         info: light.state.info.fg,
       },
       fontFamily: {
-        // Body / UI — Latin in Noto Sans, Thai falls through to Noto Serif Thai.
-        sans: ['var(--font-noto-sans)', 'var(--font-noto-serif-thai)', 'Noto Sans', 'sans-serif'],
-        body: ['var(--font-noto-sans)', 'var(--font-noto-serif-thai)', 'Noto Sans', 'sans-serif'],
-        // Display — Latin in Noto Serif, Thai in Noto Serif Thai.
-        serif: ['var(--font-noto-serif)', 'var(--font-noto-serif-thai)', 'Georgia', 'serif'],
-        display: ['var(--font-noto-serif)', 'var(--font-noto-serif-thai)', 'Georgia', 'serif'],
-        heading: ['var(--font-noto-serif)', 'var(--font-noto-serif-thai)', 'Georgia', 'serif'],
+        // Two-font system: Lato (Latin) with IBM Plex Sans Thai Looped for Thai.
+        // serif/display/heading share the same stack so no element renders a
+        // different face.
+        sans: ['var(--font-lato)', 'var(--font-ibm-thai)', 'Lato', 'sans-serif'],
+        body: ['var(--font-lato)', 'var(--font-ibm-thai)', 'Lato', 'sans-serif'],
+        serif: ['var(--font-lato)', 'var(--font-ibm-thai)', 'Lato', 'sans-serif'],
+        display: ['var(--font-lato)', 'var(--font-ibm-thai)', 'Lato', 'sans-serif'],
+        heading: ['var(--font-lato)', 'var(--font-ibm-thai)', 'Lato', 'sans-serif'],
       },
       boxShadow: {
         subtle: 'var(--shadow-subtle)',
@@ -74,8 +59,18 @@ const config: Config = {
         float: 'float 7s ease-in-out infinite',
         'top-loading': 'top-loading 1s linear infinite',
         watermark: 'watermark 30s ease-in-out infinite',
+        'accordion-down': 'accordion-down 0.2s ease-out',
+        'accordion-up': 'accordion-up 0.2s ease-out',
       },
       keyframes: {
+        'accordion-down': {
+          from: { height: '0' },
+          to: { height: 'var(--radix-accordion-content-height)' },
+        },
+        'accordion-up': {
+          from: { height: 'var(--radix-accordion-content-height)' },
+          to: { height: '0' },
+        },
         marquee: {
           '0%': { transform: 'translateX(0%)' },
           '100%': { transform: 'translateX(-50%)' },
@@ -110,21 +105,7 @@ const config: Config = {
     },
   },
   safelist: ['scrollbar-hide'],
-  plugins: [
-    heroui({
-      themes: {
-        light: {
-          colors: {
-            primary: {
-              ...BRAND,
-              DEFAULT: BRAND[500],
-              foreground: '#ffffff',
-            },
-          },
-        },
-      },
-    }),
-  ],
+  plugins: [tailwindcssAnimate],
 };
 
 export default config;

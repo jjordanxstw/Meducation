@@ -3,17 +3,25 @@
 @tailwind utilities;
 
 :root {
-  --brand: #1d4ed8;
-  --brand-hover: #1e40af;
+  color-scheme: light;
+
+  /* Brand — single light-blue accent, unified with web-client. */
+  --brand: #2f80ed;
+  --brand-hover: #1b66cc;
+  --brand-subtle: rgba(47, 128, 237, 0.12);
+
+  /* Surfaces */
   --bg-canvas: #f4f8ff;
   --bg-surface: #ffffff;
+
+  /* Ink ramp (slate) */
   --ink-1: #0f172a;
   --ink-2: #475569;
   --ink-3: #64748b;
+
+  /* Hairline borders */
   --border-subtle: rgba(15, 23, 42, 0.07);
   --border-default: rgba(15, 23, 42, 0.12);
-  --sider-active: rgba(255, 255, 255, 0.14);
-  --font-sans: 'Noto Sans', system-ui, sans-serif;
 }
 
 * {
@@ -31,17 +39,36 @@ body,
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: 'Lato', 'IBM Plex Sans Thai Looped', system-ui, sans-serif;
   background: var(--bg-canvas);
   color: var(--ink-1);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-sans);
-  letter-spacing: -0.01em;
+/* Two-font system — headings share the same Lato/Thai stack as body. */
+h1, h2, h3, h4, h5, h6,
+.font-serif {
+  font-family: 'Lato', 'IBM Plex Sans Thai Looped', system-ui, sans-serif;
 }
 
-/* Form shake on validation failure (K.1) */
+/* Calm focus ring for keyboard users (buttons, links, etc.). */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Text/search fields and select-like triggers show focus via their border,
+   not a blue ring. */
+input:focus-visible,
+textarea:focus-visible,
+[role='combobox']:focus-visible,
+[role='searchbox']:focus-visible {
+  outline: none;
+}
+
+/* Form shake on validation failure. */
 @keyframes admin-shake {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-8px); }
@@ -52,7 +79,7 @@ h1, h2, h3, h4, h5, h6 {
   animation: admin-shake 0.4s ease;
 }
 
-/* Loading spinner */
+/* Loading spinner (used by the auth fallback). */
 .spinner {
   width: 40px;
   height: 40px;
@@ -67,198 +94,26 @@ h1, h2, h3, h4, h5, h6 {
   100% { transform: rotate(360deg); }
 }
 
-/* Hide scrollbar but allow scrolling */
+/* Slim, unobtrusive scrollbars. */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.28);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.45);
+}
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
-
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
-}
-
-/* === Sidebar (Refine ThemedLayout) — dark-navy surface === */
-/* ThemedLayout's Sider paints its own light background, so force the navy here. */
-.ant-layout-sider,
-.ant-layout-sider .ant-layout-sider-children,
-.ant-layout-sider .ant-menu {
-  background: #0f2147 !important;
-}
-
-.ant-layout-sider {
-  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
-
-/* Sidebar wordmark/labels readable on navy. */
-.ant-layout-sider .ant-menu-item,
-.ant-layout-sider .ant-menu-submenu-title {
-  color: rgba(255, 255, 255, 0.72);
-}
-
-.ant-layout-sider .ant-menu-item:hover,
-.ant-layout-sider .ant-menu-submenu-title:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.08) !important;
-}
-
-/* Keep nav icons + selected labels light against the navy background. */
-.ant-layout-sider .ant-menu-item .anticon,
-.ant-layout-sider .ant-menu-submenu-title .anticon {
-  color: rgba(255, 255, 255, 0.72);
-}
-
-.ant-layout-sider .ant-menu-item-selected,
-.ant-layout-sider .ant-menu-item-selected .anticon {
-  color: #ffffff !important;
-}
-
-.ant-layout-sider .ant-menu {
-  border-inline-end: 0 !important;
-}
-
-.ant-layout-sider .ant-menu-item,
-.ant-layout-sider .ant-menu-submenu-title {
-  width: calc(100% - 12px);
-  margin-inline: 6px !important;
-  min-height: 42px;
-  line-height: 42px;
-  border-radius: 10px;
-}
-
-.ant-layout-sider .ant-menu-item-selected {
-  background: var(--sider-active) !important;
-  font-weight: 600;
-}
-
-/* Logout button pinned to the bottom of the menu */
-.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout,
-.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child {
-  margin-top: auto;
-  margin-bottom: 12px;
-  background: #fee2e2 !important;
-  color: #dc2626 !important;
-}
-
-.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout .anticon,
-.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child .anticon {
-  color: #dc2626 !important;
-}
-
-.ant-layout-sider .ant-layout-sider-children > .ant-menu .admin-sider-logout:hover,
-.ant-layout-sider .ant-layout-sider-children > .ant-menu > .ant-menu-item:last-child:hover {
-  background: #fecaca !important;
-}
-
-/* Hide the default bottom collapse trigger; expansion handled in the title area */
-.ant-layout-sider-trigger {
-  display: none !important;
-}
-
-.ant-layout-sider.ant-layout-sider-has-trigger {
-  padding-bottom: 0 !important;
-}
-
-/* === Layout scroll: sticky sider + header, scrollable content === */
-.refine-layout,
-.refine-layout > .ant-layout {
-  height: 100%;
-}
-
-.refine-layout .ant-layout {
-  min-height: 100%;
-}
-
-.refine-layout .ant-layout-sider {
-  height: 100dvh;
-  position: sticky;
-  top: 0;
-  z-index: 120;
-}
-
-.refine-layout .ant-layout-sider-children {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.refine-layout .ant-layout-sider-children > .ant-menu {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.refine-layout .ant-layout-content {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-bottom: 24px;
-}
-
-/* === Tables: subtle uppercase headers === */
-.refine-layout .ant-table-thead > tr > th {
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-  color: var(--ink-3) !important;
-}
-
-/* === Responsive filter bars === */
-.resource-filter-bar {
-  width: 100%;
-}
-
-.resource-filter-control {
-  min-width: 140px;
-}
-
-.resource-filter-button {
-  min-width: 88px;
-}
-
-@media (max-width: 992px) {
-  /* On mobile the sider is a slide-over drawer, so the collapse arrow is moot. */
-  .admin-sider-collapse {
-    display: none !important;
-  }
-
-  .refine-layout .ant-layout-content {
-    padding: 12px;
-  }
-
-  .refine-layout .ant-layout-header {
-    height: 56px !important;
-    line-height: 56px !important;
-    padding: 0 12px !important;
-  }
-}
-
-@media (max-width: 768px) {
-  .refine-layout .ant-table-content,
-  .refine-layout .ant-table-body {
-    -webkit-mask-image: linear-gradient(to right, black 92%, transparent);
-    mask-image: linear-gradient(to right, black 92%, transparent);
-  }
-
-  .resource-filter-control,
-  .resource-filter-control.ant-picker {
-    width: 100% !important;
-    max-width: 100%;
-  }
-}
-
-@media (max-width: 576px) {
-  .refine-layout .ant-card {
-    border-radius: 12px;
-  }
-
-  .resource-filter-control,
-  .resource-filter-control.ant-picker,
-  .resource-filter-button {
-    width: 100% !important;
-  }
 }

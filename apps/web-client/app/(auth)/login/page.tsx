@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, signOut, useSession } from 'next-auth/react';
-import { FiLock, FiShield } from 'react-icons/fi';
+import { Lock, Shield } from 'lucide-react';
 
 // Google SVG icon component
 function GoogleIcon({ className }: { className?: string }) {
@@ -111,21 +111,16 @@ function LoginContent() {
       <div className="relative w-full max-w-[420px]">
       {/* Main card */}
       <div className="relative w-full rounded-3xl border border-slate-200/70 bg-white/95 p-8 shadow-lift backdrop-blur-xl">
-        {/* Logo and Title */}
-        <div className="flex flex-col items-center gap-5 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand shadow-lg shadow-brand/30 ring-4 ring-brand/10">
-            <span className="font-serif text-2xl font-semibold text-white">M</span>
-          </div>
-          <div>
-            <h1 className="font-serif text-3xl font-semibold tracking-tight text-slate-900">MedPi Portal</h1>
-            <p className="mt-1.5 text-sm text-slate-500">Secure sign-in for medical students</p>
-          </div>
+        {/* Title */}
+        <div className="flex flex-col items-center gap-2 text-center">
+          <h1 className="font-serif text-3xl font-semibold tracking-tight text-slate-900">MedPi Portal</h1>
+          <p className="text-sm text-slate-500">Secure sign-in for medical students</p>
         </div>
 
         {/* Notice Banner */}
         <div className="mt-6 rounded-xl border border-brand/20 bg-brand-subtle px-4 py-3">
           <div className="flex items-start gap-3">
-            <FiShield className="h-[18px] w-[18px] shrink-0 text-brand mt-0.5" />
+            <Shield className="h-[18px] w-[18px] shrink-0 text-brand mt-0.5" />
             <div className="min-w-0 text-left">
               <p className="text-sm font-semibold text-brand">For Medical Students Only</p>
               <p className="mt-0.5 text-xs text-slate-500">
@@ -171,7 +166,7 @@ function LoginContent() {
 
         {/* Security Note */}
         <div className="mt-5 flex items-center justify-center gap-2">
-          <FiLock className="h-3 w-3 text-slate-400" />
+          <Lock className="h-3 w-3 text-slate-400" />
           <span className="text-xs text-slate-400">Protected by NextAuth · Session verified</span>
         </div>
       </div>

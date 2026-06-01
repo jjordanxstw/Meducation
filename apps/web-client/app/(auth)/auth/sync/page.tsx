@@ -3,8 +3,8 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
-import { Button } from '@heroui/react';
-import { FiRefreshCw, FiBook, FiAlertCircle } from 'react-icons/fi';
+import { Button } from '@/components/ui/button';
+import { RefreshCw, Book, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 import { api } from '@/lib/api';
 
@@ -12,7 +12,6 @@ const SAFE_EXACT_PATHS = new Set([
   '/',
   '/subjects',
   '/calendar',
-  '/profile',
   '/acdm',
   '/learning-hub',
   '/about-me',
@@ -188,7 +187,7 @@ function AuthSyncContent() {
       <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f4f8ff] p-3 sm:p-4">
         <div className="w-full max-w-md space-y-5 rounded-3xl border border-red-200 bg-white p-6 text-center shadow-xl shadow-red-500/5">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50">
-            <FiAlertCircle className="h-7 w-7 text-red-500" />
+            <AlertCircle className="h-7 w-7 text-red-500" />
           </div>
           <div className="space-y-1.5">
             <h2 className="text-lg font-semibold text-slate-900">Connection failed</h2>
@@ -197,15 +196,11 @@ function AuthSyncContent() {
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Button
-              color="primary"
-              className="w-full justify-center"
-              startContent={<FiRefreshCw className="h-4 w-4" />}
-              onPress={handleRetry}
-            >
+            <Button className="w-full" onClick={handleRetry}>
+              <RefreshCw className="h-4 w-4" />
               Try Again
             </Button>
-            <Button variant="light" className="w-full justify-center text-slate-600" onPress={handleBackToLogin}>
+            <Button variant="ghost" className="w-full text-slate-600" onClick={handleBackToLogin}>
               Back to Login
             </Button>
           </div>
@@ -220,7 +215,7 @@ function AuthSyncContent() {
         {/* Animated logo with pulse ring */}
         <div className="relative mx-auto mb-5 flex h-12 w-12 items-center justify-center">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-20" />
-          <FiBook className="relative h-12 w-12 text-brand" />
+          <Book className="relative h-12 w-12 text-brand" />
         </div>
         <p className="text-sm font-medium text-slate-500 transition-opacity duration-300">
           {syncSteps[stepIndex]}

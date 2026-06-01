@@ -2,20 +2,13 @@
 
 /**
  * Home Dashboard — editorial-premium layout.
- * HeroUI + Tailwind only.
+ * Tailwind + Radix primitives only.
  */
 
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Chip } from '@heroui/react';
-import {
-  FiVolume2,
-  FiBookOpen,
-  FiUsers,
-  FiArrowRight,
-  FiMapPin,
-  FiLayers,
-} from 'react-icons/fi';
+import { Badge } from '@/components/ui/badge';
+import { Volume2, ArrowRight, MapPin } from 'lucide-react';
 import { formatDateShort } from '@medical-portal/shared';
 import { useAuthStore } from '@/stores/auth.store';
 import { CalendarSection } from '@/components/CalendarSection';
@@ -109,7 +102,7 @@ function AnnouncementItem({
     >
       {announcement.is_pinned && (
         <span className="absolute right-2 top-2 text-brand">
-          <FiMapPin size={12} />
+          <MapPin size={12} />
         </span>
       )}
       <div className="flex items-center gap-2 pr-6">
@@ -138,45 +131,6 @@ function AnnouncementItem({
   );
 }
 
-// Feature navigation tile — restrained, single-accent.
-function FeatureTile({
-  title,
-  subtitle,
-  icon,
-  badge,
-  onClick,
-}: {
-  title: string;
-  subtitle: string;
-  icon: React.ReactNode;
-  badge?: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group flex flex-col items-start gap-3 rounded-2xl border border-slate-200/70 bg-white p-5 text-left shadow-subtle transition-all duration-200 hover:-translate-y-1 hover:border-brand/40 hover:shadow-soft"
-    >
-      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-subtle text-brand">
-        {icon}
-      </span>
-      <div className="flex items-center gap-2">
-        <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-        {badge && (
-          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-600">
-            {badge}
-          </span>
-        )}
-      </div>
-      <p className="text-sm text-slate-500">{subtitle}</p>
-      <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand transition-transform group-hover:translate-x-0.5">
-        View more <FiArrowRight size={12} />
-      </span>
-    </button>
-  );
-}
-
 export default function HomePage() {
   const router = useRouter();
   const { profile, user } = useAuthStore();
@@ -201,10 +155,6 @@ export default function HomePage() {
     { enabled: Boolean(hasNextPage) && !isFetchingNextPage, rootMargin: '120px' },
   );
 
-  const scrollToAnnouncement = () => {
-    document.getElementById('announcement-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
   const name = firstName(profile?.full_name ?? user?.name);
 
   return (
@@ -223,7 +173,7 @@ export default function HomePage() {
           <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-subtle">
             <div className="flex items-center gap-2.5 border-b border-slate-200/70 px-5 py-4">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-subtle text-brand">
-                <FiVolume2 size={18} />
+                <Volume2 size={18} />
               </span>
               <h2 className="font-serif text-lg font-semibold tracking-tight text-slate-900">Announcements</h2>
             </div>
@@ -249,7 +199,7 @@ export default function HomePage() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <FiVolume2 className="mb-3 h-12 w-12 text-slate-300" />
+                  <Volume2 className="mb-3 h-12 w-12 text-slate-300" />
                   <p className="text-slate-500">No announcements yet.</p>
                 </div>
               )}
@@ -272,7 +222,7 @@ export default function HomePage() {
                   className="flex w-full items-center justify-between rounded-xl border border-slate-200/70 px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-brand/40 hover:bg-brand-subtle hover:text-brand"
                 >
                   {filter.label}
-                  <FiArrowRight size={14} className="text-slate-300" />
+                  <ArrowRight size={14} className="text-slate-300" />
                 </button>
               ))}
             </div>
@@ -290,45 +240,12 @@ export default function HomePage() {
       >
         <div className="flex w-max animate-marquee gap-2.5">
           {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, index) => (
-            <Chip
-              key={index}
-              variant="bordered"
-              className="shrink-0 border-slate-200 text-slate-500"
-            >
+            <Badge key={index} variant="outline" className="shrink-0 px-3 py-1 text-slate-500">
               {item}
-            </Chip>
+            </Badge>
           ))}
         </div>
       </div>
-
-      {/* Feature tiles */}
-      <section className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        <FeatureTile
-          title="Announcements"
-          subtitle="News from the academic office"
-          icon={<FiVolume2 size={20} />}
-          onClick={scrollToAnnouncement}
-        />
-        <FeatureTile
-          title="Academics"
-          subtitle="All academic documents and lectures"
-          icon={<FiBookOpen size={20} />}
-          onClick={() => router.push('/subjects')}
-        />
-        <FeatureTile
-          title="Learning Hub"
-          subtitle="Curated paths and revision materials"
-          icon={<FiLayers size={20} />}
-          badge="Coming Soon"
-          onClick={() => router.push('/learning-hub')}
-        />
-        <FeatureTile
-          title="About Us"
-          subtitle="Get to know the team behind the portal"
-          icon={<FiUsers size={20} />}
-          onClick={() => router.push('/about-us')}
-        />
-      </section>
 
       {/* Calendar */}
       <section id="calendar" className="scroll-mt-24">

@@ -1,13 +1,28 @@
 /**
  * Announcements List Page
- * Admin management of system announcements
- */import { List, useTable, EditButton, DeleteButton } from '@refinedev/antd';
-import { Button, Input, Select, Space, Table, Tag } from 'antd';import { useCallback, useEffect, useRef, useState } from 'react';import type { Announcement } from '@medical-portal/shared';import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
+ * Admin management of system announcements.
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useDelete, useTable } from '@refinedev/core';
+import { Plus, Pencil, Megaphone } from 'lucide-react';
+import type { Announcement } from '@medical-portal/shared';
+import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
+import { useTableSorting } from '../../utils/use-table-sorting';
+import { PageHeader } from '@/components/ui/page-header';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { ConfirmButton } from '@/components/ui/confirm-button';
+import { AdminEmptyState } from '../../components/AdminEmptyState';
+import { DataTable, type ColumnDef } from '@/components/ui/data-table';
 
 const AnnouncementsList = () => {
-  const { tableProps, setFilters, filters } = useTable<Announcement>({
-    syncWithLocation: true,
-  });
+  const { tableQueryResult, current, setCurrent, pageSize, pageCount, setFilters, filters, sorters, setSorters } =
+    useTable<Announcement>({ resource: 'announcements', syncWithLocation: true });
+  const { sorting, onSortingChange } = useTableSorting(sorters, setSorters);
+  const { mutate: deleteOne } = useDelete();
 
   const [search, setSearch] = useState('');
   const [isPublished, setIsPublished] = useState<string | undefined>(undefined);
@@ -15,42 +30,30 @@ const AnnouncementsList = () => {
   const debouncedSearch = useDebouncedValue(search, 350);
   const hasHydratedFromUrl = useRef(false);
 
-  const buildFilters = useCallback((searchValue: string) => {
-    const nextFilters: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
-
-    if (searchValue.trim()) {
-      nextFilters.push({ field: 'search', operator: 'contains', value: searchValue.trim() });
-    }
-    if (isPublished !== undefined) {
-      nextFilters.push({ field: 'is_published', operator: 'eq', value: isPublished });
-    }
-    if (isPinned !== undefined) {
-      nextFilters.push({ field: 'is_pinned', operator: 'eq', value: isPinned });
-    }
-
-    return nextFilters;
-  }, [isPublished, isPinned]);
+  const buildFilters = useCallback(
+    (searchValue: string) => {
+      const next: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
+      if (searchValue.trim()) next.push({ field: 'search', operator: 'contains', value: searchValue.trim() });
+      if (isPublished !== undefined) next.push({ field: 'is_published', operator: 'eq', value: isPublished });
+      if (isPinned !== undefined) next.push({ field: 'is_pinned', operator: 'eq', value: isPinned });
+      return next;
+    },
+    [isPublished, isPinned],
+  );
 
   useEffect(() => {
-    if (hasHydratedFromUrl.current) {
-      return;
-    }
-
+    if (hasHydratedFromUrl.current) return;
     const searchValue = getFilterValue(filters, 'search');
     const publishedValue = getFilterValue(filters, 'is_published');
     const pinnedValue = getFilterValue(filters, 'is_pinned');
-
     setSearch(typeof searchValue === 'string' ? searchValue : '');
     setIsPublished(typeof publishedValue === 'string' ? publishedValue : undefined);
     setIsPinned(typeof pinnedValue === 'string' ? pinnedValue : undefined);
-
     hasHydratedFromUrl.current = true;
   }, [filters]);
 
   useEffect(() => {
-    if (!hasHydratedFromUrl.current) {
-      return;
-    }
+    if (!hasHydratedFromUrl.current) return;
     setFilters(buildFilters(debouncedSearch), 'replace');
   }, [buildFilters, debouncedSearch, setFilters]);
 
@@ -61,90 +64,126 @@ const AnnouncementsList = () => {
     setFilters([], 'replace');
   };
 
-  return (
-    <List createButtonProps={{ children: 'Create' }}>
-      <Space wrap size="small" style={{ marginBottom: 12 }} className="resource-filter-bar">
-        <Input.Search
-          className="resource-filter-control"
-          allowClear
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder={'Search'}
-          style={{ width: 220 }}
-        />
-        <Select
-          className="resource-filter-control"
-          allowClear
-          value={isPublished}
-          onChange={(value) => setIsPublished(value)}
-          placeholder={'Status'}
-          style={{ width: 150 }}
-          options={[
-            { label: 'Published', value: 'true' },
-            { label: 'Draft', value: 'false' },
-          ]}
-        />
-        <Select
-          className="resource-filter-control"
-          allowClear
-          value={isPinned}
-          onChange={(value) => setIsPinned(value)}
-          placeholder={'Pinned'}
-          style={{ width: 150 }}
-          options={[
-            { label: 'Pinned', value: 'true' },
-            { label: 'Not Pinned', value: 'false' },
-          ]}
-        />
-        <Button className="resource-filter-button" onClick={resetFilters}>{'Clear'}</Button>
-      </Space>
+  const columns: ColumnDef<Announcement, unknown>[] = useMemo(
+    () => [
+      { accessorKey: 'title', header: 'Title' },
+      {
+        accessorKey: 'is_published',
+        header: 'Status',
+        cell: ({ getValue }) =>
+          getValue() ? <Badge variant="success">Published</Badge> : <Badge variant="neutral">Draft</Badge>,
+      },
+      {
+        accessorKey: 'is_pinned',
+        header: 'Pinned',
+        cell: ({ getValue }) => (getValue() ? <Badge variant="warning">📌 Pinned</Badge> : <span className="text-slate-400">—</span>),
+      },
+      {
+        accessorKey: 'created_at',
+        header: 'Created',
+        cell: ({ getValue }) => new Date(getValue() as string).toLocaleDateString(),
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <Button asChild size="sm" variant="secondary">
+              <Link to={`/announcements/edit/${row.original.id}`}>
+                <Pencil />
+                Edit
+              </Link>
+            </Button>
+            <ConfirmButton
+              title="Delete announcement?"
+              description="You can undo this within a few seconds."
+              confirmLabel="Delete"
+              onConfirm={() => deleteOne({ resource: 'announcements', id: row.original.id })}
+              trigger={
+                <Button size="sm" variant="danger-ghost">
+                  Delete
+                </Button>
+              }
+            />
+          </div>
+        ),
+      },
+    ],
+    [deleteOne],
+  );
 
-      <Table
-        {...tableProps}
-        rowKey="id"
-        size="small"
-        scroll={{ x: 'max-content' }}
-      >
-        <Table.Column dataIndex="title" title={'Title'} ellipsis />
-        <Table.Column
-          dataIndex="is_published"
-          title={'Published'}
-          width={110}
-          render={(value) => (
-            <Tag color={value ? 'green' : 'default'}>
-              {value ? 'Published' : 'Draft'}
-            </Tag>
-          )}
+  return (
+    <div>
+      <PageHeader
+        title="Announcements"
+        description="Publish and pin announcements for students."
+        actions={
+          <Button asChild>
+            <Link to="/announcements/create">
+              <Plus />
+              Create
+            </Link>
+          </Button>
+        }
+      />
+
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200/70 bg-white p-4 shadow-subtle">
+        <Input
+          className="w-full sm:w-60"
+          placeholder="Search announcements…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
         />
-        <Table.Column
-          dataIndex="is_pinned"
-          title={'Pinned'}
-          width={90}
-          render={(value) => (
-            <Tag color={value ? 'gold' : 'default'}>
-              {value ? '📌 ' + 'Pinned' : '-'}
-            </Tag>
-          )}
-        />
-        <Table.Column
-          dataIndex="created_at"
-          title={'Created'}
-          width={130}
-          render={(value) => new Date(value).toLocaleDateString()}
-        />
-        <Table.Column
-          title={'Actions'}
-          fixed="right"
-          width={120}
-          render={(_, record: Announcement) => (
-            <Space size="small">
-              <EditButton hideText size="small" recordItemId={record.id} />
-              <DeleteButton hideText size="small" recordItemId={record.id} />
-            </Space>
-          )}
-        />
-      </Table>
-    </List>
+        <div className="w-full sm:w-40">
+          <Select value={isPublished ?? '__all'} onValueChange={(v) => setIsPublished(v === '__all' ? undefined : v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">All status</SelectItem>
+              <SelectItem value="true">Published</SelectItem>
+              <SelectItem value="false">Draft</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="w-full sm:w-40">
+          <Select value={isPinned ?? '__all'} onValueChange={(v) => setIsPinned(v === '__all' ? undefined : v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Pinned" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">All</SelectItem>
+              <SelectItem value="true">Pinned</SelectItem>
+              <SelectItem value="false">Not pinned</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button variant="ghost" size="sm" onClick={resetFilters}>
+          Clear
+        </Button>
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={tableQueryResult?.data?.data ?? []}
+        loading={tableQueryResult?.isLoading}
+        getRowId={(row) => row.id}
+        pageIndex={current - 1}
+        pageSize={pageSize}
+        pageCount={pageCount}
+        total={tableQueryResult?.data?.total}
+        onPageChange={(idx) => setCurrent(idx + 1)}
+        sorting={sorting}
+        onSortingChange={onSortingChange}
+        emptyState={
+          <AdminEmptyState
+            icon={<Megaphone />}
+            title="No announcements yet"
+            subtitle="Create your first announcement to reach students."
+          />
+        }
+      />
+    </div>
   );
 };
 

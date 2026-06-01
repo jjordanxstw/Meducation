@@ -1,25 +1,22 @@
-import { notification } from 'antd';
+import { toast } from 'sonner';
 
 /**
- * Centralised notification helper for the admin panel. Standardises placement
- * so every toast looks consistent regardless of where it is triggered (form
- * submits, deletes, copy actions, session expiry). Styling follows the active
- * Ant Design (light) theme.
+ * Centralised notification helper for the admin panel. Backed by sonner so
+ * every toast looks consistent regardless of where it is triggered (form
+ * submits, deletes, copy actions, session expiry).
  */
-notification.config({ placement: 'bottomRight' });
-
 export const notify = {
   success(message: string, description?: string) {
-    notification.success({ message, description });
+    toast.success(message, { description });
   },
   error(message: string, description?: string) {
-    notification.error({ message, description });
+    toast.error(message, { description });
   },
   info(message: string, description?: string) {
-    notification.info({ message, description });
+    toast.info(message, { description });
   },
   warning(message: string, description?: string) {
-    notification.warning({ message, description });
+    toast.warning(message, { description });
   },
 };
 

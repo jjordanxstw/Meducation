@@ -179,6 +179,20 @@ export const ERROR_DEFINITIONS: Record<ErrorCode, ErrorDefinition> = {
     category: 'RESOURCE',
     httpStatus: 409,
   },
+  [ErrorCode.CALENDAR_EVENT_TYPE_IN_USE]: {
+    code: ErrorCode.CALENDAR_EVENT_TYPE_IN_USE,
+    i18nKey: 'errors.calendar.eventTypeInUse',
+    defaultMessage: 'There are events on this type. Please delete all events of this type first.',
+    category: 'RESOURCE',
+    httpStatus: 409,
+  },
+  [ErrorCode.CALENDAR_EVENT_TYPE_NAME_DUPLICATE]: {
+    code: ErrorCode.CALENDAR_EVENT_TYPE_NAME_DUPLICATE,
+    i18nKey: 'errors.calendar.eventTypeNameDuplicate',
+    defaultMessage: 'An event type with this name already exists',
+    category: 'RESOURCE',
+    httpStatus: 409,
+  },
   [ErrorCode.ANNOUNCEMENT_NOT_FOUND]: {
     code: ErrorCode.ANNOUNCEMENT_NOT_FOUND,
     i18nKey: 'errors.announcement.notFound',

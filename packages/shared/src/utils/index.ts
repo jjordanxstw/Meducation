@@ -3,7 +3,7 @@
  * Common utility functions used across all apps
  */
 
-import { ResourceType, EventType, UserRole } from '../types';
+import { ResourceType, UserRole } from '../types';
 
 // =====================================================
 // CURSOR PAGINATION UTILITIES
@@ -269,31 +269,8 @@ export function formatDuration(seconds: number | null): string {
 // CALENDAR UTILITIES
 // =====================================================
 
-/**
- * Get color for calendar event type
- */
-export function getEventTypeColor(type: EventType): string {
-  const colors: Record<EventType, string> = {
-    [EventType.EXAM]: '#DC2626',     // Red
-    [EventType.LECTURE]: '#0070F3',  // Blue
-    [EventType.HOLIDAY]: '#16A34A',  // Green
-    [EventType.EVENT]: '#7C3AED',    // Purple
-  };
-  return colors[type] || '#666666';
-}
-
-/**
- * Get Thai label for event type
- */
-export function getEventTypeLabel(type: EventType): string {
-  const labels: Record<EventType, string> = {
-    [EventType.EXAM]: 'Exam',
-    [EventType.LECTURE]: 'Lecture',
-    [EventType.HOLIDAY]: 'Holiday',
-    [EventType.EVENT]: 'Event',
-  };
-  return labels[type] || type;
-}
+// Event-type color/label come from the admin-managed event_types table now,
+// resolved per event by the API — no hardcoded enum maps here.
 
 // =====================================================
 // USER UTILITIES
@@ -434,13 +411,6 @@ export const RESOURCE_TYPE_LABELS: Record<ResourceType, string> = {
   [ResourceType.GDRIVE_VIDEO]: 'Google Drive Video',
   [ResourceType.GDRIVE_PDF]: 'Google Drive PDF',
   [ResourceType.EXTERNAL]: 'External Link',
-};
-
-export const EVENT_TYPE_LABELS: Record<EventType, string> = {
-  [EventType.EXAM]: 'Examination',
-  [EventType.LECTURE]: 'Lecture',
-  [EventType.HOLIDAY]: 'Holiday',
-  [EventType.EVENT]: 'Event',
 };
 
 export const THEME_COLORS = {

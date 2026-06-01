@@ -1,10 +1,9 @@
 'use client';
 
 import { QueryClientProvider } from '@tanstack/react-query';
-import { HeroUIProvider } from '@heroui/react';
 import { SessionProvider } from 'next-auth/react';
 import { ReactNode, useEffect, useRef, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { createQueryClient } from '../lib/queryClient';
 import { useAuthStore } from '@/stores/auth.store';
@@ -37,15 +36,12 @@ function AuthStoreBridge({ children }: { children: ReactNode }) {
 export function Providers({ children }: { children: ReactNode }) {
   // Use useState to avoid recreating QueryClient on every render
   const [queryClient] = useState(() => createQueryClient());
-  const router = useRouter();
 
   return (
     <SessionProvider>
       <QueryClientProvider client={queryClient}>
-        <HeroUIProvider navigate={router.push}>
-          <TopLoadingBar />
-          <AuthStoreBridge>{children}</AuthStoreBridge>
-        </HeroUIProvider>
+        <TopLoadingBar />
+        <AuthStoreBridge>{children}</AuthStoreBridge>
       </QueryClientProvider>
     </SessionProvider>
   );

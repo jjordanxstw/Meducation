@@ -24,6 +24,7 @@ const ADMIN_RESOURCE_SET = new Set([
   'lectures',
   'resources',
   'calendar',
+  'event-types',
   'announcements',
   'profiles',
   'audit-logs',

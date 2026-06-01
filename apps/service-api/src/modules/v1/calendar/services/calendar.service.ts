@@ -78,22 +78,18 @@ export class CalendarService {
       return;
     }
 
+    const startTime = (payload.start_time as string | null | undefined) || null;
+    const endTime = (payload.end_time as string | null | undefined) || null;
+
     const overlapQuery = this.supabaseAdmin
       .from('calendar_events')
-      .select('id')
-      .eq('subject_id', subjectId)
-      .limit(1);
+      .select('id, start_date, end_date, start_time, end_time')
+      .eq('subject_id', subjectId);
 
-    // Event overlaps if: existing start_date <= our end_date AND existing end_date >= our start_date
-    if (endDate) {
-      overlapQuery.lte('start_date', endDate);
-      // existing end_date >= startDate: handle NULL end_date (treat as same-day)
-      overlapQuery.or(`end_date.gte.${startDate},end_date.is.null`);
-    } else {
-      // Single-day event: check if it falls within any existing event range or same day
-      overlapQuery.lte('start_date', startDate);
-      overlapQuery.or(`end_date.gte.${startDate},end_date.is.null`);
-    }
+    // Date overlap if: existing start_date <= our end_date AND existing end_date >= our start_date
+    overlapQuery.lte('start_date', endDate ?? startDate);
+    // existing end_date >= startDate: handle NULL end_date (treat as same-day)
+    overlapQuery.or(`end_date.gte.${startDate},end_date.is.null`);
 
     if (options?.excludeId) {
       overlapQuery.neq('id', options.excludeId);
@@ -110,12 +106,68 @@ export class CalendarService {
       );
     }
 
-    if (overlapRows && overlapRows.length > 0) {
+    const newSingleDay = !endDate || endDate === startDate;
+
+    const conflict = (overlapRows ?? []).find((row) => {
+      const rowSingleDay = !row.end_date || row.end_date === row.start_date;
+      const sameDay = row.start_date === startDate;
+      const bothTimed = !!startTime && !!row.start_time;
+
+      // Two timed events confined to the same single day only conflict when
+      // their time ranges actually overlap — otherwise they can coexist.
+      if (newSingleDay && rowSingleDay && sameDay && bothTimed) {
+        return this.timeRangesOverlap(startTime, endTime, row.start_time, row.end_time);
+      }
+
+      // All-day or multi-day involvement keeps the date-level conflict.
+      return true;
+    });
+
+    if (conflict) {
       throw new AppException(
         ErrorCode.CALENDAR_EVENT_DATE_CONFLICT,
-        { conflictingEventId: overlapRows[0].id },
+        { conflictingEventId: conflict.id },
       );
     }
+  }
+
+  /** Half-open interval overlap on `HH:mm[:ss]` times; missing end = a point. */
+  private timeRangesOverlap(
+    aStart: string | null,
+    aEnd: string | null,
+    bStart: string | null,
+    bEnd: string | null,
+  ): boolean {
+    const hm = (t: string | null) => (t ? t.slice(0, 5) : null);
+    const aS = hm(aStart);
+    const bS = hm(bStart);
+    if (!aS || !bS) return true;
+    const aE = hm(aEnd) ?? aS;
+    const bE = hm(bEnd) ?? bS;
+    return aS < bE && bS < aE;
+  }
+
+  /** name → color map from the admin-managed event_types table. */
+  private async loadTypeColorMap(): Promise<Record<string, string>> {
+    const { data } = await this.supabaseAdmin.from('event_types').select('name, color');
+    const map: Record<string, string> = {};
+    (data ?? []).forEach((row: { name?: string; color?: string }) => {
+      if (row.name) map[row.name] = row.color ?? '';
+    });
+    return map;
+  }
+
+  /** Resolve each event's display color: its own override, else its type color. */
+  private async withResolvedColors<T extends { type?: string; color?: string | null }>(
+    events: T[] | null | undefined,
+  ): Promise<T[]> {
+    const rows = events ?? [];
+    if (rows.length === 0) return rows;
+    const map = await this.loadTypeColorMap();
+    return rows.map((event) => ({
+      ...event,
+      color: event.color ?? (event.type ? map[event.type] ?? null : null),
+    }));
   }
 
   private resolveSort(
@@ -182,7 +234,7 @@ export class CalendarService {
     if (shouldPaginate) {
       const total = count ?? 0;
       return {
-        data: data ?? [],
+        data: await this.withResolvedColors(data),
         pagination: {
           page: safePage,
           pageSize: safePageSize,
@@ -192,7 +244,7 @@ export class CalendarService {
       };
     }
 
-    return data;
+    return this.withResolvedColors(data);
   }
 
   async getByMonth(year: number, month: number) {
@@ -212,7 +264,7 @@ export class CalendarService {
       throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'calendar_event' }, 'Failed to fetch calendar events');
     }
 
-    return data;
+    return this.withResolvedColors(data);
   }
 
   async getUpcoming(limit: number = 10) {
@@ -230,7 +282,7 @@ export class CalendarService {
       throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'calendar_event' }, 'Failed to fetch upcoming events');
     }
 
-    return data;
+    return this.withResolvedColors(data);
   }
 
   async findOne(id: string) {
@@ -244,7 +296,8 @@ export class CalendarService {
       throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'calendar_event', id }, 'Calendar event not found');
     }
 
-    return data;
+    const [withColor] = await this.withResolvedColors([data]);
+    return withColor ?? data;
   }
 
   async create(data: any, createdBy: string) {

@@ -1,169 +1,199 @@
 /**
  * Resources List Page
  * Single-page workflow for hierarchy-aware resource management.
- */import { useDataProvider, useDelete, useInvalidate, useList } from '@refinedev/core';import { List, useTable } from '@refinedev/antd';import {
-  App,
-  Button,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Popconfirm,
-  Select,
-  Space,
-  Switch,
-  Table,
-  Tag,
-} from 'antd';import { ResourceType } from '@medical-portal/shared';import { useCallback, useEffect, useRef, useState } from 'react';import { DatabaseOutlined, LinkOutlined, WarningOutlined } from '@ant-design/icons';import type { ResourceWithHierarchy, Section, Subject, Lecture } from '@medical-portal/shared';import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';import { resolveApiErrorMessage } from '../../utils/api-error';import { ResourceTypeTag } from '../../components/ResourceTypeTag';import { AdminEmptyState } from '../../components/AdminEmptyState';import { notify } from '../../utils/notify';
+ * Refine headless core + Tailwind/Radix UI (no Ant Design).
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useDataProvider, useDelete, useInvalidate, useList, useTable } from '@refinedev/core';
+import { Database, Share2, ExternalLink, Plus, RotateCcw } from 'lucide-react';
+import { ResourceType } from '@medical-portal/shared';
+import type { ResourceWithHierarchy, Section, Subject, Lecture } from '@medical-portal/shared';
+import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
+import { resolveApiErrorMessage } from '../../utils/api-error';
+import { ResourceTypeTag } from '../../components/ResourceTypeTag';
+import { AdminEmptyState } from '../../components/AdminEmptyState';
+import { notify } from '../../utils/notify';
+import { PageHeader } from '@/components/ui/page-header';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Combobox } from '@/components/ui/combobox';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { DataTable, type ColumnDef, type SortingState } from '@/components/ui/data-table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { ConfirmButton } from '@/components/ui/confirm-button';
+import { cn } from '@/lib/utils';
+
+const RESOURCE_TYPE_OPTIONS = [
+  { label: '🎬 YouTube', value: ResourceType.YOUTUBE },
+  { label: '📹 Google Drive Video', value: ResourceType.GDRIVE_VIDEO },
+  { label: '📄 Google Drive PDF', value: ResourceType.GDRIVE_PDF },
+  { label: '🔗 External Link', value: ResourceType.EXTERNAL },
+];
+
+const TYPE_ACCENT: Record<string, string> = {
+  [ResourceType.YOUTUBE]: '#dc2626',
+  [ResourceType.GDRIVE_VIDEO]: '#1d4ed8',
+  [ResourceType.GDRIVE_PDF]: '#16a34a',
+  [ResourceType.EXTERNAL]: '#7c3aed',
+};
+
+type ResourceFormState = {
+  subject_id?: string;
+  section_id?: string;
+  lecture_id?: string;
+  label: string;
+  type?: string;
+  url: string;
+  order_index: number;
+  is_active: boolean;
+};
+
+const EMPTY_FORM: ResourceFormState = {
+  subject_id: undefined,
+  section_id: undefined,
+  lecture_id: undefined,
+  label: '',
+  type: undefined,
+  url: '',
+  order_index: 0,
+  is_active: true,
+};
 
 const ResourcesList = () => {
-  const { message } = App.useApp();
-  const [form] = Form.useForm();
   const invalidate = useInvalidate();
   const dataProvider = useDataProvider();
   const { mutateAsync: deleteOne } = useDelete();
-  const { tableProps, setFilters, filters, tableQueryResult } = useTable<ResourceWithHierarchy>({
-    syncWithLocation: true,
-  });
 
-  const resourceTypeOptions = [
-    { label: `🎬 ${'YouTube'}`, value: ResourceType.YOUTUBE },
-    { label: `📹 ${'Google Drive Video'}`, value: ResourceType.GDRIVE_VIDEO },
-    { label: `📄 ${'Google Drive PDF'}`, value: ResourceType.GDRIVE_PDF },
-    { label: `🔗 ${'External Link'}`, value: ResourceType.EXTERNAL },
-  ];
+  const {
+    tableQueryResult,
+    current,
+    setCurrent,
+    pageSize,
+    pageCount,
+    sorters,
+    setSorters,
+    filters,
+    setFilters,
+  } = useTable<ResourceWithHierarchy>({ resource: 'resources', syncWithLocation: true });
 
+  const rows = tableQueryResult?.data?.data ?? [];
+  const total = tableQueryResult?.data?.total ?? 0;
+
+  // Filter bar state.
   const [search, setSearch] = useState('');
   const [subjectId, setSubjectId] = useState<string | undefined>(undefined);
   const [sectionId, setSectionId] = useState<string | undefined>(undefined);
   const [lectureId, setLectureId] = useState<string | undefined>(undefined);
   const [resourceType, setResourceType] = useState<string | undefined>(undefined);
   const [isActive, setIsActive] = useState<boolean | undefined>(undefined);
+  const debouncedSearch = useDebouncedValue(search, 350);
+  const hasHydratedFromUrl = useRef(false);
+
+  // Create/edit modal state.
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingResource, setEditingResource] = useState<ResourceWithHierarchy | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formShake, setFormShake] = useState(false);
-  const [modalSubjectSearchText, setModalSubjectSearchText] = useState('');
-  const [modalSectionSearchText, setModalSectionSearchText] = useState('');
-  const [modalLectureSearchText, setModalLectureSearchText] = useState('');
-  const debouncedSearch = useDebouncedValue(search, 350);
-  const hasHydratedFromUrl = useRef(false);
+  const [form, setForm] = useState<ResourceFormState>(EMPTY_FORM);
+  // Free-text names used when creating subject/section/lecture inline.
+  const [subjectText, setSubjectText] = useState('');
+  const [sectionText, setSectionText] = useState('');
+  const [lectureText, setLectureText] = useState('');
 
-  // Quick create states
+  // Quick-create modal state.
   const [quickCreateType, setQuickCreateType] = useState<'subject' | 'section' | 'lecture' | null>(null);
-  const [quickCreateForm] = Form.useForm();
   const [isQuickCreateSubmitting, setIsQuickCreateSubmitting] = useState(false);
+  const [qcCode, setQcCode] = useState('');
+  const [qcName, setQcName] = useState('');
+  const [qcYear, setQcYear] = useState('1');
+  const [qcSubjectId, setQcSubjectId] = useState<string | undefined>(undefined);
+  const [qcSectionName, setQcSectionName] = useState('');
+  const [qcLectureTitle, setQcLectureTitle] = useState('');
 
-  const { data: subjectsData } = useList<Subject>({
-    resource: 'subjects',
-  });
-  const { data: sectionsData } = useList<Section>({
+  const setFormField = useCallback(
+    <K extends keyof ResourceFormState>(key: K, value: ResourceFormState[K]) =>
+      setForm((prev) => ({ ...prev, [key]: value })),
+    [],
+  );
+
+  // Reference data for dropdowns.
+  const { data: subjectsData } = useList<Subject>({ resource: 'subjects', pagination: { mode: 'off' } });
+  const { data: filterSectionsData } = useList<Section>({
     resource: 'sections',
     filters: subjectId ? [{ field: 'subject_id', operator: 'eq', value: subjectId }] : [],
-    queryOptions: {
-      enabled: !!subjectId,
-    },
+    queryOptions: { enabled: !!subjectId },
   });
-  const { data: lecturesData } = useList<Lecture>({
+  const { data: filterLecturesData } = useList<Lecture>({
     resource: 'lectures',
     filters: sectionId ? [{ field: 'section_id', operator: 'eq', value: sectionId }] : [],
-    queryOptions: {
-      enabled: !!sectionId,
-    },
+    queryOptions: { enabled: !!sectionId },
   });
 
-  const subjects = subjectsData?.data || [];
-  const sections = sectionsData?.data || [];
-  const lectures = lecturesData?.data || [];
-  const quickCreateSubjectId = Form.useWatch('subject_id', quickCreateForm);
+  const subjects = subjectsData?.data ?? [];
+  const filterSections = filterSectionsData?.data ?? [];
+  const filterLectures = filterLecturesData?.data ?? [];
 
-  const modalSubjectId = Form.useWatch('subject_id', form);
-  const modalSectionId = Form.useWatch('section_id', form);
-  const modalType = Form.useWatch('type', form);
-
-  const typeAccent: Record<string, string> = {
-    [ResourceType.YOUTUBE]: '#dc2626',
-    [ResourceType.GDRIVE_VIDEO]: '#1d4ed8',
-    [ResourceType.GDRIVE_PDF]: '#16a34a',
-    [ResourceType.EXTERNAL]: '#7c3aed',
-  };
-
-  const { data: quickCreateSectionsData } = useList<Section>({
-    resource: 'sections',
-    filters: quickCreateSubjectId ? [{ field: 'subject_id', operator: 'eq', value: quickCreateSubjectId }] : [],
-    queryOptions: {
-      enabled: !!quickCreateSubjectId,
-    },
-  });
-
+  // Modal cascading reference data.
   const { data: modalSectionsData, isFetching: modalSectionsFetching } = useList<Section>({
     resource: 'sections',
-    filters: modalSubjectId ? [{ field: 'subject_id', operator: 'eq', value: modalSubjectId }] : [],
-    queryOptions: {
-      enabled: !!modalSubjectId,
-    },
+    filters: form.subject_id ? [{ field: 'subject_id', operator: 'eq', value: form.subject_id }] : [],
+    queryOptions: { enabled: !!form.subject_id },
   });
   const { data: modalLecturesData, isFetching: modalLecturesFetching } = useList<Lecture>({
     resource: 'lectures',
-    filters: modalSectionId ? [{ field: 'section_id', operator: 'eq', value: modalSectionId }] : [],
-    queryOptions: {
-      enabled: !!modalSectionId,
-    },
+    filters: form.section_id ? [{ field: 'section_id', operator: 'eq', value: form.section_id }] : [],
+    queryOptions: { enabled: !!form.section_id },
+  });
+  const { data: qcSectionsData } = useList<Section>({
+    resource: 'sections',
+    filters: qcSubjectId ? [{ field: 'subject_id', operator: 'eq', value: qcSubjectId }] : [],
+    queryOptions: { enabled: !!qcSubjectId },
   });
 
   const modalSections = modalSectionsData?.data ?? [];
   const modalLectures = modalLecturesData?.data ?? [];
-  const quickCreateSections = quickCreateSectionsData?.data ?? [];
+  const qcSections = qcSectionsData?.data ?? [];
 
-  const buildFilters = useCallback((searchValue: string) => {
-    const nextFilters: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
-    if (searchValue.trim()) {
-      nextFilters.push({ field: 'search', operator: 'contains', value: searchValue.trim() });
-    }
-    if (subjectId) {
-      nextFilters.push({ field: 'subject_id', operator: 'eq', value: subjectId });
-    }
-    if (sectionId) {
-      nextFilters.push({ field: 'section_id', operator: 'eq', value: sectionId });
-    }
-    if (lectureId) {
-      nextFilters.push({ field: 'lecture_id', operator: 'eq', value: lectureId });
-    }
-    if (resourceType) {
-      nextFilters.push({ field: 'type', operator: 'eq', value: resourceType });
-    }
-    if (typeof isActive === 'boolean') {
-      nextFilters.push({ field: 'is_active', operator: 'eq', value: isActive });
-    }
-    return nextFilters;
-  }, [isActive, lectureId, resourceType, sectionId, subjectId]);
+  const subjectOptions = subjects.map((s) => ({ value: s.id, label: `${s.code} - ${s.name}` }));
+
+  // --- Filters → Refine ---
+  const buildFilters = useCallback(
+    (searchValue: string) => {
+      const next: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
+      if (searchValue.trim()) next.push({ field: 'search', operator: 'contains', value: searchValue.trim() });
+      if (subjectId) next.push({ field: 'subject_id', operator: 'eq', value: subjectId });
+      if (sectionId) next.push({ field: 'section_id', operator: 'eq', value: sectionId });
+      if (lectureId) next.push({ field: 'lecture_id', operator: 'eq', value: lectureId });
+      if (resourceType) next.push({ field: 'type', operator: 'eq', value: resourceType });
+      if (typeof isActive === 'boolean') next.push({ field: 'is_active', operator: 'eq', value: isActive });
+      return next;
+    },
+    [isActive, lectureId, resourceType, sectionId, subjectId],
+  );
 
   useEffect(() => {
-    if (hasHydratedFromUrl.current) {
-      return;
-    }
-
-    const searchValue = getFilterValue(filters, 'search');
-    const subjectValue = getFilterValue(filters, 'subject_id');
-    const sectionValue = getFilterValue(filters, 'section_id');
-    const lectureValue = getFilterValue(filters, 'lecture_id');
-    const typeValue = getFilterValue(filters, 'type');
+    if (hasHydratedFromUrl.current) return;
+    setSearch(typeof getFilterValue(filters, 'search') === 'string' ? (getFilterValue(filters, 'search') as string) : '');
+    setSubjectId(typeof getFilterValue(filters, 'subject_id') === 'string' ? (getFilterValue(filters, 'subject_id') as string) : undefined);
+    setSectionId(typeof getFilterValue(filters, 'section_id') === 'string' ? (getFilterValue(filters, 'section_id') as string) : undefined);
+    setLectureId(typeof getFilterValue(filters, 'lecture_id') === 'string' ? (getFilterValue(filters, 'lecture_id') as string) : undefined);
+    setResourceType(typeof getFilterValue(filters, 'type') === 'string' ? (getFilterValue(filters, 'type') as string) : undefined);
     const activeValue = getFilterValue(filters, 'is_active');
-
-    setSearch(typeof searchValue === 'string' ? searchValue : '');
-    setSubjectId(typeof subjectValue === 'string' ? subjectValue : undefined);
-    setSectionId(typeof sectionValue === 'string' ? sectionValue : undefined);
-    setLectureId(typeof lectureValue === 'string' ? lectureValue : undefined);
-    setResourceType(typeof typeValue === 'string' ? typeValue : undefined);
     setIsActive(typeof activeValue === 'boolean' ? activeValue : undefined);
-
     hasHydratedFromUrl.current = true;
   }, [filters]);
 
   useEffect(() => {
-    if (!hasHydratedFromUrl.current) {
-      return;
-    }
+    if (!hasHydratedFromUrl.current) return;
     setFilters(buildFilters(debouncedSearch), 'replace');
   }, [buildFilters, debouncedSearch, setFilters]);
 
@@ -181,28 +211,35 @@ const ResourcesList = () => {
     setFilters([], 'replace');
   };
 
+  // --- Sorting ---
+  const sorting: SortingState = useMemo(
+    () => sorters.filter((s) => s.order).map((s) => ({ id: s.field, desc: s.order === 'desc' })),
+    [sorters],
+  );
+  const handleSortingChange = (updater: SortingState | ((old: SortingState) => SortingState)) => {
+    const next = typeof updater === 'function' ? updater(sorting) : updater;
+    setSorters(next.map((s) => ({ field: s.id, order: s.desc ? 'desc' : 'asc' })));
+  };
+
+  // --- Modal open/close ---
   const openCreateModal = () => {
     setEditingResource(null);
-    setModalSubjectSearchText('');
-    setModalSectionSearchText('');
-    setModalLectureSearchText('');
-    form.resetFields();
-    form.setFieldsValue({
-      order_index: 0,
-      is_active: true,
-    });
+    setForm(EMPTY_FORM);
+    setSubjectText('');
+    setSectionText('');
+    setLectureText('');
     setIsModalOpen(true);
   };
 
   const openEditModal = (record: ResourceWithHierarchy) => {
     setEditingResource(record);
-    setModalSubjectSearchText('');
-    setModalSectionSearchText('');
-    setModalLectureSearchText('');
-    form.setFieldsValue({
+    setSubjectText('');
+    setSectionText('');
+    setLectureText('');
+    setForm({
       subject_id: record.subject_id || undefined,
       section_id: record.section_id || undefined,
-      lecture_id: record.lecture_id,
+      lecture_id: record.lecture_id || undefined,
       label: record.label,
       type: record.type,
       url: record.url,
@@ -212,272 +249,270 @@ const ResourcesList = () => {
     setIsModalOpen(true);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingResource(null);
-    setModalSubjectSearchText('');
-    setModalSectionSearchText('');
-    setModalLectureSearchText('');
-  };
-
-  // Quick create handlers
-  const openQuickCreateModal = (type: 'subject' | 'section' | 'lecture') => {
-    setQuickCreateType(type);
-    quickCreateForm.resetFields();
-    if (type === 'section' && modalSubjectId) {
-      quickCreateForm.setFieldValue('subject_id', modalSubjectId);
-    }
-    if (type === 'lecture') {
-      if (modalSubjectId) {
-        quickCreateForm.setFieldValue('subject_id', modalSubjectId);
-      }
-      if (modalSectionId) {
-        quickCreateForm.setFieldValue('section_id', modalSectionId);
-      }
-    }
-  };
-
-  const closeQuickCreateModal = () => {
-    setQuickCreateType(null);
-    quickCreateForm.resetFields();
-  };
-
-  const handleQuickCreate = async () => {
-    try {
-      const values = await quickCreateForm.validateFields();
-      setIsQuickCreateSubmitting(true);
-
-      const provider = dataProvider();
-      if (!provider?.custom) {
-        throw new Error('Data provider custom method is not available');
-      }
-
-      if (quickCreateType === 'subject') {
-        await provider.custom({
-          url: '/api/v1/admin/subjects',
-          method: 'post',
-          payload: { code: values.code, name: values.name, year_level: values.year_level },
-        });
-        message.success('Created successfully');
-      } else if (quickCreateType === 'section') {
-        await provider.custom({
-          url: '/api/v1/admin/sections',
-          method: 'post',
-          payload: { subject_id: values.subject_id, name: values.name },
-        });
-        message.success('Created successfully');
-      } else if (quickCreateType === 'lecture') {
-        await provider.custom({
-          url: '/api/v1/admin/lectures',
-          method: 'post',
-          payload: {
-            subject_id: values.subject_id,
-            section_id: values.section_id,
-            title: values.title,
-          },
-        });
-        message.success('Created successfully');
-      }
-
-      await Promise.all([
-        invalidate({ resource: 'subjects', invalidates: ['list'] }),
-        invalidate({ resource: 'sections', invalidates: ['list'] }),
-        invalidate({ resource: 'lectures', invalidates: ['list'] }),
-      ]);
-
-      closeQuickCreateModal();
-    } catch (error) {
-      if (
-        error &&
-        typeof error === 'object' &&
-        'errorFields' in error &&
-        Array.isArray((error as { errorFields?: unknown[] }).errorFields)
-      ) {
-        return;
-      }
-      const errorMessage = resolveApiErrorMessage(error, 'notifications.error');
-      message.error(errorMessage);
-    } finally {
-      setIsQuickCreateSubmitting(false);
-    }
-  };
-
   const handleDelete = async (id: string) => {
     await deleteOne({
       resource: 'resources',
       id,
-      successNotification: {
-        message: 'Deleted successfully',
-        type: 'success',
-      },
-      errorNotification: {
-        message: 'Failed to delete',
-        type: 'error',
-      },
+      successNotification: { message: 'Deleted successfully', type: 'success' },
+      errorNotification: { message: 'Failed to delete', type: 'error' },
     });
     await invalidate({ resource: 'resources', invalidates: ['list'] });
   };
 
   const handleSubmit = async () => {
+    // Validation: subject/section/lecture (selected or free text), label, type, url.
+    const subjectOk = form.subject_id || subjectText.trim();
+    const sectionOk = form.section_id || sectionText.trim();
+    const lectureOk = form.lecture_id || lectureText.trim();
+    if (!subjectOk || !sectionOk || !lectureOk || !form.label.trim() || !form.type || !form.url.trim()) {
+      setFormShake(true);
+      window.setTimeout(() => setFormShake(false), 400);
+      return;
+    }
+
+    const payload = {
+      resource_id: editingResource?.id,
+      subject_id: form.subject_id || undefined,
+      subject_name: form.subject_id ? undefined : subjectText.trim(),
+      section_id: form.section_id || undefined,
+      section_name: form.section_id ? undefined : sectionText.trim(),
+      lecture_id: form.lecture_id || undefined,
+      lecture_name: form.lecture_id ? undefined : lectureText.trim(),
+      label: form.label,
+      url: form.url,
+      type: form.type,
+      order_index: form.order_index,
+      is_active: form.is_active,
+    };
+
+    setIsSubmitting(true);
     try {
-      const values = await form.validateFields();
-
-      const subjectText = modalSubjectSearchText.trim();
-      const sectionText = modalSectionSearchText.trim();
-      const lectureText = modalLectureSearchText.trim();
-
-      const payload = {
-        resource_id: editingResource?.id,
-        subject_id: values.subject_id || undefined,
-        subject_name: values.subject_id ? undefined : subjectText,
-        section_id: values.section_id || undefined,
-        section_name: values.section_id ? undefined : sectionText,
-        lecture_id: values.lecture_id || undefined,
-        lecture_name: values.lecture_id ? undefined : lectureText,
-        label: values.label,
-        url: values.url,
-        type: values.type,
-        order_index: values.order_index,
-        is_active: values.is_active,
-      };
-
-      setIsSubmitting(true);
       const provider = dataProvider();
-      if (!provider?.custom) {
-        throw new Error('Data provider custom method is not available');
-      }
-
-      await provider.custom({
-        url: '/api/v1/admin/resources/full-create',
-        method: 'post',
-        payload,
-      });
-
-      message.success(
-        editingResource
-          ? 'Updated successfully'
-          : 'Created successfully',
-      );
-
+      if (!provider?.custom) throw new Error('Data provider custom method is not available');
+      await provider.custom({ url: '/api/v1/admin/resources/full-create', method: 'post', payload });
+      notify.success(editingResource ? 'Updated successfully' : 'Created successfully');
       await Promise.all([
         invalidate({ resource: 'resources', invalidates: ['list'] }),
         invalidate({ resource: 'subjects', invalidates: ['list'] }),
         invalidate({ resource: 'sections', invalidates: ['list'] }),
         invalidate({ resource: 'lectures', invalidates: ['list'] }),
       ]);
-
-      closeModal();
+      setIsModalOpen(false);
+      setEditingResource(null);
     } catch (error) {
-      if (
-        error &&
-        typeof error === 'object' &&
-        'errorFields' in error &&
-        Array.isArray((error as { errorFields?: unknown[] }).errorFields)
-      ) {
-        // Validation failure — shake the form to draw attention.
-        setFormShake(true);
-        window.setTimeout(() => setFormShake(false), 400);
-        return;
-      }
-      const errorMessage = resolveApiErrorMessage(error, 'notifications.error');
-      message.error(errorMessage);
+      notify.error(resolveApiErrorMessage(error, 'Could not save the resource. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const openQuickCreate = (type: 'subject' | 'section' | 'lecture') => {
+    setQcCode('');
+    setQcName('');
+    setQcYear('1');
+    setQcSectionName('');
+    setQcLectureTitle('');
+    setQcSubjectId(type === 'subject' ? undefined : form.subject_id);
+    setQuickCreateType(type);
+  };
+
+  const handleQuickCreate = async () => {
+    // Validate before showing the submitting state.
+    if (quickCreateType === 'subject' && (!qcCode.trim() || !qcName.trim())) return;
+    if (quickCreateType === 'section' && (!qcSubjectId || !qcName.trim())) return;
+    if (quickCreateType === 'lecture' && (!qcSubjectId || !qcSectionName || !qcLectureTitle.trim())) return;
+
+    setIsQuickCreateSubmitting(true);
+    try {
+      const provider = dataProvider();
+      if (!provider?.custom) throw new Error('Data provider custom method is not available');
+
+      if (quickCreateType === 'subject') {
+        await provider.custom({
+          url: '/api/v1/admin/subjects',
+          method: 'post',
+          payload: { code: qcCode.trim(), name: qcName.trim(), year_level: Number(qcYear) },
+        });
+      } else if (quickCreateType === 'section') {
+        await provider.custom({
+          url: '/api/v1/admin/sections',
+          method: 'post',
+          payload: { subject_id: qcSubjectId, name: qcName.trim() },
+        });
+      } else if (quickCreateType === 'lecture') {
+        await provider.custom({
+          url: '/api/v1/admin/lectures',
+          method: 'post',
+          payload: { subject_id: qcSubjectId, section_id: qcSectionName, title: qcLectureTitle.trim() },
+        });
+      }
+      notify.success('Created successfully');
+      await Promise.all([
+        invalidate({ resource: 'subjects', invalidates: ['list'] }),
+        invalidate({ resource: 'sections', invalidates: ['list'] }),
+        invalidate({ resource: 'lectures', invalidates: ['list'] }),
+      ]);
+      setQuickCreateType(null);
+    } catch (error) {
+      notify.error(resolveApiErrorMessage(error, 'Could not create the item. Please try again.'));
+    } finally {
+      setIsQuickCreateSubmitting(false);
+    }
+  };
+
+  // --- Columns ---
+  const columns: ColumnDef<ResourceWithHierarchy, unknown>[] = useMemo(
+    () => [
+      {
+        id: 'subject_name',
+        header: 'Subject',
+        enableSorting: true,
+        cell: ({ row }) =>
+          row.original.subject_code && row.original.subject_name
+            ? `${row.original.subject_code} - ${row.original.subject_name}`
+            : '-',
+      },
+      { accessorKey: 'section_name', header: 'Section', enableSorting: true },
+      { accessorKey: 'lecture_title', header: 'Lecture', enableSorting: true },
+      { accessorKey: 'label', header: 'Button Label', enableSorting: true },
+      {
+        accessorKey: 'type',
+        header: 'Type',
+        enableSorting: true,
+        cell: ({ getValue }) => <ResourceTypeTag type={getValue() as string} />,
+      },
+      { accessorKey: 'url', header: 'URL / Video ID', enableSorting: true },
+      { accessorKey: 'order_index', header: 'Order', enableSorting: true },
+      {
+        accessorKey: 'is_active',
+        header: 'Status',
+        enableSorting: true,
+        cell: ({ getValue }) =>
+          getValue() ? <Badge variant="success">Active</Badge> : <Badge variant="danger">Inactive</Badge>,
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="secondary" onClick={() => openEditModal(row.original)}>
+              Edit
+            </Button>
+            <ConfirmButton
+              title="Delete resource?"
+              description="This will remove the resource. You can undo within a few seconds."
+              confirmLabel="Delete"
+              onConfirm={() => void handleDelete(row.original.id)}
+              trigger={
+                <Button size="sm" variant="danger-ghost">
+                  Delete
+                </Button>
+              }
+            />
+          </div>
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   return (
-    <List
-      createButtonProps={{
-        children: 'Create',
-        onClick: openCreateModal,
-      }}
-    >
-      <div className="mb-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <Space wrap size="small" className="resource-filter-bar">
-        <Input.Search
-          className="resource-filter-control"
-          allowClear
+    <div>
+      <PageHeader
+        title="Resources"
+        description="Manage lecture resources across subjects, sections and lectures."
+        actions={
+          <Button onClick={openCreateModal}>
+            <Plus />
+            Create
+          </Button>
+        }
+      />
+
+      {/* Filter bar */}
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200/70 bg-white p-4 shadow-subtle">
+        <Input
+          className="w-full sm:w-60"
+          placeholder="Search resources…"
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder={'Search'}
-          style={{ width: 240 }}
+          onChange={(e) => setSearch(e.target.value)}
         />
-        <Select
-          className="resource-filter-control"
-          allowClear
-          value={subjectId}
-          onChange={(value) => {
-            setSubjectId(value);
-            setSectionId(undefined);
-            setLectureId(undefined);
-          }}
-          placeholder={'Subject'}
-          style={{ width: 280 }}
-          options={subjects.map((subject) => ({
-            label: `${subject.code} - ${subject.name}`,
-            value: subject.id,
-          }))}
-        />
-        <Select
-          className="resource-filter-control"
-          allowClear
-          value={sectionId}
-          onChange={(value) => {
-            setSectionId(value);
-            setLectureId(undefined);
-          }}
-          placeholder={'Section'}
-          style={{ width: 280 }}
-          disabled={!subjectId}
-          options={sections.map((section) => ({
-            label: section.name,
-            value: section.id,
-          }))}
-        />
-        <Select
-          className="resource-filter-control"
-          allowClear
-          value={lectureId}
-          onChange={(value) => setLectureId(value)}
-          placeholder={'Lecture'}
-          style={{ width: 280 }}
-          disabled={!sectionId}
-          options={lectures.map((lecture) => ({
-            label: lecture.title,
-            value: lecture.id,
-          }))}
-        />
-        <Select
-          className="resource-filter-control"
-          allowClear
-          value={resourceType}
-          onChange={(value) => setResourceType(value)}
-          placeholder={'Resource Type'}
-          style={{ width: 220 }}
-          options={resourceTypeOptions}
-        />
-        <Select
-          className="resource-filter-control"
-          allowClear
-          value={isActive}
-          onChange={(value) => setIsActive(value)}
-          placeholder={'Status'}
-          style={{ width: 160 }}
-          options={[
-            { label: 'Active', value: true },
-            { label: 'Inactive', value: false },
-          ]}
-        />
+        <div className="w-full sm:w-64">
+          <Combobox
+            options={subjectOptions}
+            value={subjectId}
+            onChange={(v) => {
+              setSubjectId(v);
+              setSectionId(undefined);
+              setLectureId(undefined);
+            }}
+            placeholder="All subjects"
+          />
+        </div>
+        <div className="w-full sm:w-56">
+          <Combobox
+            options={filterSections.map((s) => ({ value: s.id, label: s.name }))}
+            value={sectionId}
+            onChange={(v) => {
+              setSectionId(v);
+              setLectureId(undefined);
+            }}
+            placeholder="All sections"
+            disabled={!subjectId}
+          />
+        </div>
+        <div className="w-full sm:w-56">
+          <Combobox
+            options={filterLectures.map((l) => ({ value: l.id, label: l.title }))}
+            value={lectureId}
+            onChange={setLectureId}
+            placeholder="All lectures"
+            disabled={!sectionId}
+          />
+        </div>
+        <div className="w-full sm:w-44">
+          <Select
+            value={resourceType ?? '__all'}
+            onValueChange={(v) => setResourceType(v === '__all' ? undefined : v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">All types</SelectItem>
+              {RESOURCE_TYPE_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="w-full sm:w-36">
+          <Select
+            value={isActive === undefined ? '__all' : isActive ? 'active' : 'inactive'}
+            onValueChange={(v) => setIsActive(v === '__all' ? undefined : v === 'active')}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">All status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         {hasActiveFilters && (
-          <Button className="resource-filter-button" type="text" onClick={resetFilters}>
-            {'Clear all'}
+          <Button variant="ghost" size="sm" onClick={resetFilters}>
+            <RotateCcw />
+            Clear all
           </Button>
         )}
         <Button
-          className="resource-filter-button"
-          type="text"
-          icon={<LinkOutlined />}
+          variant="ghost"
+          size="sm"
           onClick={() => {
             void navigator.clipboard
               ?.writeText(window.location.href)
@@ -485,443 +520,294 @@ const ResourcesList = () => {
               .catch(() => notify.error('Could not copy link'));
           }}
         >
-          {'Share filters'}
+          <Share2 />
+          Share filters
         </Button>
-      </Space>
       </div>
 
       {tableQueryResult?.isError ? (
         <AdminEmptyState
-          icon={<WarningOutlined />}
-          title={'Failed to load resources'}
-          subtitle={
-            (tableQueryResult.error as { message?: string } | undefined)?.message ||
-            'Something went wrong'
-          }
+          icon={<Database />}
+          title="Failed to load resources"
+          subtitle={(tableQueryResult.error as { message?: string } | undefined)?.message || 'Something went wrong'}
           action={{ label: 'Retry', onClick: () => void tableQueryResult.refetch() }}
         />
       ) : (
-      <Table
-        {...tableProps}
-        rowKey="id"
-        size="small"
-        scroll={{ x: 'max-content' }}
-        locale={{
-          emptyText: (
+        <DataTable
+          columns={columns}
+          data={rows}
+          loading={tableQueryResult?.isLoading}
+          getRowId={(row) => row.id}
+          pageIndex={current - 1}
+          pageSize={pageSize}
+          pageCount={pageCount}
+          total={total}
+          onPageChange={(idx) => setCurrent(idx + 1)}
+          sorting={sorting}
+          onSortingChange={handleSortingChange}
+          emptyState={
             <AdminEmptyState
-              icon={<DatabaseOutlined />}
-              title={'No resources found'}
-              subtitle={'Adjust your filters or create a new resource.'}
+              icon={<Database />}
+              title="No resources found"
+              subtitle="Adjust your filters or create a new resource."
               action={{ label: 'Create', onClick: openCreateModal }}
             />
-          ),
-        }}
-      >
-        <Table.Column
-          dataIndex="subject_name"
-          title={'Subject'}
-          ellipsis
-          sorter
-          render={(_, record: ResourceWithHierarchy) => (
-            record.subject_code && record.subject_name
-              ? `${record.subject_code} - ${record.subject_name}`
-              : '-'
-          )}
+          }
         />
-        <Table.Column
-          dataIndex="section_name"
-          title={'Section'}
-          ellipsis
-          sorter
-        />
-        <Table.Column
-          dataIndex="lecture_title"
-          title={'Lecture'}
-          ellipsis
-          sorter
-        />
-        <Table.Column dataIndex="label" title={'Button Label'} ellipsis sorter />
-        <Table.Column
-          dataIndex="type"
-          title={'Resource Type'}
-          width={150}
-          sorter
-          render={(value) => <ResourceTypeTag type={value} />}
-        />
-        <Table.Column dataIndex="url" title={'URL / Video ID'} ellipsis sorter />
-        <Table.Column
-          dataIndex="order_index"
-          title={'Order'}
-          width={80}
-          sorter
-        />
-        <Table.Column
-          dataIndex="is_active"
-          title={'Status'}
-          width={100}
-          sorter
-          render={(value) => (
-            <Tag color={value ? 'green' : 'red'}>
-              {value ? 'Active' : 'Inactive'}
-            </Tag>
-          )}
-        />
-        <Table.Column
-          title={'Actions'}
-          fixed="right"
-          width={120}
-          render={(_, record: ResourceWithHierarchy) => (
-            <Space size="small">
-              <Button size="small" onClick={() => openEditModal(record)}>
-                {'Edit'}
-              </Button>
-              <Popconfirm
-                title={'Actions'}
-                description={'Failed to delete'}
-                onConfirm={() => handleDelete(record.id)}
-              >
-                <Button danger size="small">Delete</Button>
-              </Popconfirm>
-            </Space>
-          )}
-        />
-      </Table>
       )}
 
-      <Modal
-        title={
-          <span
-            style={{
-              display: 'inline-block',
-              borderLeft: `4px solid ${typeAccent[modalType] ?? '#0070f3'}`,
-              paddingLeft: 10,
-              fontWeight: 600,
-              fontSize: 18,
-            }}
-          >
-            {editingResource ? 'Edit Resource' : 'Create Resource'}
-          </span>
-        }
-        open={isModalOpen}
-        onCancel={closeModal}
-        onOk={handleSubmit}
-        okText={'Confirm'}
-        cancelText={'Cancel'}
-        confirmLoading={isSubmitting}
-        width={760}
-        destroyOnClose
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          initialValues={{ order_index: 0, is_active: true }}
-          className={formShake ? 'admin-shake' : undefined}
-        >
-          <Form.Item
-            label={<>{'Subject'}</>}
-            name="subject_id"
-            required
-            rules={[
-              {
-                validator: async (_, value) => {
-                  if (value || modalSubjectSearchText.trim()) {
-                    return;
-                  }
-                  throw new Error('Please select subject');
-                },
-              },
-            ]}
-          >
-            <Space.Compact style={{ width: '100%' }}>
-              <Select
-                showSearch
-                allowClear
-                optionFilterProp="label"
-                placeholder={'Select subject'}
-                style={{ flex: 1 }}
-                options={subjects.map((subject) => ({
-                  label: `${subject.code} - ${subject.name}`,
-                  value: subject.id,
-                }))}
-                onSearch={setModalSubjectSearchText}
-                onChange={(value) => {
-                  form.setFieldValue('subject_id', value || undefined);
-                  setModalSubjectSearchText('');
-                  form.setFieldValue('section_id', undefined);
-                  form.setFieldValue('lecture_id', undefined);
-                  setModalSectionSearchText('');
-                  setModalLectureSearchText('');
-                }}
-              />
-              <Button onClick={() => openQuickCreateModal('subject')}>{'+Create'}</Button>
-            </Space.Compact>
-          </Form.Item>
+      {/* Create / Edit modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle
+              className="border-l-4 pl-3"
+              style={{ borderColor: TYPE_ACCENT[form.type ?? ''] ?? '#2f80ed' }}
+            >
+              {editingResource ? 'Edit Resource' : 'Create Resource'}
+            </DialogTitle>
+          </DialogHeader>
 
-          <Form.Item
-            label={<>{'Section'}</>}
-            name="section_id"
-            required
-            rules={[
-              {
-                validator: async (_, value) => {
-                  if (value || modalSectionSearchText.trim()) {
-                    return;
-                  }
-                  throw new Error('Please select section');
-                },
-              },
-            ]}
-          >
-            <Space.Compact style={{ width: '100%' }}>
-              <Select
-                showSearch
-                allowClear
-                disabled={!modalSubjectId}
-                loading={modalSectionsFetching}
-                optionFilterProp="label"
-                placeholder={
-                  modalSubjectId
-                    ? 'Select section'
-                    : 'Select a subject first'
-                }
-                style={{ flex: 1 }}
-                options={modalSections.map((section) => ({
-                  label: section.name,
-                  value: section.id,
-                }))}
-                onSearch={setModalSectionSearchText}
-                onChange={(value) => {
-                  form.setFieldValue('section_id', value || undefined);
-                  setModalSectionSearchText('');
-                  form.setFieldValue('lecture_id', undefined);
-                  setModalLectureSearchText('');
-                }}
-              />
-              <Button onClick={() => openQuickCreateModal('section')} disabled={!modalSubjectId}>{'+Create'}</Button>
-            </Space.Compact>
-          </Form.Item>
-
-          <Form.Item
-            label={<>{'Lecture'}</>}
-            name="lecture_id"
-            required
-            rules={[
-              {
-                validator: async (_, value) => {
-                  if (value || modalLectureSearchText.trim()) {
-                    return;
-                  }
-                  throw new Error('Please select lecture');
-                },
-              },
-            ]}
-          >
-            <Space.Compact style={{ width: '100%' }}>
-              <Select
-                showSearch
-                allowClear
-                disabled={!modalSectionId}
-                loading={modalLecturesFetching}
-                optionFilterProp="label"
-                placeholder={
-                  modalSectionId
-                    ? 'Select lecture'
-                    : 'Select a section first'
-                }
-                style={{ flex: 1 }}
-                options={modalLectures.map((lecture) => ({
-                  label: lecture.title,
-                  value: lecture.id,
-                }))}
-                onSearch={setModalLectureSearchText}
-                onChange={(value) => {
-                  form.setFieldValue('lecture_id', value || undefined);
-                  setModalLectureSearchText('');
-                }}
-              />
-              <Button onClick={() => openQuickCreateModal('lecture')} disabled={!modalSectionId}>{'+Create'}</Button>
-            </Space.Compact>
-          </Form.Item>
-
-          <Form.Item
-            label={'Button Label'}
-            name="label"
-            rules={[{ required: true, message: 'Please enter label' }]}
-          >
-            <Input placeholder={'e.g. Slide, Video, Summary'} />
-          </Form.Item>
-
-          <Form.Item
-            label={'Resource Type'}
-            name="type"
-            rules={[{ required: true, message: 'Please select type' }]}
-          >
-            <Select options={resourceTypeOptions} />
-          </Form.Item>
-
-          <Form.Item
-            label={'URL / Video ID'}
-            name="url"
-            rules={[{ required: true, message: 'Please enter URL' }]}
-          >
-            <Input
-              placeholder={'URL or Video ID'}
-              addonAfter={
-                <button
-                  type="button"
-                  style={{ border: 0, background: 'transparent', cursor: 'pointer', color: '#1d4ed8' }}
-                  onClick={() => {
-                    const url = String(form.getFieldValue('url') ?? '').trim();
-                    if (url) {
-                      window.open(url, '_blank', 'noopener,noreferrer');
-                    }
+          <div className={cn('flex flex-col gap-4', formShake && 'admin-shake')}>
+            {/* Subject */}
+            <div className="space-y-1.5">
+              <Label required>Subject</Label>
+              <div className="flex gap-2">
+                <Combobox
+                  className="flex-1"
+                  options={subjectOptions}
+                  value={form.subject_id}
+                  onChange={(v) => {
+                    setForm((prev) => ({ ...prev, subject_id: v, section_id: undefined, lecture_id: undefined }));
+                    setSectionText('');
+                    setLectureText('');
                   }}
-                >
-                  {'Test Link'}
-                </button>
-              }
-            />
-          </Form.Item>
+                  placeholder="Select subject"
+                />
+                <Button variant="secondary" onClick={() => openQuickCreate('subject')}>
+                  <Plus />
+                  New
+                </Button>
+              </div>
+            </div>
 
-          <Form.Item label={'Display Order'} name="order_index">
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
+            {/* Section */}
+            <div className="space-y-1.5">
+              <Label required>Section</Label>
+              <div className="flex gap-2">
+                <Combobox
+                  className="flex-1"
+                  options={modalSections.map((s) => ({ value: s.id, label: s.name }))}
+                  value={form.section_id}
+                  onChange={(v) => {
+                    setForm((prev) => ({ ...prev, section_id: v, lecture_id: undefined }));
+                    setLectureText('');
+                  }}
+                  placeholder={form.subject_id ? 'Select section' : 'Select a subject first'}
+                  disabled={!form.subject_id}
+                  loading={modalSectionsFetching}
+                />
+                <Button variant="secondary" disabled={!form.subject_id} onClick={() => openQuickCreate('section')}>
+                  <Plus />
+                  New
+                </Button>
+              </div>
+            </div>
 
-          <Form.Item label={'Active'} name="is_active" valuePropName="checked">
-            <Switch />
-          </Form.Item>
-        </Form>
-      </Modal>
+            {/* Lecture */}
+            <div className="space-y-1.5">
+              <Label required>Lecture</Label>
+              <div className="flex gap-2">
+                <Combobox
+                  className="flex-1"
+                  options={modalLectures.map((l) => ({ value: l.id, label: l.title }))}
+                  value={form.lecture_id}
+                  onChange={(v) => setFormField('lecture_id', v)}
+                  placeholder={form.section_id ? 'Select lecture' : 'Select a section first'}
+                  disabled={!form.section_id}
+                  loading={modalLecturesFetching}
+                />
+                <Button variant="secondary" disabled={!form.section_id} onClick={() => openQuickCreate('lecture')}>
+                  <Plus />
+                  New
+                </Button>
+              </div>
+            </div>
 
-      {/* Quick Create Modals */}
-      <Modal
-        title={'Create Subject'}
-        open={quickCreateType === 'subject'}
-        onCancel={closeQuickCreateModal}
-        onOk={handleQuickCreate}
-        okText={'Confirm'}
-        cancelText={'Cancel'}
-        confirmLoading={isQuickCreateSubmitting}
-        destroyOnClose
-      >
-        <Form form={quickCreateForm} layout="vertical">
-          <Form.Item
-            label={<>{'Code'}</>}
-            name="code"
-            required
-            rules={[{ required: true, message: 'Please enter code' }]}
-          >
-            <Input placeholder={'e.g. CS101'} />
-          </Form.Item>
-          <Form.Item
-            label={<>{'Name'}</>}
-            name="name"
-            required
-            rules={[{ required: true, message: 'Please enter name' }]}
-          >
-            <Input placeholder={'Subject name'} />
-          </Form.Item>
-          <Form.Item
-            label={<>{'Year Level'}</>}
-            name="year_level"
-            required
-            rules={[{ required: true, message: 'Please specify year level' }]}
-          >
-            <InputNumber min={1} max={6} placeholder={'1-6'} style={{ width: '100%' }} />
-          </Form.Item>
-        </Form>
-      </Modal>
+            {/* Label */}
+            <div className="space-y-1.5">
+              <Label required>Button Label</Label>
+              <Input
+                placeholder="e.g. Slide, Video, Summary"
+                value={form.label}
+                onChange={(e) => setFormField('label', e.target.value)}
+              />
+            </div>
 
-      <Modal
-        title={'Create Section'}
-        open={quickCreateType === 'section'}
-        onCancel={closeQuickCreateModal}
-        onOk={handleQuickCreate}
-        okText={'Confirm'}
-        cancelText={'Cancel'}
-        confirmLoading={isQuickCreateSubmitting}
-        destroyOnClose
-      >
-        <Form form={quickCreateForm} layout="vertical">
-          <Form.Item
-            label={<>{'Subject'}</>}
-            name="subject_id"
-            required
-            rules={[{ required: true, message: 'Please select subject' }]}
-          >
-            <Select
-              placeholder={'Select subject'}
-              options={subjects.map((subject) => ({
-                label: `${subject.code} - ${subject.name}`,
-                value: subject.id,
-              }))}
-            />
-          </Form.Item>
-          <Form.Item
-            label={<>{'Name'}</>}
-            name="name"
-            required
-            rules={[{ required: true, message: 'Please enter name' }]}
-          >
-            <Input placeholder={'Section name'} />
-          </Form.Item>
-        </Form>
-      </Modal>
+            {/* Type */}
+            <div className="space-y-1.5">
+              <Label required>Resource Type</Label>
+              <Select value={form.type} onValueChange={(v) => setFormField('type', v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {RESOURCE_TYPE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-      <Modal
-        title={'Create Lecture'}
-        open={quickCreateType === 'lecture'}
-        onCancel={closeQuickCreateModal}
-        onOk={handleQuickCreate}
-        okText={'Confirm'}
-        cancelText={'Cancel'}
-        confirmLoading={isQuickCreateSubmitting}
-        destroyOnClose
-      >
-        <Form form={quickCreateForm} layout="vertical">
-          <Form.Item
-            label={<>{'Subject'}</>}
-            name="subject_id"
-            required
-            rules={[{ required: true, message: 'Please select subject' }]}
-          >
-            <Select
-              placeholder={'Select subject'}
-              options={subjects.map((subject) => ({
-                label: `${subject.code} - ${subject.name}`,
-                value: subject.id,
-              }))}
-              onChange={() => {
-                quickCreateForm.setFieldValue('section_id', undefined);
-              }}
-            />
-          </Form.Item>
-          <Form.Item
-            label={<>{'Section'}</>}
-            name="section_id"
-            required
-            rules={[{ required: true, message: 'Please select section' }]}
-          >
-            <Select
-              disabled={!quickCreateSubjectId}
-              placeholder={'Select section'}
-              options={quickCreateSections.map((section) => ({
-                label: section.name,
-                value: section.id,
-              }))}
-            />
-          </Form.Item>
-          <Form.Item
-            label={<>{'Title'}</>}
-            name="title"
-            required
-            rules={[{ required: true, message: 'Please enter title' }]}
-          >
-            <Input placeholder={'Lecture title'} />
-          </Form.Item>
-        </Form>
-      </Modal>
-    </List>
+            {/* URL */}
+            <div className="space-y-1.5">
+              <Label required>URL / Video ID</Label>
+              <Input
+                placeholder="URL or Video ID"
+                value={form.url}
+                onChange={(e) => setFormField('url', e.target.value)}
+                endContent={
+                  <button
+                    type="button"
+                    className="text-brand"
+                    onClick={() => {
+                      const url = form.url.trim();
+                      if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                    }}
+                    aria-label="Test link"
+                  >
+                    <ExternalLink className="size-4" />
+                  </button>
+                }
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Display Order</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.order_index}
+                  onChange={(e) => setFormField('order_index', Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Active</Label>
+                <div className="flex h-10 items-center">
+                  <Switch checked={form.is_active} onCheckedChange={(v) => setFormField('is_active', v)} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} loading={isSubmitting}>
+              {editingResource ? 'Save changes' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick create modal */}
+      <Dialog open={quickCreateType !== null} onOpenChange={(open) => !open && setQuickCreateType(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {quickCreateType === 'subject'
+                ? 'Create Subject'
+                : quickCreateType === 'section'
+                  ? 'Create Section'
+                  : 'Create Lecture'}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4">
+            {quickCreateType === 'subject' && (
+              <>
+                <div className="space-y-1.5">
+                  <Label required>Code</Label>
+                  <Input placeholder="e.g. CS101" value={qcCode} onChange={(e) => setQcCode(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label required>Name</Label>
+                  <Input placeholder="Subject name" value={qcName} onChange={(e) => setQcName(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label required>Year Level</Label>
+                  <Input type="number" min={1} max={6} value={qcYear} onChange={(e) => setQcYear(e.target.value)} />
+                </div>
+              </>
+            )}
+            {quickCreateType === 'section' && (
+              <>
+                <div className="space-y-1.5">
+                  <Label required>Subject</Label>
+                  <Combobox
+                    options={subjectOptions}
+                    value={qcSubjectId}
+                    onChange={setQcSubjectId}
+                    placeholder="Select subject"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label required>Name</Label>
+                  <Input placeholder="Section name" value={qcName} onChange={(e) => setQcName(e.target.value)} />
+                </div>
+              </>
+            )}
+            {quickCreateType === 'lecture' && (
+              <>
+                <div className="space-y-1.5">
+                  <Label required>Subject</Label>
+                  <Combobox
+                    options={subjectOptions}
+                    value={qcSubjectId}
+                    onChange={(v) => {
+                      setQcSubjectId(v);
+                      setQcSectionName('');
+                    }}
+                    placeholder="Select subject"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label required>Section</Label>
+                  <Combobox
+                    options={qcSections.map((s) => ({ value: s.id, label: s.name }))}
+                    value={qcSectionName || undefined}
+                    onChange={(v) => setQcSectionName(v ?? '')}
+                    placeholder="Select section"
+                    disabled={!qcSubjectId}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label required>Title</Label>
+                  <Input
+                    placeholder="Lecture title"
+                    value={qcLectureTitle}
+                    onChange={(e) => setQcLectureTitle(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setQuickCreateType(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleQuickCreate} loading={isQuickCreateSubmitting}>
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 

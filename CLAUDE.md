@@ -36,9 +36,11 @@ The portal should feel like a premium, production-grade experience — not a gen
 
 ### Tech Stack
 
-- **web-client** (student portal): Next.js (App Router) + **HeroUI** (`@heroui/react`, the renamed NextUI) + Tailwind CSS. Prefer HeroUI components and Tailwind utilities; write custom CSS only when necessary. Ant Design is used only for the calendar grid.
-- **web-admin** (content management): Vite + **Refine.dev** (`@refinedev/antd`) + Ant Design. Keep it lightweight, clean, and consistent with the same light-blue palette.
-- **Shared tokens:** `@medical-portal/shared` (`HERO_TOKENS.light`, `HERO_BRAND`) is the single source of truth for colors. Both apps consume it (Tailwind config + Ant Design `ConfigProvider`).
+Both apps share a single, owned, headless UI foundation: **Tailwind CSS + Radix UI primitives + shadcn-style components** (copied into each app's `components/ui`, built with `class-variance-authority` + `cn()` from `lib/utils`), with **lucide-react** icons. There is no third-party component library (no HeroUI, no Ant Design). Prefer the in-repo `components/ui` primitives and Tailwind utilities; only add a new primitive when one doesn't already exist.
+
+- **web-client** (student portal): Next.js (App Router) + Tailwind + Radix. Interactive primitives carry `'use client'`. Data layer (untouched by UI work): TanStack Query (`hooks/`), Zustand (`stores/auth.store`), NextAuth, axios (`lib/api`). Calendar is a custom Tailwind grid in `components/CalendarSection.tsx` (no external calendar lib).
+- **web-admin** (content management): Vite + **Refine.dev headless core** (`@refinedev/core` — data provider, auth provider, routing, resources, `mutationMode: 'undoable'`) — *not* `@refinedev/antd`. UI is Tailwind + Radix; **TanStack Table** (`components/ui/data-table.tsx`) is driven by Refine core's `useTable`; forms use **react-hook-form + zod** (`components/ui/form.tsx`); charts use **Recharts**; toasts use **sonner** (which also backs the custom Refine `notificationProvider` that preserves the 5s undo-delete UX). The app shell is `components/layout/AdminShell.tsx`, driven by Refine core's `useMenu`.
+- **Shared tokens:** `@medical-portal/shared` (`HERO_TOKENS.light`, `HERO_BRAND`) is the single source of truth for colors; the brand accent is unified at `#2f80ed` across both apps. Both apps consume it via their Tailwind configs.
 
 ### Design Principles
 
@@ -69,10 +71,10 @@ The portal should feel like a premium, production-grade experience — not a gen
 - Light scrim overlays for modals (`bg-slate-900/20 backdrop-blur-sm`)
 
 #### Typography Scale
-- **Editorial serif display for headings.** Page titles `font-serif text-3xl/4xl font-semibold tracking-tight`, slate-900; section headings `font-serif text-lg/2xl font-semibold tracking-tight`, slate-900
-- Body text: `text-sm text-slate-600` (`var(--ink-2)`) — sans
+- **Two fonts only — no serif display face.** Both apps render a single sans family for everything. Page titles `text-3xl/4xl font-semibold tracking-tight`, slate-900; section headings `text-lg/2xl font-semibold tracking-tight`, slate-900. Weight and size carry the hierarchy, not a contrasting typeface. (`font-serif`/`font-display` classes still exist but are mapped to the same sans stack, so they're harmless no-ops.)
+- Body text: `text-sm text-slate-600` (`var(--ink-2)`)
 - Labels/captions: `text-xs text-slate-400` (`var(--ink-3)`)
-- Fonts (web-client, via `next/font`): **Noto Serif** for display/headings (`font-serif`), **Noto Sans** for body/UI (`font-sans`), **Noto Serif Thai** for Thai content. The Latin faces have no Thai glyphs, so Thai text falls through to Noto Serif Thai automatically in every context — no per-string tagging. web-admin still uses `@fontsource/noto-sans`.
+- Fonts: **Lato** for all Latin text, **IBM Plex Sans Thai Looped** for Thai. Lato has no Thai glyphs, so Thai text falls through to IBM Plex Sans Thai Looped automatically in every context — no per-string tagging. web-client loads both via `next/font/google` (`--font-lato`, `--font-ibm-thai`); web-admin loads them via `@fontsource/lato` + `@fontsource/ibm-plex-sans-thai-looped`. `sans`/`serif`/`display`/`heading` in both Tailwind configs all resolve to the same Lato → IBM Plex Sans Thai Looped stack.
 
 #### Color Usage
 - Primary blue (`#2f80ed`): Active states, CTAs, links, emphasis

@@ -7,9 +7,7 @@
 
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { Authenticated } from '@refinedev/core';
-import { ThemedLayout } from '@refinedev/antd';
-import { AppLayoutHeader } from './layout-header';
-import { AppLayoutTitle } from './layout-title';
+import { AdminShell } from '@/components/layout/AdminShell';
 
 import { LoginPage } from './auth';
 import DashboardPage from './dashboard';
@@ -17,6 +15,9 @@ import ResourcesList from './resources';
 import CalendarList from './calendar';
 import CalendarCreate from './calendar/create';
 import CalendarEdit from './calendar/edit';
+import EventTypesList from './event-types';
+import EventTypesCreate from './event-types/create';
+import EventTypesEdit from './event-types/edit';
 import AnnouncementsList from './announcements';
 import AnnouncementsCreate from './announcements/create';
 import AnnouncementsEdit from './announcements/edit';
@@ -41,19 +42,15 @@ const AuthLoadingFallback = () => (
 );
 
 // Protected layout wrapper - shared across all authenticated routes.
-// The `refine-layout` wrapper enables the sticky sider + scrollable content
-// CSS in `index.css` so the logout button stays visible while content scrolls.
 const ProtectedLayout = () => (
   <Authenticated
     key="root-auth"
     redirectOnFail="/login"
     loading={<AuthLoadingFallback />}
   >
-    <div className="refine-layout">
-      <ThemedLayout Header={AppLayoutHeader} Title={AppLayoutTitle}>
-        <Outlet />
-      </ThemedLayout>
-    </div>
+    <AdminShell>
+      <Outlet />
+    </AdminShell>
   </Authenticated>
 );
 
@@ -84,6 +81,9 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
       { path: 'calendar', element: <CalendarList /> },
       { path: 'calendar/create', element: <CalendarCreate /> },
       { path: 'calendar/edit/:id', element: <CalendarEdit /> },
+      { path: 'event-types', element: <EventTypesList /> },
+      { path: 'event-types/create', element: <EventTypesCreate /> },
+      { path: 'event-types/edit/:id', element: <EventTypesEdit /> },
       { path: 'announcements', element: <AnnouncementsList /> },
       { path: 'announcements/create', element: <AnnouncementsCreate /> },
       { path: 'announcements/edit/:id', element: <AnnouncementsEdit /> },

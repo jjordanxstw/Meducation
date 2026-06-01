@@ -35,11 +35,12 @@
   --shadow-md: 0 10px 24px rgba(15, 23, 42, 0.08), 0 3px 8px rgba(15, 23, 42, 0.05);
   --shadow-lg: 0 22px 48px rgba(15, 23, 42, 0.12), 0 8px 16px rgba(15, 23, 42, 0.07);
 
-  /* Type stacks — Thai falls through to Noto Serif Thai automatically. */
-  --font-sans-stack: var(--font-noto-sans), var(--font-noto-serif-thai), 'Noto Sans',
+  /* Two-font system — Thai falls through to IBM Plex Sans Thai Looped.
+     serif stack mirrors sans so headings share the same face. */
+  --font-sans-stack: var(--font-lato), var(--font-ibm-thai), 'Lato',
     -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-serif-stack: var(--font-noto-serif), var(--font-noto-serif-thai), Georgia,
-    'Times New Roman', serif;
+  --font-serif-stack: var(--font-lato), var(--font-ibm-thai), 'Lato',
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 html {
@@ -74,11 +75,20 @@ body {
   color: var(--ink-1);
 }
 
-/* Consistent, calm focus ring for keyboard users. */
+/* Consistent, calm focus ring for keyboard users (buttons, links, etc.). */
 :focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* Text/search fields and select-like triggers show focus via their border,
+   not a blue ring. */
+input:focus-visible,
+textarea:focus-visible,
+[role='combobox']:focus-visible,
+[role='searchbox']:focus-visible {
+  outline: none;
 }
 
 /* Slim, unobtrusive scrollbars. */

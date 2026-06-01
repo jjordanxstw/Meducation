@@ -36,6 +36,8 @@ const ERROR_CODE_MESSAGES: Record<string, string> = {
   PROFILE_STUDENT_ID_DUPLICATE: 'Student ID already exists',
   CALENDAR_TIME_RANGE_INVALID: 'Calendar event date range is invalid',
   CALENDAR_EVENT_TIME_CONFLICT: 'Calendar event date conflicts with an existing event',
+  CALENDAR_EVENT_TYPE_IN_USE: 'There are events on this type. Please delete all events of this type first.',
+  CALENDAR_EVENT_TYPE_NAME_DUPLICATE: 'An event type with this name already exists',
   SYSTEM_INTERNAL_ERROR: 'Internal server error',
   SYSTEM_EXTERNAL_SERVICE_ERROR: 'External service error',
 };

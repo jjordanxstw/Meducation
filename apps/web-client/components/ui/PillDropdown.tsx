@@ -1,7 +1,13 @@
 'use client';
 
-import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from '@heroui/react';
-import { FiChevronDown } from 'react-icons/fi';
+import { ChevronDown, Check } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
 type PillDropdownOption = {
   value: string | number;
@@ -26,29 +32,35 @@ export function PillDropdown({
   const selectedOption = options.find((option) => String(option.value) === String(value));
 
   return (
-    <Dropdown placement="bottom-start" className={className}>
-      <DropdownTrigger>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
         <button
           type="button"
           aria-label={ariaLabel}
-          className="flex items-center gap-2 rounded-full border border-slate-200 bg-white py-2 pl-4 pr-3 text-sm font-medium text-slate-700 transition hover:border-brand/40 hover:bg-brand-subtle hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          className={cn(
+            'flex items-center gap-2 rounded-full border border-slate-200 bg-white py-2 pl-4 pr-3 text-sm font-medium text-slate-700 transition hover:border-brand/40 hover:bg-brand-subtle hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40',
+            className,
+          )}
         >
           <span>{selectedOption?.label ?? value}</span>
-          <FiChevronDown size={14} className="text-slate-400" />
+          <ChevronDown className="size-3.5 text-slate-400" />
         </button>
-      </DropdownTrigger>
-      <DropdownMenu
-        aria-label={ariaLabel}
-        variant="flat"
-        selectionMode="single"
-        selectedKeys={new Set([String(value)])}
-        onAction={(key) => onChange(String(key))}
-        className="max-h-72 overflow-y-auto"
-      >
-        {options.map((option) => (
-          <DropdownItem key={String(option.value)}>{option.label}</DropdownItem>
-        ))}
-      </DropdownMenu>
-    </Dropdown>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto" aria-label={ariaLabel}>
+        {options.map((option) => {
+          const isSelected = String(option.value) === String(value);
+          return (
+            <DropdownMenuItem
+              key={String(option.value)}
+              onSelect={() => onChange(String(option.value))}
+              className={cn('justify-between', isSelected && 'bg-brand-subtle text-brand')}
+            >
+              <span>{option.label}</span>
+              {isSelected && <Check className="size-4" />}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -1,83 +1,77 @@
 /**
  * Calendar Events List Page
- * Displays date-only calendar events
- */import { List, useTable, EditButton, DeleteButton } from '@refinedev/antd';import { useList } from '@refinedev/core';import { Button, DatePicker, Input, Select, Space, Table, Tag } from 'antd';import dayjs from 'dayjs';import { EventType } from '@medical-portal/shared';import { useCallback, useEffect, useRef, useState } from 'react';import type { Subject } from '@medical-portal/shared';import type { CalendarEvent } from '@medical-portal/shared';import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
-
-const eventTypeColors: Record<string, string> = {
-  [EventType.EXAM]: 'red',
-  [EventType.LECTURE]: 'blue',
-  [EventType.HOLIDAY]: 'green',
-  [EventType.EVENT]: 'purple',
-};
+ * Displays date-only calendar events.
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useDelete, useList, useTable } from '@refinedev/core';
+import dayjs from 'dayjs';
+import { Plus, Pencil, CalendarDays } from 'lucide-react';
+import type { CalendarEvent, CalendarEventType, Subject } from '@medical-portal/shared';
+import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
+import { useTableSorting } from '../../utils/use-table-sorting';
+import { PageHeader } from '@/components/ui/page-header';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
+import { Combobox } from '@/components/ui/combobox';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { ConfirmButton } from '@/components/ui/confirm-button';
+import { AdminEmptyState } from '../../components/AdminEmptyState';
+import { DataTable, type ColumnDef } from '@/components/ui/data-table';
 
 const CalendarList = () => {
-  const { tableProps, setFilters, filters } = useTable<CalendarEvent>({
-    syncWithLocation: true,
-  });
-  const { RangePicker } = DatePicker;
-
-  const eventTypeOptions = [
-    { label: `🎯 ${'Exam'}`, value: EventType.EXAM },
-    { label: `📚 ${'Lecture'}`, value: EventType.LECTURE },
-    { label: `🎉 ${'Holiday'}`, value: EventType.HOLIDAY },
-    { label: `📅 ${'Event'}`, value: EventType.EVENT },
-  ];
-
-  const { data: subjectsData } = useList<Subject>({ resource: 'subjects' });
+  const { tableQueryResult, current, setCurrent, pageSize, pageCount, setFilters, filters, sorters, setSorters } =
+    useTable<CalendarEvent>({ resource: 'calendar', syncWithLocation: true });
+  const { sorting, onSortingChange } = useTableSorting(sorters, setSorters);
+  const { mutate: deleteOne } = useDelete();
+  const { data: subjectsData } = useList<Subject>({ resource: 'subjects', pagination: { mode: 'off' } });
   const subjects = subjectsData?.data ?? [];
+  const subjectOptions = subjects.map((s) => ({ value: s.id, label: `${s.code} - ${s.name}` }));
+
+  const { data: eventTypesData } = useList<CalendarEventType>({ resource: 'event-types', pagination: { mode: 'off' } });
+  const eventTypes = useMemo(() => eventTypesData?.data ?? [], [eventTypesData]);
+  const typeColor = useMemo(() => {
+    const map: Record<string, string> = {};
+    eventTypes.forEach((t) => {
+      map[t.name] = t.color;
+    });
+    return map;
+  }, [eventTypes]);
 
   const [search, setSearch] = useState('');
   const [eventType, setEventType] = useState<string | undefined>(undefined);
   const [subjectId, setSubjectId] = useState<string | undefined>(undefined);
-  const [dateRange, setDateRange] = useState<[string, string] | undefined>(undefined);
+  const [startDate, setStartDate] = useState<string | undefined>(undefined);
+  const [endDate, setEndDate] = useState<string | undefined>(undefined);
   const debouncedSearch = useDebouncedValue(search, 350);
   const hasHydratedFromUrl = useRef(false);
 
-  const buildFilters = useCallback((searchValue: string) => {
-    const nextFilters: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
-
-    if (searchValue.trim()) {
-      nextFilters.push({ field: 'search', operator: 'contains', value: searchValue.trim() });
-    }
-    if (eventType) {
-      nextFilters.push({ field: 'type', operator: 'eq', value: eventType });
-    }
-    if (subjectId) {
-      nextFilters.push({ field: 'subject_id', operator: 'eq', value: subjectId });
-    }
-    if (dateRange) {
-      nextFilters.push({ field: 'start_date', operator: 'eq', value: dateRange[0] });
-      nextFilters.push({ field: 'end_date', operator: 'eq', value: dateRange[1] });
-    }
-
-    return nextFilters;
-  }, [dateRange, eventType, subjectId]);
+  const buildFilters = useCallback(
+    (searchValue: string) => {
+      const next: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
+      if (searchValue.trim()) next.push({ field: 'search', operator: 'contains', value: searchValue.trim() });
+      if (eventType) next.push({ field: 'type', operator: 'eq', value: eventType });
+      if (subjectId) next.push({ field: 'subject_id', operator: 'eq', value: subjectId });
+      if (startDate) next.push({ field: 'start_date', operator: 'eq', value: startDate });
+      if (endDate) next.push({ field: 'end_date', operator: 'eq', value: endDate });
+      return next;
+    },
+    [eventType, subjectId, startDate, endDate],
+  );
 
   useEffect(() => {
-    if (hasHydratedFromUrl.current) {
-      return;
-    }
-
-    const searchValue = getFilterValue(filters, 'search');
-    const typeValue = getFilterValue(filters, 'type');
-    const subjectValue = getFilterValue(filters, 'subject_id');
-    const startDate = getFilterValue(filters, 'start_date');
-    const endDate = getFilterValue(filters, 'end_date');
-
-    setSearch(typeof searchValue === 'string' ? searchValue : '');
-    setEventType(typeof typeValue === 'string' ? typeValue : undefined);
-    setSubjectId(typeof subjectValue === 'string' ? subjectValue : undefined);
-    if (typeof startDate === 'string' && typeof endDate === 'string') {
-      setDateRange([startDate, endDate]);
-    }
-
+    if (hasHydratedFromUrl.current) return;
+    setSearch(typeof getFilterValue(filters, 'search') === 'string' ? (getFilterValue(filters, 'search') as string) : '');
+    setEventType(typeof getFilterValue(filters, 'type') === 'string' ? (getFilterValue(filters, 'type') as string) : undefined);
+    setSubjectId(typeof getFilterValue(filters, 'subject_id') === 'string' ? (getFilterValue(filters, 'subject_id') as string) : undefined);
+    setStartDate(typeof getFilterValue(filters, 'start_date') === 'string' ? (getFilterValue(filters, 'start_date') as string) : undefined);
+    setEndDate(typeof getFilterValue(filters, 'end_date') === 'string' ? (getFilterValue(filters, 'end_date') as string) : undefined);
     hasHydratedFromUrl.current = true;
   }, [filters]);
 
   useEffect(() => {
-    if (!hasHydratedFromUrl.current) {
-      return;
-    }
+    if (!hasHydratedFromUrl.current) return;
     setFilters(buildFilters(debouncedSearch), 'replace');
   }, [buildFilters, debouncedSearch, setFilters]);
 
@@ -85,113 +79,181 @@ const CalendarList = () => {
     setSearch('');
     setEventType(undefined);
     setSubjectId(undefined);
-    setDateRange(undefined);
+    setStartDate(undefined);
+    setEndDate(undefined);
     setFilters([], 'replace');
   };
 
-  return (
-    <List createButtonProps={{ children: 'Create' }}>
-      <Space wrap size="small" style={{ marginBottom: 12 }} className="resource-filter-bar">
-        <Input.Search
-          className="resource-filter-control"
-          allowClear
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder={'Search'}
-          style={{ width: 220 }}
-        />
-        <Select
-          className="resource-filter-control"
-          allowClear
-          value={eventType}
-          onChange={(value) => setEventType(value)}
-          placeholder={'Type'}
-          style={{ width: 180 }}
-          options={eventTypeOptions}
-        />
-        <Select
-          className="resource-filter-control"
-          allowClear
-          value={subjectId}
-          onChange={(value) => setSubjectId(value)}
-          placeholder={'Related Subject'}
-          style={{ width: 260 }}
-          options={subjects.map((subject) => ({
-            label: `${subject.code} - ${subject.name}`,
-            value: subject.id,
-          }))}
-        />
-        <RangePicker
-          className="resource-filter-control"
-          placeholder={[
-            'Start date',
-            'End date',
-          ]}
-          value={
-            dateRange
-              ? [dayjs(dateRange[0]), dayjs(dateRange[1])]
-              : undefined
-          }
-          onChange={(values) => {
-            if (!values?.[0] || !values?.[1]) {
-              setDateRange(undefined);
-              return;
-            }
-            setDateRange([values[0].format('YYYY-MM-DD'), values[1].format('YYYY-MM-DD')]);
-          }}
-        />
-        <Button className="resource-filter-button" onClick={resetFilters}>{'Clear'}</Button>
-      </Space>
+  const columns: ColumnDef<CalendarEvent, unknown>[] = useMemo(
+    () => [
+      { accessorKey: 'title', header: 'Title' },
+      {
+        accessorKey: 'type',
+        header: 'Type',
+        cell: ({ getValue }) => {
+          const value = getValue() as string;
+          return (
+            <span className="inline-flex items-center gap-2">
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full border border-slate-200"
+                style={{ backgroundColor: typeColor[value] || '#2f80ed' }}
+              />
+              <span className="text-slate-700">{value}</span>
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: 'start_date',
+        header: 'Start',
+        cell: ({ row }) => {
+          const { start_date, start_time } = row.original;
+          if (!start_date) return '-';
+          return (
+            <span>
+              {dayjs(start_date).format('DD/MM/YYYY')}
+              {start_time ? <span className="text-slate-400"> · {start_time.slice(0, 5)}</span> : null}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: 'end_date',
+        header: 'End',
+        cell: ({ row }) => {
+          const { end_date, end_time } = row.original;
+          if (!end_date && !end_time) return '-';
+          return (
+            <span>
+              {end_date ? dayjs(end_date).format('DD/MM/YYYY') : '—'}
+              {end_time ? <span className="text-slate-400"> · {end_time.slice(0, 5)}</span> : null}
+            </span>
+          );
+        },
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <Button asChild size="sm" variant="secondary">
+              <Link to={`/calendar/edit/${row.original.id}`}>
+                <Pencil />
+                Edit
+              </Link>
+            </Button>
+            <ConfirmButton
+              title="Delete event?"
+              description="You can undo this within a few seconds."
+              confirmLabel="Delete"
+              onConfirm={() => deleteOne({ resource: 'calendar', id: row.original.id })}
+              trigger={
+                <Button size="sm" variant="danger-ghost">
+                  Delete
+                </Button>
+              }
+            />
+          </div>
+        ),
+      },
+    ],
+    [deleteOne, typeColor],
+  );
 
-      <Table
-        {...tableProps}
-        rowKey="id"
-        size="small"
-        scroll={{ x: 'max-content' }}
-      >
-        <Table.Column dataIndex="title" title={'Title'} ellipsis sorter />
-        <Table.Column
-          dataIndex="type"
-          title={'Type'}
-          width={130}
-          sorter
-          render={(value) => (
-            <Tag color={eventTypeColors[value] || 'default'}>
-              {eventTypeOptions.find((o) => o.value === value)?.label?.split(' ')[0] || value}
-            </Tag>
-          )}
+  return (
+    <div>
+      <PageHeader
+        title="Calendar"
+        description="Exam schedules, lectures, holidays and events."
+        actions={
+          <Button asChild>
+            <Link to="/calendar/create">
+              <Plus />
+              Create
+            </Link>
+          </Button>
+        }
+      />
+
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200/70 bg-white p-4 shadow-subtle">
+        <Input
+          className="w-full sm:w-56"
+          placeholder="Search events…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
         />
-        <Table.Column
-          dataIndex="start_date"
-          title={'Start Date'}
-          width={130}
-          sorter
-          render={(value) =>
-            value ? dayjs(value).format('DD/MM/YYYY') : '-'
-          }
-        />
-        <Table.Column
-          dataIndex="end_date"
-          title={'End Date'}
-          width={130}
-          sorter
-          render={(value) =>
-            value ? dayjs(value).format('DD/MM/YYYY') : '-'
-          }
-        />
-        <Table.Column
-          title={'Actions'}
-          fixed="right"
-          width={120}
-          render={(_, record: CalendarEvent) => (
-            <Space size="small">
-              <EditButton hideText size="small" recordItemId={record.id} />
-              <DeleteButton hideText size="small" recordItemId={record.id} />
-            </Space>
-          )}
-        />
-      </Table>
-    </List>
+        <div className="w-full sm:w-44">
+          <Select value={eventType ?? '__all'} onValueChange={(v) => setEventType(v === '__all' ? undefined : v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="All types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">All types</SelectItem>
+              {eventTypes.map((t) => (
+                <SelectItem key={t.id} value={t.name}>
+                  <span className="flex items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full border border-slate-200"
+                      style={{ backgroundColor: t.color || '#2f80ed' }}
+                    />
+                    {t.name}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="w-full sm:w-64">
+          <Combobox
+            options={subjectOptions}
+            value={subjectId}
+            onChange={setSubjectId}
+            placeholder="All subjects"
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <DatePicker
+            className="w-full sm:w-40"
+            value={startDate}
+            onChange={(v) => setStartDate(v || undefined)}
+            max={endDate}
+            placeholder="From date"
+          />
+          <span className="text-slate-400">–</span>
+          <DatePicker
+            className="w-full sm:w-40"
+            value={endDate}
+            onChange={(v) => setEndDate(v || undefined)}
+            min={startDate}
+            placeholder="To date"
+          />
+        </div>
+        <Button variant="ghost" size="sm" onClick={resetFilters}>
+          Clear
+        </Button>
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={tableQueryResult?.data?.data ?? []}
+        loading={tableQueryResult?.isLoading}
+        getRowId={(row) => row.id}
+        pageIndex={current - 1}
+        pageSize={pageSize}
+        pageCount={pageCount}
+        total={tableQueryResult?.data?.total}
+        onPageChange={(idx) => setCurrent(idx + 1)}
+        sorting={sorting}
+        onSortingChange={onSortingChange}
+        emptyState={
+          <AdminEmptyState
+            icon={<CalendarDays />}
+            title="No events found"
+            subtitle="Adjust your filters or create a new event."
+          />
+        }
+      />
+    </div>
   );
 };
 

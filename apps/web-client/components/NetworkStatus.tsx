@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useSyncExternalStore } from 'react';
-import { FiWifiOff, FiX } from 'react-icons/fi';
+import { WifiOff, X } from 'lucide-react';
 
 function subscribe(callback: () => void) {
   window.addEventListener('online', callback);
@@ -48,7 +48,7 @@ export function NetworkStatus() {
       }`}
     >
       <div className="flex items-center justify-center gap-2 border-b border-amber-500/30 bg-amber-500/20 px-4 py-2 text-amber-300 backdrop-blur-sm">
-        <FiWifiOff className="h-4 w-4 flex-shrink-0" aria-hidden />
+        <WifiOff className="h-4 w-4 flex-shrink-0" aria-hidden />
         <span className="text-xs font-medium sm:text-sm">
           You&apos;re offline — some content may be unavailable.
         </span>
@@ -58,7 +58,7 @@ export function NetworkStatus() {
           aria-label="Dismiss offline notice"
           className="ml-2 rounded-md p-1 text-amber-300/70 transition-colors hover:bg-amber-500/20 hover:text-amber-200"
         >
-          <FiX className="h-4 w-4" aria-hidden />
+          <X className="h-4 w-4" aria-hidden />
         </button>
       </div>
     </div>

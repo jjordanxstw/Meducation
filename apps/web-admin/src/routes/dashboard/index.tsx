@@ -1,57 +1,43 @@
 /**
  * Admin Dashboard Page — light blue/white theme, English only.
- *
- * UX goals:
- * - Show both total and active counts on every KPI card with a progress bar.
- * - "Students by Year" bar chart + "Activity over time" line chart with
- *   granularity (day/week/month) and a date-range picker.
- * - Upcoming events as a colour-coded Timeline with relative times.
- * - Audit logs as a filterable, paginated Table with action chips.
- * - Welcome banner, last-updated timestamp + manual refresh, quick actions.
+ * Tailwind + Radix UI + Recharts (no Ant Design).
  */
-
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
-  Button,
-  Card,
-  Col,
-  DatePicker,
-  Empty,
-  Progress,
-  Radio,
-  Row,
-  Segmented,
-  Skeleton,
-  Space,
-  Table,
-  Tag,
-  Timeline,
-  Tooltip,
-  Typography,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import { Column, Line } from '@ant-design/charts';
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+} from 'recharts';
 import {
-  AuditOutlined,
-  BellOutlined,
-  BookOutlined,
-  CalendarOutlined,
-  ClockCircleOutlined,
-  FileTextOutlined,
-  PlusOutlined,
-  ReadOutlined,
-  ReloadOutlined,
-  TeamOutlined,
-  UnorderedListOutlined,
-  WarningOutlined,
-} from '@ant-design/icons';
+  Bell,
+  Book,
+  BookOpen,
+  CalendarDays,
+  Clock,
+  FileText,
+  List,
+  Plus,
+  RefreshCw,
+  ScrollText,
+  Users,
+  AlertTriangle,
+} from 'lucide-react';
 import { useGetIdentity, useGo } from '@refinedev/core';
 import dayjs, { type Dayjs } from 'dayjs';
 import { authAxios } from '../../providers/auth-provider';
-
-const { Title, Text, Paragraph } = Typography;
-const { RangePicker } = DatePicker;
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/date-picker';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 type CountPair = { total: number; active: number };
 
@@ -88,17 +74,8 @@ type ActivityResponse = {
   granularity: 'day' | 'week' | 'month';
   from: string;
   to: string;
-  buckets: Array<{
-    bucket: string;
-    newProfiles: number;
-    newLectures: number;
-    newAuditEvents: number;
-  }>;
-  totals: {
-    newProfiles: number;
-    newLectures: number;
-    newAuditEvents: number;
-  };
+  buckets: Array<{ bucket: string; newProfiles: number; newLectures: number; newAuditEvents: number }>;
+  totals: { newProfiles: number; newLectures: number; newAuditEvents: number };
 };
 
 type AdminIdentity = {
@@ -112,62 +89,102 @@ type AdminIdentity = {
 type RangePreset = '7d' | '30d' | '90d' | 'custom';
 type Granularity = 'day' | 'week' | 'month';
 
-const PRESET_RANGES: Record<Exclude<RangePreset, 'custom'>, number> = {
-  '7d': 6,
-  '30d': 29,
-  '90d': 89,
-};
+const PRESET_RANGES: Record<Exclude<RangePreset, 'custom'>, number> = { '7d': 6, '30d': 29, '90d': 89 };
 
 function defaultRangeFor(preset: Exclude<RangePreset, 'custom'>): [Dayjs, Dayjs] {
   const end = dayjs().startOf('day');
-  const start = end.subtract(PRESET_RANGES[preset], 'day');
-  return [start, end];
+  return [end.subtract(PRESET_RANGES[preset], 'day'), end];
 }
 
 const KPI_DEFINITIONS = [
-  { key: 'subjects' as const, accent: '#1d4ed8', icon: <BookOutlined />, label: 'Subjects' },
-  { key: 'sections' as const, accent: '#7c3aed', icon: <UnorderedListOutlined />, label: 'Sections' },
-  { key: 'lectures' as const, accent: '#0891b2', icon: <ReadOutlined />, label: 'Lectures' },
-  { key: 'resources' as const, accent: '#ea580c', icon: <FileTextOutlined />, label: 'Resources' },
-  { key: 'profiles' as const, accent: '#16a34a', icon: <TeamOutlined />, label: 'Profiles' },
-  { key: 'calendarEvents' as const, accent: '#db2777', icon: <CalendarOutlined />, label: 'Calendar events' },
+  { key: 'subjects' as const, icon: Book, label: 'Subjects' },
+  { key: 'sections' as const, icon: List, label: 'Sections' },
+  { key: 'lectures' as const, icon: BookOpen, label: 'Lectures' },
+  { key: 'resources' as const, icon: FileText, label: 'Resources' },
+  { key: 'profiles' as const, icon: Users, label: 'Profiles' },
+  { key: 'calendarEvents' as const, icon: CalendarDays, label: 'Calendar events' },
 ];
 
 const EVENT_COLORS: Record<string, string> = {
   exam: '#dc2626',
-  lecture: '#1d4ed8',
+  lecture: '#2f80ed',
   holiday: '#d97706',
   event: '#16a34a',
 };
 
-const ACTION_COLORS: Record<string, string> = {
-  INSERT: 'green',
-  UPDATE: 'blue',
-  DELETE: 'red',
+const ACTION_BADGE: Record<string, 'success' | 'brand' | 'danger'> = {
+  INSERT: 'success',
+  UPDATE: 'brand',
+  DELETE: 'danger',
 };
+
+const CHART_COLORS = ['#2f80ed', '#7c3aed', '#16a34a'];
 
 function formatRelativeTime(target: dayjs.Dayjs, now: dayjs.Dayjs): string {
   const diffMs = target.diff(now);
   const absMs = Math.abs(diffMs);
-
-  if (absMs < 60_000) {
-    return 'happening now';
-  }
-
+  if (absMs < 60_000) return 'happening now';
   const minutes = Math.round(absMs / 60_000);
   const hours = Math.round(minutes / 60);
   const days = Math.round(hours / 24);
-
-  let value: string;
-  if (days >= 1) {
-    value = `${days}d`;
-  } else if (hours >= 1) {
-    value = `${hours}h`;
-  } else {
-    value = `${minutes}m`;
-  }
-
+  const value = days >= 1 ? `${days}d` : hours >= 1 ? `${hours}h` : `${minutes}m`;
   return diffMs >= 0 ? `in ${value}` : `${value} ago`;
+}
+
+// Small inline segmented control.
+function Segmented<T extends string>({
+  value,
+  onChange,
+  options,
+}: {
+  value: T;
+  onChange: (value: T) => void;
+  options: Array<{ label: string; value: T }>;
+}) {
+  return (
+    <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onChange(option.value)}
+          className={cn(
+            'rounded-md px-3 py-1 text-xs font-medium transition-colors',
+            value === option.value ? 'bg-white text-slate-900 shadow-subtle' : 'text-slate-500 hover:text-slate-700',
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SectionCard({
+  title,
+  icon: Icon,
+  extra,
+  children,
+  className,
+}: {
+  title: string;
+  icon?: typeof Book;
+  extra?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <Card className={className}>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/70 px-5 py-3.5">
+        <div className="flex items-center gap-2">
+          {Icon ? <Icon className="size-4 text-brand" /> : null}
+          <h2 className="font-serif text-base font-semibold tracking-tight text-slate-900">{title}</h2>
+        </div>
+        {extra}
+      </div>
+      <CardContent className="p-5 pt-5">{children}</CardContent>
+    </Card>
+  );
 }
 
 const DashboardPage = () => {
@@ -190,12 +207,10 @@ const DashboardPage = () => {
   const [refreshTick, setRefreshTick] = useState(0);
   const [nowTick, setNowTick] = useState<Dayjs>(() => dayjs());
 
-  // M.10: auto-refresh stats every 60s while the tab is visible.
+  // Auto-refresh stats every 60s while the tab is visible.
   useEffect(() => {
     const id = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        setRefreshTick((tick) => tick + 1);
-      }
+      if (document.visibilityState === 'visible') setRefreshTick((tick) => tick + 1);
     }, 60_000);
     return () => clearInterval(id);
   }, []);
@@ -206,40 +221,29 @@ const DashboardPage = () => {
     return () => clearInterval(id);
   }, []);
 
-  const effectiveRange = useMemo<[Dayjs, Dayjs]>(() => {
-    if (rangePreset === 'custom') {
-      return customRange;
-    }
-    return defaultRangeFor(rangePreset);
-  }, [rangePreset, customRange]);
+  const effectiveRange = useMemo<[Dayjs, Dayjs]>(
+    () => (rangePreset === 'custom' ? customRange : defaultRangeFor(rangePreset)),
+    [rangePreset, customRange],
+  );
 
   useEffect(() => {
     let mounted = true;
-
     const loadOverview = async () => {
       setOverviewLoading(true);
       setOverviewError(null);
       try {
         const response = await authAxios.get('/api/v1/admin/statistics/overview');
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
         setOverview(response.data?.data ?? null);
         setLastUpdated(dayjs());
       } catch {
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
         setOverviewError('Dashboard data is unavailable');
       } finally {
-        if (mounted) {
-          setOverviewLoading(false);
-        }
+        if (mounted) setOverviewLoading(false);
       }
     };
-
     void loadOverview();
-
     return () => {
       mounted = false;
     };
@@ -248,497 +252,380 @@ const DashboardPage = () => {
   useEffect(() => {
     let mounted = true;
     const [from, to] = effectiveRange;
-
     const loadActivity = async () => {
       setActivityLoading(true);
       setActivityError(null);
       try {
         const response = await authAxios.get('/api/v1/admin/statistics/activity', {
-          params: {
-            from: from.format('YYYY-MM-DD'),
-            to: to.format('YYYY-MM-DD'),
-            granularity,
-          },
+          params: { from: from.format('YYYY-MM-DD'), to: to.format('YYYY-MM-DD'), granularity },
         });
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
         setActivity(response.data?.data ?? null);
       } catch {
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
         setActivityError('No activity in the selected range');
         setActivity(null);
       } finally {
-        if (mounted) {
-          setActivityLoading(false);
-        }
+        if (mounted) setActivityLoading(false);
       }
     };
-
     void loadActivity();
-
     return () => {
       mounted = false;
     };
   }, [effectiveRange, granularity, refreshTick]);
 
-  const handleRefresh = useCallback(() => {
-    setRefreshTick((tick) => tick + 1);
-  }, []);
+  const handleRefresh = useCallback(() => setRefreshTick((tick) => tick + 1), []);
 
-  const handleRangePresetChange = useCallback((value: string | number) => {
-    const preset = value as RangePreset;
+  const handleRangePresetChange = useCallback((preset: RangePreset) => {
     setRangePreset(preset);
-    if (preset !== 'custom') {
-      setCustomRange(defaultRangeFor(preset));
-    }
-  }, []);
-
-  const handleCustomRangeChange = useCallback((dates: [Dayjs | null, Dayjs | null] | null) => {
-    if (!dates || !dates[0] || !dates[1]) {
-      return;
-    }
-    setRangePreset('custom');
-    setCustomRange([dates[0].startOf('day'), dates[1].startOf('day')]);
+    if (preset !== 'custom') setCustomRange(defaultRangeFor(preset));
   }, []);
 
   const activityChartData = useMemo(() => {
-    if (!activity) {
-      return [];
-    }
-
-    const series: Array<{ bucket: string; series: string; value: number }> = [];
-    for (const point of activity.buckets) {
-      series.push({ bucket: point.bucket, series: 'New users', value: point.newProfiles });
-      series.push({ bucket: point.bucket, series: 'New lectures', value: point.newLectures });
-      series.push({ bucket: point.bucket, series: 'Audit events', value: point.newAuditEvents });
-    }
-    return series;
+    if (!activity) return [];
+    return activity.buckets.map((point) => ({
+      bucket: point.bucket,
+      'New users': point.newProfiles,
+      'New lectures': point.newLectures,
+      'Audit events': point.newAuditEvents,
+    }));
   }, [activity]);
 
   const studentsChartData = useMemo(() => {
-    if (!overview?.studentsByYear) {
-      return [];
-    }
-    return overview.studentsByYear.map((row) => ({
-      year: `Year ${row.yearLevel}`,
-      count: row.count,
-      yearLevel: row.yearLevel,
-    }));
+    if (!overview?.studentsByYear) return [];
+    return overview.studentsByYear.map((row) => ({ year: `Year ${row.yearLevel}`, count: row.count }));
   }, [overview]);
 
   const filteredAuditLogs = useMemo(() => {
-    if (!overview?.recentAuditLogs) {
-      return [];
-    }
-    if (!actionFilter) {
-      return overview.recentAuditLogs;
-    }
+    if (!overview?.recentAuditLogs) return [];
+    if (!actionFilter) return overview.recentAuditLogs;
     return overview.recentAuditLogs.filter((log) => log.action === actionFilter);
   }, [overview, actionFilter]);
 
-  const auditColumns = useMemo<ColumnsType<DashboardOverview['recentAuditLogs'][number]>>(
-    () => [
-      {
-        title: 'Action',
-        dataIndex: 'action',
-        key: 'action',
-        width: 110,
-        render: (action: string) => (
-          <Tag color={ACTION_COLORS[action] ?? 'default'} style={{ fontWeight: 500 }}>
-            {action}
-          </Tag>
-        ),
-      },
-      {
-        title: 'Table',
-        dataIndex: 'table_name',
-        key: 'table_name',
-        ellipsis: true,
-      },
-      {
-        title: 'User',
-        dataIndex: 'user_email',
-        key: 'user_email',
-        ellipsis: true,
-        render: (email: string | null) =>
-          email ? (
-            <Space size={6} align="center">
-              <span
-                aria-hidden
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 26,
-                  height: 26,
-                  borderRadius: '50%',
-                  background: 'rgba(47, 128, 237, 0.12)',
-                  color: '#1d4ed8',
-                  fontWeight: 600,
-                  fontSize: 12,
-                }}
-              >
-                {email.slice(0, 1).toUpperCase()}
-              </span>
-              <Text>{email}</Text>
-            </Space>
-          ) : (
-            <Text type="secondary">-</Text>
-          ),
-      },
-      {
-        title: 'Time',
-        dataIndex: 'created_at',
-        key: 'created_at',
-        width: 180,
-        render: (createdAt: string) => (
-          <Tooltip title={dayjs(createdAt).format('YYYY-MM-DD HH:mm:ss')}>
-            <Text type="secondary">{dayjs(createdAt).format('DD/MM/YYYY HH:mm')}</Text>
-          </Tooltip>
-        ),
-      },
-    ],
-    [],
-  );
-
   const welcomeName = identity?.name ?? identity?.username ?? '';
   const welcomeMessage = welcomeName ? `Welcome back, ${welcomeName}` : 'Welcome to the admin console';
-
   const isLoadingOverview = overviewLoading && !overview;
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+    <div className="flex flex-col gap-4">
       {/* Welcome / refresh banner */}
-      <Card
-        bordered={false}
-        style={{ background: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)', color: '#fff' }}
-      >
-        <Row align="middle" justify="space-between" gutter={[12, 12]} wrap>
-          <Col xs={24} md={16}>
-            <Title level={3} style={{ color: '#fff', marginBottom: 4 }}>
-              {welcomeMessage}
-            </Title>
-            <Paragraph style={{ color: 'rgba(255,255,255,0.85)', margin: 0 }}>
-              Select a menu item to manage the system
-            </Paragraph>
-          </Col>
-          <Col xs={24} md="auto">
-            <Space size={8} wrap>
-              {lastUpdated && (
-                <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12 }}>
-                  Last updated: {Math.max(0, nowTick.diff(lastUpdated, 'second'))}s ago
-                </Text>
-              )}
-              <Button
-                ghost
-                icon={<ReloadOutlined spin={overviewLoading || activityLoading} />}
-                onClick={handleRefresh}
-                disabled={overviewLoading && activityLoading}
-              >
-                Refresh
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-      </Card>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gradient-to-br from-brand to-brand-hover p-6 text-white shadow-soft">
+        <div className="min-w-0">
+          <h1 className="font-serif text-2xl font-semibold tracking-tight">{welcomeMessage}</h1>
+          <p className="mt-1 text-sm text-white/85">Select a menu item to manage the system</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {lastUpdated && (
+            <span className="text-xs text-white/75">
+              Last updated: {Math.max(0, nowTick.diff(lastUpdated, 'second'))}s ago
+            </span>
+          )}
+          <Button
+            variant="secondary"
+            size="sm"
+            className="border-white/30 bg-white/10 text-white hover:bg-white/20"
+            onClick={handleRefresh}
+            disabled={overviewLoading && activityLoading}
+          >
+            <RefreshCw className={cn(overviewLoading || activityLoading ? 'animate-spin' : '')} />
+            Refresh
+          </Button>
+        </div>
+      </div>
 
-      {overviewError && <Alert type="error" showIcon message={overviewError} />}
+      {overviewError && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <AlertTriangle className="size-4 shrink-0" />
+          {overviewError}
+        </div>
+      )}
 
       {/* KPI cards */}
-      <Row gutter={[12, 12]}>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         {KPI_DEFINITIONS.map((definition) => {
           const pair = overview?.kpis[definition.key];
           const total = pair?.total ?? 0;
           const active = pair?.active ?? 0;
           const ratio = total > 0 ? Math.round((active / total) * 100) : 0;
-
+          const Icon = definition.icon;
           return (
-            <Col key={definition.key} xs={12} sm={12} md={8} lg={8} xl={4}>
-              <Card
-                size="small"
-                style={{
-                  borderTop: `3px solid ${definition.accent}`,
-                  height: '100%',
-                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                }}
-                bodyStyle={{ padding: 14 }}
-                hoverable
-              >
-                {isLoadingOverview ? (
-                  <Skeleton active paragraph={{ rows: 2 }} />
-                ) : (
-                  <>
-                    <Row align="middle" justify="space-between" wrap={false}>
-                      <Col flex="auto" style={{ minWidth: 0 }}>
-                        <Text type="secondary" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          {definition.label}
-                        </Text>
-                        <Title level={3} style={{ margin: '4px 0 0', color: definition.accent }}>
-                          {overviewError ? '—' : total.toLocaleString()}
-                        </Title>
-                      </Col>
-                      <Col>
-                        <span
-                          aria-hidden
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: 36,
-                            height: 36,
-                            borderRadius: 10,
-                            background: `${definition.accent}1a`,
-                            color: definition.accent,
-                            fontSize: 16,
-                          }}
-                        >
-                          {definition.icon}
-                        </span>
-                      </Col>
-                    </Row>
-                    <div style={{ marginTop: 10 }}>
-                      <Progress
-                        percent={ratio}
-                        size="small"
-                        showInfo={false}
-                        strokeColor={definition.accent}
-                        trailColor="rgba(15,23,42,0.06)"
-                      />
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {`${active}/${total} active`}
-                      </Text>
+            <Card key={definition.key} className="p-4">
+              {isLoadingOverview ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-7 w-12" />
+                  <Skeleton className="h-1.5 w-full" />
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+                        {definition.label}
+                      </p>
+                      <p className="mt-1 font-serif text-2xl font-semibold text-slate-900">
+                        {overviewError ? '—' : total.toLocaleString()}
+                      </p>
                     </div>
-                  </>
-                )}
-              </Card>
-            </Col>
+                    <span className="flex size-9 items-center justify-center rounded-xl bg-brand-subtle text-brand">
+                      <Icon className="size-4" />
+                    </span>
+                  </div>
+                  <div className="mt-3">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${ratio}%` }} />
+                    </div>
+                    <p className="mt-1.5 text-xs text-slate-400">{`${active}/${total} active`}</p>
+                  </div>
+                </>
+              )}
+            </Card>
           );
         })}
-      </Row>
+      </div>
 
       {/* Quick actions */}
-      <Card title="Quick actions" size="small">
-        <Space wrap>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => go({ to: { resource: 'subjects', action: 'create' } })}>
-            New subject
+      <SectionCard title="Quick actions">
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => go({ to: { resource: 'resources', action: 'list' } })}>
+            <Plus />
+            New resource
           </Button>
-          <Button icon={<PlusOutlined />} onClick={() => go({ to: { resource: 'lectures', action: 'create' } })}>
-            New lecture
-          </Button>
-          <Button icon={<PlusOutlined />} onClick={() => go({ to: { resource: 'calendar', action: 'create' } })}>
+          <Button variant="secondary" onClick={() => go({ to: { resource: 'calendar', action: 'create' } })}>
+            <Plus />
             New calendar event
           </Button>
-          <Button icon={<PlusOutlined />} onClick={() => go({ to: { resource: 'announcements', action: 'create' } })}>
+          <Button variant="secondary" onClick={() => go({ to: { resource: 'announcements', action: 'create' } })}>
+            <Plus />
             New announcement
           </Button>
-        </Space>
-      </Card>
+        </div>
+      </SectionCard>
 
       {/* Activity over time */}
-      <Card
-        title={
-          <Space size={8}>
-            <ClockCircleOutlined />
-            Activity over time
-          </Space>
-        }
+      <SectionCard
+        title="Activity over time"
+        icon={Clock}
         extra={
-          <Space size={8} wrap>
+          <div className="flex flex-wrap items-center gap-2">
             <Segmented
               value={granularity}
-              onChange={(value) => setGranularity(value as Granularity)}
+              onChange={setGranularity}
               options={[
                 { label: 'Daily', value: 'day' },
                 { label: 'Weekly', value: 'week' },
                 { label: 'Monthly', value: 'month' },
               ]}
             />
-            <Radio.Group
+            <Segmented
               value={rangePreset}
-              onChange={(event) => handleRangePresetChange(event.target.value)}
-              optionType="button"
-              buttonStyle="solid"
-              size="small"
-            >
-              <Radio.Button value="7d">Last 7 days</Radio.Button>
-              <Radio.Button value="30d">Last 30 days</Radio.Button>
-              <Radio.Button value="90d">Last 90 days</Radio.Button>
-              <Radio.Button value="custom">Custom</Radio.Button>
-            </Radio.Group>
+              onChange={handleRangePresetChange}
+              options={[
+                { label: '7d', value: '7d' },
+                { label: '30d', value: '30d' },
+                { label: '90d', value: '90d' },
+                { label: 'Custom', value: 'custom' },
+              ]}
+            />
             {rangePreset === 'custom' && (
-              <RangePicker
-                value={customRange}
-                onChange={(dates) => handleCustomRangeChange(dates as [Dayjs | null, Dayjs | null] | null)}
-                allowClear={false}
-                disabledDate={(current) => current && current > dayjs().endOf('day')}
-              />
+              <div className="flex items-center gap-1.5">
+                <DatePicker
+                  className="h-9 w-36"
+                  value={customRange[0].format('YYYY-MM-DD')}
+                  max={customRange[1].format('YYYY-MM-DD')}
+                  onChange={(v) => v && setCustomRange([dayjs(v).startOf('day'), customRange[1]])}
+                />
+                <span className="text-slate-400">–</span>
+                <DatePicker
+                  className="h-9 w-36"
+                  value={customRange[1].format('YYYY-MM-DD')}
+                  max={dayjs().format('YYYY-MM-DD')}
+                  onChange={(v) => v && setCustomRange([customRange[0], dayjs(v).startOf('day')])}
+                />
+              </div>
             )}
-          </Space>
+          </div>
         }
       >
-        <Paragraph type="secondary" style={{ marginTop: -4, marginBottom: 12, fontSize: 12 }}>
+        <p className="-mt-1 mb-3 text-xs text-slate-400">
           New users, lectures, and audit events across the selected period
-        </Paragraph>
+        </p>
         {activityLoading ? (
-          <Skeleton active paragraph={{ rows: 6 }} />
+          <Skeleton className="h-64 w-full" />
         ) : activityError ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '32px 0' }}>
-            <WarningOutlined style={{ fontSize: 32, color: '#d97706' }} />
-            <Text type="secondary">Chart data unavailable</Text>
-            <Button type="link" size="small" onClick={handleRefresh}>
+          <div className="flex flex-col items-center gap-2 py-8 text-center">
+            <AlertTriangle className="size-8 text-amber-500" />
+            <span className="text-sm text-slate-500">Chart data unavailable</span>
+            <Button variant="link" size="sm" onClick={handleRefresh}>
               Retry
             </Button>
           </div>
         ) : !activity || activity.buckets.length === 0 ? (
-          <Empty description="No activity in the selected range" />
+          <p className="py-12 text-center text-sm text-slate-400">No activity in the selected range</p>
         ) : (
-          <Line
-            data={activityChartData}
-            autoFit
-            xField="bucket"
-            yField="value"
-            seriesField="series"
-            smooth
-            height={260}
-            color={['#1d4ed8', '#7c3aed', '#16a34a']}
-            point={{ size: 3, shape: 'circle' }}
-            xAxis={{ tickCount: 6 }}
-            yAxis={{ minInterval: 1 }}
-            legend={{ position: 'top-right' }}
-          />
+          <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={activityChartData} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(15,23,42,0.06)" vertical={false} />
+              <XAxis dataKey="bucket" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} minTickGap={24} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={40} />
+              <RechartsTooltip
+                contentStyle={{ borderRadius: 12, border: '1px solid rgba(15,23,42,0.1)', fontSize: 12 }}
+              />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              {['New users', 'New lectures', 'Audit events'].map((key, i) => (
+                <Line
+                  key={key}
+                  type="monotone"
+                  dataKey={key}
+                  stroke={CHART_COLORS[i]}
+                  strokeWidth={2}
+                  dot={{ r: 2 }}
+                  activeDot={{ r: 4 }}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
         )}
-      </Card>
+      </SectionCard>
 
-      <Row gutter={[12, 12]}>
-        {/* Students by year (bar chart) */}
-        <Col xs={24} lg={10}>
-          <Card title="Students By Year" style={{ height: '100%' }}>
-            {isLoadingOverview ? (
-              <Skeleton active paragraph={{ rows: 5 }} />
-            ) : studentsChartData.length === 0 ? (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            ) : (
-              <Column
-                data={studentsChartData}
-                autoFit
-                xField="year"
-                yField="count"
-                height={280}
-                color="#1d4ed8"
-                columnStyle={{ radius: [6, 6, 0, 0] }}
-                label={{
-                  position: 'top',
-                  style: { fill: 'rgba(15,23,42,0.45)', fontSize: 12 },
-                }}
-                tooltip={{
-                  formatter: (datum: { count?: number }) => ({
-                    name: 'Profiles',
-                    value: datum?.count ?? 0,
-                  }),
-                }}
-                xAxis={{ label: { autoRotate: false } }}
-                yAxis={{ minInterval: 1 }}
-              />
-            )}
-          </Card>
-        </Col>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        {/* Students by year */}
+        <SectionCard title="Students by Year" className="lg:col-span-5">
+          {isLoadingOverview ? (
+            <Skeleton className="h-72 w-full" />
+          ) : studentsChartData.length === 0 ? (
+            <p className="py-12 text-center text-sm text-slate-400">No data</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={studentsChartData} margin={{ top: 16, right: 12, left: -16, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(15,23,42,0.06)" vertical={false} />
+                <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={40} />
+                <RechartsTooltip
+                  cursor={{ fill: 'rgba(47,128,237,0.06)' }}
+                  contentStyle={{ borderRadius: 12, border: '1px solid rgba(15,23,42,0.1)', fontSize: 12 }}
+                />
+                <Bar dataKey="count" name="Profiles" fill="#2f80ed" radius={[6, 6, 0, 0]} maxBarSize={48} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </SectionCard>
 
-        {/* Upcoming events (timeline) */}
-        <Col xs={24} lg={14}>
-          <Card
-            title={
-              <Space size={8}>
-                <BellOutlined />
-                Upcoming Events
-              </Space>
-            }
-            style={{ height: '100%' }}
-          >
-            {isLoadingOverview ? (
-              <Skeleton active paragraph={{ rows: 4 }} />
-            ) : !overview?.upcomingEvents || overview.upcomingEvents.length === 0 ? (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No upcoming events" />
-            ) : (
-              <Timeline
-                mode="left"
-                items={overview.upcomingEvents.map((event) => {
-                  const startSource = event.start_date ?? event.start_time ?? '';
-                  const start = dayjs(startSource);
-                  const now = dayjs();
-                  const color = EVENT_COLORS[event.type?.toLowerCase()] ?? '#94a3b8';
-                  const hoursUntil = start.diff(now, 'hour');
-                  const urgencyColor = hoursUntil < 24 ? '#dc2626' : hoursUntil < 72 ? '#d97706' : '#94a3b8';
-                  return {
-                    color,
-                    label: (
-                      <Space direction="vertical" size={0} style={{ textAlign: 'right' }}>
-                        <Text strong>{start.format('DD MMM')}</Text>
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          {start.format('HH:mm')}
-                        </Text>
-                      </Space>
-                    ),
-                    children: (
-                      <Space direction="vertical" size={2}>
-                        <Space size={6} wrap>
-                          <Text strong>{event.title}</Text>
-                          <Tag color={color}>{event.type}</Tag>
-                        </Space>
-                        <Text style={{ fontSize: 12 }}>
-                          <span style={{ color: urgencyColor, fontWeight: 500 }}>
-                            {formatRelativeTime(start, now)}
-                          </span>
-                          {event.location ? <span style={{ color: '#94a3b8' }}> · {event.location}</span> : null}
-                        </Text>
-                      </Space>
-                    ),
-                  };
-                })}
-              />
-            )}
-          </Card>
-        </Col>
-      </Row>
+        {/* Upcoming events */}
+        <SectionCard title="Upcoming Events" icon={Bell} className="lg:col-span-7">
+          {isLoadingOverview ? (
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : !overview?.upcomingEvents || overview.upcomingEvents.length === 0 ? (
+            <p className="py-12 text-center text-sm text-slate-400">No upcoming events</p>
+          ) : (
+            <ol className="space-y-3">
+              {overview.upcomingEvents.map((event) => {
+                const start = dayjs(event.start_date ?? event.start_time ?? '');
+                const now = dayjs();
+                const color = EVENT_COLORS[event.type?.toLowerCase()] ?? '#94a3b8';
+                const hoursUntil = start.diff(now, 'hour');
+                const urgencyColor = hoursUntil < 24 ? '#dc2626' : hoursUntil < 72 ? '#d97706' : '#94a3b8';
+                return (
+                  <li key={event.id} className="flex gap-3">
+                    <div className="flex w-12 shrink-0 flex-col items-end pt-0.5 text-right">
+                      <span className="text-sm font-semibold text-slate-900">{start.format('DD MMM')}</span>
+                      <span className="text-xs text-slate-400">{start.format('HH:mm')}</span>
+                    </div>
+                    <span className="mt-1 size-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium text-slate-900">{event.title}</span>
+                        <span
+                          className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+                          style={{ backgroundColor: `${color}1a`, color }}
+                        >
+                          {event.type}
+                        </span>
+                      </div>
+                      <p className="text-xs">
+                        <span style={{ color: urgencyColor, fontWeight: 500 }}>{formatRelativeTime(start, now)}</span>
+                        {event.location ? <span className="text-slate-400"> · {event.location}</span> : null}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </SectionCard>
+      </div>
 
-      {/* Audit logs table */}
-      <Card
-        title={
-          <Space size={8}>
-            <AuditOutlined />
-            Recent Audit Logs
-          </Space>
-        }
+      {/* Audit logs */}
+      <SectionCard
+        title="Recent Audit Logs"
+        icon={ScrollText}
         extra={
-          <Radio.Group
+          <Segmented
             value={actionFilter ?? 'all'}
-            onChange={(event) => setActionFilter(event.target.value === 'all' ? null : event.target.value)}
-            optionType="button"
-            size="small"
-          >
-            <Radio.Button value="all">All actions</Radio.Button>
-            <Radio.Button value="INSERT">INSERT</Radio.Button>
-            <Radio.Button value="UPDATE">UPDATE</Radio.Button>
-            <Radio.Button value="DELETE">DELETE</Radio.Button>
-          </Radio.Group>
+            onChange={(value) => setActionFilter(value === 'all' ? null : value)}
+            options={[
+              { label: 'All', value: 'all' },
+              { label: 'INSERT', value: 'INSERT' },
+              { label: 'UPDATE', value: 'UPDATE' },
+              { label: 'DELETE', value: 'DELETE' },
+            ]}
+          />
         }
       >
-        <Table
-          rowKey="id"
-          size="small"
-          columns={auditColumns}
-          dataSource={filteredAuditLogs}
-          loading={isLoadingOverview}
-          pagination={{ pageSize: 5, showSizeChanger: false }}
-          locale={{
-            emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No recent audit logs" />,
-          }}
-          scroll={{ x: 'max-content' }}
-        />
-      </Card>
-    </Space>
+        {isLoadingOverview ? (
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-full" />
+            ))}
+          </div>
+        ) : filteredAuditLogs.length === 0 ? (
+          <p className="py-8 text-center text-sm text-slate-400">No recent audit logs</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200/70 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  <th className="py-2 pr-4">Action</th>
+                  <th className="py-2 pr-4">Table</th>
+                  <th className="py-2 pr-4">User</th>
+                  <th className="py-2">Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAuditLogs.slice(0, 8).map((log) => (
+                  <tr key={log.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2.5 pr-4">
+                      <Badge variant={ACTION_BADGE[log.action] ?? 'neutral'}>{log.action}</Badge>
+                    </td>
+                    <td className="py-2.5 pr-4 text-slate-700">{log.table_name}</td>
+                    <td className="py-2.5 pr-4">
+                      {log.user_email ? (
+                        <span className="flex items-center gap-2">
+                          <span className="flex size-6 items-center justify-center rounded-full bg-brand-subtle text-[11px] font-semibold text-brand">
+                            {log.user_email.slice(0, 1).toUpperCase()}
+                          </span>
+                          <span className="text-slate-700">{log.user_email}</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
+                    <td className="py-2.5 text-slate-500" title={dayjs(log.created_at).format('YYYY-MM-DD HH:mm:ss')}>
+                      {dayjs(log.created_at).format('DD/MM/YYYY HH:mm')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SectionCard>
+    </div>
   );
 };
 

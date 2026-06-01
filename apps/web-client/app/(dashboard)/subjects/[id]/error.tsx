@@ -6,8 +6,9 @@
  */
 
 import { useEffect } from 'react';
-import { Card, CardBody, Button } from '@heroui/react';
-import { FiAlertTriangle, FiRefreshCw, FiArrowLeft } from 'react-icons/fi';
+import { Card, CardBody } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SubjectDetailError({
@@ -27,10 +28,10 @@ export default function SubjectDetailError({
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center p-4">
-      <Card shadow="none" className="w-full max-w-md border border-slate-200/70 bg-white shadow-subtle">
-        <CardBody className="gap-4 p-6 text-center">
+      <Card className="w-full max-w-md">
+        <CardBody className="flex flex-col gap-4 p-6 pt-6 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-50">
-            <FiAlertTriangle className="h-7 w-7 text-amber-500" />
+            <AlertTriangle className="h-7 w-7 text-amber-500" />
           </div>
 
           <div className="space-y-2">
@@ -48,18 +49,16 @@ export default function SubjectDetailError({
 
           <div className="flex flex-col gap-3 pt-2 sm:flex-row">
             {!isNotFound && (
-              <Button color="primary" className="flex-1" startContent={<FiRefreshCw className="h-4 w-4" />} onPress={reset}>
+              <Button className="flex-1" onClick={reset}>
+                <RefreshCw className="h-4 w-4" />
                 Try Again
               </Button>
             )}
-            <Button
-              as={Link}
-              href="/subjects"
-              variant="flat"
-              className="flex-1"
-              startContent={<FiArrowLeft className="h-4 w-4" />}
-            >
-              Back to Subjects
+            <Button asChild variant="secondary" className="flex-1">
+              <Link href="/subjects">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Subjects
+              </Link>
             </Button>
           </div>
         </CardBody>

@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import Link from 'next/link';
-import { FiArrowUpRight } from 'react-icons/fi';
+import { ArrowUpRight } from 'lucide-react';
 import { HighlightText } from '@/components/ui/HighlightText';
 import { usePrefetchSubject } from '@/hooks/use-subjects';
 
@@ -74,7 +74,7 @@ export function SubjectCard({
               {lectureCount} {lectureCount === 1 ? 'lecture' : 'lectures'}
             </span>
           )}
-          <FiArrowUpRight className="ml-auto h-4 w-4 text-slate-300 transition-colors group-hover:text-brand" />
+          <ArrowUpRight className="ml-auto h-4 w-4 text-slate-300 transition-colors group-hover:text-brand" />
         </div>
       </div>
     </Link>

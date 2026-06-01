@@ -1,56 +1,55 @@
 /**
  * Profiles List Page
- * Migrated from src/app/profiles/page.tsx
- */import { List, useTable, EditButton, ShowButton } from '@refinedev/antd';
-import { Avatar, Button, Input, Select, Space, Table, Tag } from 'antd';import { useCallback, useEffect, useRef, useState } from 'react';import { UserRole } from '@medical-portal/shared';import type { Profile } from '@medical-portal/shared';import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useTable } from '@refinedev/core';
+import { Eye, Pencil, Users } from 'lucide-react';
+import { UserRole } from '@medical-portal/shared';
+import type { Profile } from '@medical-portal/shared';
+import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
+import { useTableSorting } from '../../utils/use-table-sorting';
+import { PageHeader } from '@/components/ui/page-header';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { AdminEmptyState } from '../../components/AdminEmptyState';
+import { DataTable, type ColumnDef } from '@/components/ui/data-table';
 
 const ProfilesList = () => {
-  const { tableProps, setFilters, filters } = useTable<Profile>({
-    syncWithLocation: true,
-  });
+  const { tableQueryResult, current, setCurrent, pageSize, pageCount, setFilters, filters, sorters, setSorters } =
+    useTable<Profile>({ resource: 'profiles', syncWithLocation: true });
+  const { sorting, onSortingChange } = useTableSorting(sorters, setSorters);
 
   const [search, setSearch] = useState('');
   const [role, setRole] = useState<string | undefined>(undefined);
-  const [yearLevel, setYearLevel] = useState<number | undefined>(undefined);
+  const [yearLevel, setYearLevel] = useState<string | undefined>(undefined);
   const debouncedSearch = useDebouncedValue(search, 350);
   const hasHydratedFromUrl = useRef(false);
 
-  const buildFilters = useCallback((searchValue: string) => {
-    const nextFilters: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
-
-    if (searchValue.trim()) {
-      nextFilters.push({ field: 'search', operator: 'contains', value: searchValue.trim() });
-    }
-    if (role) {
-      nextFilters.push({ field: 'role', operator: 'eq', value: role });
-    }
-    if (typeof yearLevel === 'number') {
-      nextFilters.push({ field: 'year_level', operator: 'eq', value: yearLevel });
-    }
-
-    return nextFilters;
-  }, [role, yearLevel]);
+  const buildFilters = useCallback(
+    (searchValue: string) => {
+      const next: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
+      if (searchValue.trim()) next.push({ field: 'search', operator: 'contains', value: searchValue.trim() });
+      if (role) next.push({ field: 'role', operator: 'eq', value: role });
+      if (yearLevel) next.push({ field: 'year_level', operator: 'eq', value: Number(yearLevel) });
+      return next;
+    },
+    [role, yearLevel],
+  );
 
   useEffect(() => {
-    if (hasHydratedFromUrl.current) {
-      return;
-    }
-
-    const searchValue = getFilterValue(filters, 'search');
-    const roleValue = getFilterValue(filters, 'role');
-    const yearLevelValue = getFilterValue(filters, 'year_level');
-
-    setSearch(typeof searchValue === 'string' ? searchValue : '');
-    setRole(typeof roleValue === 'string' ? roleValue : undefined);
-    setYearLevel(typeof yearLevelValue === 'number' ? yearLevelValue : undefined);
-
+    if (hasHydratedFromUrl.current) return;
+    setSearch(typeof getFilterValue(filters, 'search') === 'string' ? (getFilterValue(filters, 'search') as string) : '');
+    setRole(typeof getFilterValue(filters, 'role') === 'string' ? (getFilterValue(filters, 'role') as string) : undefined);
+    const yl = getFilterValue(filters, 'year_level');
+    setYearLevel(typeof yl === 'number' ? String(yl) : typeof yl === 'string' ? yl : undefined);
     hasHydratedFromUrl.current = true;
   }, [filters]);
 
   useEffect(() => {
-    if (!hasHydratedFromUrl.current) {
-      return;
-    }
+    if (!hasHydratedFromUrl.current) return;
     setFilters(buildFilters(debouncedSearch), 'replace');
   }, [buildFilters, debouncedSearch, setFilters]);
 
@@ -61,97 +60,115 @@ const ProfilesList = () => {
     setFilters([], 'replace');
   };
 
-  return (
-    <List>
-      <Space wrap size="small" style={{ marginBottom: 12 }} className="resource-filter-bar">
-        <Input.Search
-          className="resource-filter-control"
-          allowClear
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder={'Search'}
-          style={{ width: 260 }}
-        />
-        <Select
-          className="resource-filter-control"
-          allowClear
-          value={role}
-          onChange={(value) => setRole(value)}
-          placeholder={'Role'}
-          style={{ width: 180 }}
-          options={[
-            { label: 'Admin', value: UserRole.ADMIN },
-            { label: 'Student', value: UserRole.STUDENT },
-          ]}
-        />
-        <Select
-          className="resource-filter-control"
-          allowClear
-          value={yearLevel}
-          onChange={(value) => setYearLevel(value)}
-          placeholder={'Year Level'}
-          style={{ width: 160 }}
-          options={[1, 2, 3, 4, 5, 6].map((value) => ({
-            label: `${'Year'} ${value}`,
-            value,
-          }))}
-        />
-        <Button className="resource-filter-button" onClick={resetFilters}>{'Clear'}</Button>
-      </Space>
+  const columns: ColumnDef<Profile, unknown>[] = useMemo(
+    () => [
+      {
+        id: 'avatar',
+        header: '',
+        cell: ({ row }) => (
+          <span className="flex size-8 items-center justify-center rounded-full bg-brand-subtle text-xs font-semibold text-brand">
+            {row.original.full_name?.charAt(0)?.toUpperCase() ?? '?'}
+          </span>
+        ),
+      },
+      { accessorKey: 'full_name', header: 'Full Name' },
+      { accessorKey: 'email', header: 'Email' },
+      {
+        accessorKey: 'student_id',
+        header: 'Student ID',
+        cell: ({ getValue }) => (getValue() as string) || '-',
+      },
+      {
+        accessorKey: 'year_level',
+        header: 'Year',
+        cell: ({ getValue }) => (getValue() ? `Year ${getValue()}` : '-'),
+      },
+      {
+        accessorKey: 'role',
+        header: 'Role',
+        cell: ({ getValue }) =>
+          getValue() === UserRole.ADMIN ? <Badge variant="warning">Admin</Badge> : <Badge variant="brand">Student</Badge>,
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <Button asChild size="icon-sm" variant="secondary" aria-label="View">
+              <Link to={`/profiles/show/${row.original.id}`}>
+                <Eye />
+              </Link>
+            </Button>
+            <Button asChild size="icon-sm" variant="secondary" aria-label="Edit">
+              <Link to={`/profiles/edit/${row.original.id}`}>
+                <Pencil />
+              </Link>
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
 
-      <Table
-        {...tableProps}
-        rowKey="id"
-        size="small"
-        scroll={{ x: 'max-content' }}
-      >
-        <Table.Column
-          dataIndex="avatar_url"
-          title=""
-          width={50}
-          sorter
-          render={(value, record: Profile) => (
-            <Avatar src={value} size="small">
-              {record.full_name?.charAt(0)}
-            </Avatar>
-          )}
+  return (
+    <div>
+      <PageHeader title="Profiles" description="View and manage student and admin accounts." />
+
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200/70 bg-white p-4 shadow-subtle">
+        <Input
+          className="w-full sm:w-64"
+          placeholder="Search by name or email…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
         />
-        <Table.Column dataIndex="full_name" title={'Full Name'} ellipsis sorter />
-        <Table.Column dataIndex="email" title={'Email'} ellipsis sorter />
-        <Table.Column dataIndex="student_id" title={'Student ID'} ellipsis sorter />
-        <Table.Column
-          dataIndex="year_level"
-          title={'Year Level'}
-          width={80}
-          sorter
-          render={(value) => (value ? `${'Year'} ${value}` : '-')}
-        />
-        <Table.Column
-          dataIndex="role"
-          title={'Role'}
-          width={120}
-          sorter
-          render={(value) => (
-            <Tag color={value === UserRole.ADMIN ? 'gold' : 'blue'}>
-              {value === UserRole.ADMIN
-                ? 'Admin'
-                : 'Student'}
-            </Tag>
-          )}
-        />
-        <Table.Column
-          title={'Actions'}
-          fixed="right"
-          width={120}
-          render={(_, record: Profile) => (
-            <Space size="small">
-              <ShowButton hideText size="small" recordItemId={record.id} />
-              <EditButton hideText size="small" recordItemId={record.id} />
-            </Space>
-          )}
-        />
-      </Table>
-    </List>
+        <div className="w-full sm:w-40">
+          <Select value={role ?? '__all'} onValueChange={(v) => setRole(v === '__all' ? undefined : v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">All roles</SelectItem>
+              <SelectItem value={UserRole.ADMIN}>Admin</SelectItem>
+              <SelectItem value={UserRole.STUDENT}>Student</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="w-full sm:w-40">
+          <Select value={yearLevel ?? '__all'} onValueChange={(v) => setYearLevel(v === '__all' ? undefined : v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Year" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">All years</SelectItem>
+              {[1, 2, 3, 4, 5, 6].map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  Year {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button variant="ghost" size="sm" onClick={resetFilters}>
+          Clear
+        </Button>
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={tableQueryResult?.data?.data ?? []}
+        loading={tableQueryResult?.isLoading}
+        getRowId={(row) => row.id}
+        pageIndex={current - 1}
+        pageSize={pageSize}
+        pageCount={pageCount}
+        total={tableQueryResult?.data?.total}
+        onPageChange={(idx) => setCurrent(idx + 1)}
+        sorting={sorting}
+        onSortingChange={onSortingChange}
+        emptyState={<AdminEmptyState icon={<Users />} title="No profiles found" subtitle="Adjust your filters." />}
+      />
+    </div>
   );
 };
 

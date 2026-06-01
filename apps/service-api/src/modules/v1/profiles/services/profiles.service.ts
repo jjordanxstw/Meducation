@@ -168,10 +168,11 @@ export class ProfilesService {
     return data;
   }
 
-  async update(id: string, data: any, requestingUserId?: string, requestingUserRole?: string) {
-    // Users can only update their own profile unless admin
-    if (requestingUserId !== id && requestingUserRole !== 'admin') {
-      throw new AppException(ErrorCode.AUTHZ_FORBIDDEN, { resource: 'profile', targetId: id }, 'You can only update your own profile');
+  async update(id: string, data: any, _requestingUserId?: string, requestingUserRole?: string) {
+    // Profiles are read-only for students; only admins may update profiles.
+    // (avatar_url/student_id/year_level are populated automatically on sign-in.)
+    if (requestingUserRole !== 'admin') {
+      throw new AppException(ErrorCode.AUTHZ_FORBIDDEN, { resource: 'profile', targetId: id }, 'Profiles are read-only. Only an administrator can change profile details.');
     }
 
     // Get old data for audit

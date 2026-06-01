@@ -19,13 +19,6 @@ export enum ResourceType {
   EXTERNAL = 'external',
 }
 
-export enum EventType {
-  EXAM = 'exam',
-  LECTURE = 'lecture',
-  HOLIDAY = 'holiday',
-  EVENT = 'event',
-}
-
 export enum AuditAction {
   INSERT = 'INSERT',
   UPDATE = 'UPDATE',
@@ -225,14 +218,38 @@ export interface ResourceFullCreateResponse {
 // CALENDAR EVENT
 // =====================================================
 
+/**
+ * Admin-managed calendar event type. `name` is the natural key referenced by
+ * calendar_events.type (FK with ON UPDATE CASCADE), so renaming a type
+ * propagates to every event automatically.
+ */
+export interface CalendarEventType extends BaseEntity {
+  name: string;
+  color: string;
+  sort_order: number;
+}
+
+export interface CreateCalendarEventTypeDto {
+  name: string;
+  color?: string;
+  sort_order?: number;
+}
+
+export interface UpdateCalendarEventTypeDto extends Partial<CreateCalendarEventTypeDto> {}
+
 export interface CalendarEvent extends BaseEntity {
   title: string;
   description: string | null;
   start_date: string;
   end_date: string | null;
-  type: EventType;
+  /** Optional time-of-day (`HH:mm[:ss]`); null = all-day. */
+  start_time: string | null;
+  end_time: string | null;
+  /** Event type name — references {@link CalendarEventType.name}. */
+  type: string;
   subject_id: string | null;
   location: string | null;
+  /** Resolved display color: the event's override, else its type's color. */
   color: string | null;
   created_by: string | null;
 }
@@ -242,7 +259,9 @@ export interface CreateCalendarEventDto {
   description?: string;
   start_date: string;
   end_date?: string;
-  type: EventType;
+  start_time?: string;
+  end_time?: string;
+  type: string;
   subject_id?: string;
   location?: string;
   color?: string;
@@ -471,7 +490,7 @@ export interface SubjectFilters {
 export interface CalendarFilters {
   start_date?: string;
   end_date?: string;
-  type?: EventType;
+  type?: string;
   subject_id?: string;
 }
 

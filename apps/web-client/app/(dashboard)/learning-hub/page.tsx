@@ -1,7 +1,8 @@
 'use client';
 
-import { Chip, Button } from '@heroui/react';
-import { FiBookOpen, FiClock, FiCheckCircle } from 'react-icons/fi';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { BookOpen, Clock, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { PageTransition } from '@/components/PageTransition';
 
@@ -21,9 +22,7 @@ function FeatureCard({
       </div>
       <h3 className="mb-2 text-base font-semibold text-slate-900">{title}</h3>
       <p className="mb-3 text-sm leading-relaxed text-slate-500">{description}</p>
-      <Chip size="sm" className="border border-amber-200 bg-amber-50 text-xs font-medium text-amber-600">
-        Coming Soon
-      </Chip>
+      <Badge variant="warning">Coming Soon</Badge>
     </div>
   );
 }
@@ -34,9 +33,7 @@ export default function LearningHubPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="font-serif text-3xl font-semibold tracking-tight text-slate-900">Learning Hub</h1>
-        <Chip size="sm" className="border border-amber-200 bg-amber-50 text-xs font-medium text-amber-600">
-          Coming Soon
-        </Chip>
+        <Badge variant="warning">Coming Soon</Badge>
       </div>
 
       {/* Hero card */}
@@ -47,40 +44,34 @@ export default function LearningHubPage() {
 
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <FeatureCard
-            icon={<FiBookOpen className="h-5 w-5" />}
+            icon={<BookOpen className="h-5 w-5" />}
             title="Learning Paths"
             description="Structured courses to guide your study journey"
           />
           <FeatureCard
-            icon={<FiClock className="h-5 w-5" />}
+            icon={<Clock className="h-5 w-5" />}
             title="Track Progress"
             description="Monitor your learning journey and achievements"
           />
           <FeatureCard
-            icon={<FiCheckCircle className="h-5 w-5" />}
+            icon={<CheckCircle className="h-5 w-5" />}
             title="Achievements"
             description="Earn badges and certificates as you learn"
           />
         </div>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <Button
-            as={Link}
-            href="/subjects"
-            color="primary"
-            className="w-full justify-center sm:w-auto"
-            startContent={<FiBookOpen className="h-4 w-4" />}
-          >
-            Browse Subjects
+          <Button asChild className="w-full sm:w-auto">
+            <Link href="/subjects">
+              <BookOpen className="h-4 w-4" />
+              Browse Subjects
+            </Link>
           </Button>
-          <Button
-            as={Link}
-            href="/#calendar"
-            variant="flat"
-            className="w-full justify-center sm:w-auto"
-            startContent={<FiClock className="h-4 w-4" />}
-          >
-            View Schedule
+          <Button asChild variant="secondary" className="w-full sm:w-auto">
+            <Link href="/#calendar">
+              <Clock className="h-4 w-4" />
+              View Schedule
+            </Link>
           </Button>
         </div>
       </div>
