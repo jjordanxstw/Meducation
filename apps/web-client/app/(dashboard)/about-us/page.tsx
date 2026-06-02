@@ -120,7 +120,7 @@ const STRIDE = CARD_WIDTH + CARD_GAP;
 export default function AboutUsPage() {
   const { data: members = [], isLoading } = useTeamMembers();
 
-  const viewportRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<ResizeObserver | null>(null);
   const [viewportWidth, setViewportWidth] = useState(0);
   const [current, setCurrent] = useState(0);
   const currentRef = useRef(0);
@@ -136,17 +136,22 @@ export default function AboutUsPage() {
     currentRef.current = activeIndex;
   }, [activeIndex]);
 
-  // Measure the viewport so we can centre the active card. ResizeObserver fires
-  // an initial callback on observe, so the width is set without a synchronous
-  // setState in the effect body.
-  useEffect(() => {
-    const el = viewportRef.current;
-    if (!el) return;
+  // Measure the viewport so we can centre the active card. A callback ref (not a
+  // plain effect) is used because the viewport only mounts in the loaded,
+  // non-empty branch — an effect with [] deps runs during the initial loading
+  // render when the node is still null and would never re-attach afterwards,
+  // leaving viewportWidth at 0 and the active card mis-centred.
+  const setViewportRef = useCallback((node: HTMLDivElement | null) => {
+    observerRef.current?.disconnect();
+    if (!node) {
+      observerRef.current = null;
+      return;
+    }
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) setViewportWidth(entry.contentRect.width);
     });
-    observer.observe(el);
-    return () => observer.disconnect();
+    observer.observe(node);
+    observerRef.current = observer;
   }, []);
 
   // Offset that places the centre of the active card at the viewport centre.
@@ -233,7 +238,7 @@ export default function AboutUsPage() {
             {/* Viewport clips the track horizontally; generous vertical padding
                 gives card shadows room so they're never cut at the edge. */}
             <div
-              ref={viewportRef}
+              ref={setViewportRef}
               onPointerDown={handlePointerDown}
               onPointerUp={handlePointerUp}
               className="overflow-hidden px-1 py-8"
