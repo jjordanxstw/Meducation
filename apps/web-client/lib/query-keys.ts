@@ -21,6 +21,12 @@ export const queryKeys = {
   calendar: {
     events: (month: string) => ['calendar', 'events', month] as const,
   },
+  hotNews: {
+    all: () => ['hotNews'] as const,
+    list: (filters: { page?: number; pageSize?: number; category?: string }) =>
+      ['hotNews', 'list', filters] as const,
+    detail: (id: string) => ['hotNews', 'detail', id] as const,
+  },
   teamMembers: {
     all: () => ['teamMembers'] as const,
   },

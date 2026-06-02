@@ -27,6 +27,12 @@ import AnnouncementsEdit from './announcements/edit';
 import TeamMembersList from './team-members';
 import TeamMembersCreate from './team-members/create';
 import TeamMembersEdit from './team-members/edit';
+import NewsList from './news';
+import NewsCreate from './news/create';
+import NewsEdit from './news/edit';
+import NewsCategoriesList from './news-categories';
+import NewsCategoriesCreate from './news-categories/create';
+import NewsCategoriesEdit from './news-categories/edit';
 import ProfilesList from './profiles';
 import ProfilesEdit from './profiles/edit';
 import ProfilesShow from './profiles/show';
@@ -96,6 +102,12 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
       { path: 'team-members', element: <TeamMembersList /> },
       { path: 'team-members/create', element: <TeamMembersCreate /> },
       { path: 'team-members/edit/:id', element: <TeamMembersEdit /> },
+      { path: 'news', element: <NewsList /> },
+      { path: 'news/create', element: <NewsCreate /> },
+      { path: 'news/edit/:id', element: <NewsEdit /> },
+      { path: 'news-categories', element: <NewsCategoriesList /> },
+      { path: 'news-categories/create', element: <NewsCategoriesCreate /> },
+      { path: 'news-categories/edit/:id', element: <NewsCategoriesEdit /> },
       { path: 'profiles', element: <ProfilesList /> },
       { path: 'profiles/edit/:id', element: <ProfilesEdit /> },
       { path: 'profiles/show/:id', element: <ProfilesShow /> },

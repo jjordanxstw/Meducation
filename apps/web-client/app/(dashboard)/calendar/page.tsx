@@ -1,25 +1,17 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-
 /**
- * Calendar Page - Redirects to home page
- * The calendar is now displayed on the home page
+ * Calendar Page — the academic calendar on its own route (moved off the home
+ * dashboard, which now leads with Hot News). Tailwind + Radix only.
  */
+
+import { CalendarSection } from '@/components/CalendarSection';
+import { PageTransition } from '@/components/PageTransition';
+
 export default function CalendarPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/');
-  }, [router]);
-
   return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <div className="text-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-brand mx-auto mb-4" />
-        <p className="text-slate-500 text-sm">Redirecting...</p>
-      </div>
-    </div>
+    <PageTransition>
+      <CalendarSection />
+    </PageTransition>
   );
 }

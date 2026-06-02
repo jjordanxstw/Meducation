@@ -13,6 +13,8 @@ import {
   Megaphone,
   Users,
   UsersRound,
+  Newspaper,
+  Tag,
   ScrollText,
 } from 'lucide-react';
 
@@ -83,6 +85,26 @@ export const buildResources = () => [
     meta: {
       label: 'Team Members',
       icon: React.createElement(UsersRound),
+    },
+  },
+  {
+    name: 'news',
+    list: '/news',
+    create: '/news/create',
+    edit: '/news/edit/:id',
+    meta: {
+      label: 'Hot News',
+      icon: React.createElement(Newspaper),
+    },
+  },
+  {
+    name: 'news-categories',
+    list: '/news-categories',
+    create: '/news-categories/create',
+    edit: '/news-categories/edit/:id',
+    meta: {
+      label: 'News Categories',
+      icon: React.createElement(Tag),
     },
   },
   {

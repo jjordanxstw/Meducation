@@ -329,6 +329,63 @@ export interface CreateTeamMemberDto {
 export interface UpdateTeamMemberDto extends Partial<CreateTeamMemberDto> {}
 
 // =====================================================
+// NEWS
+// =====================================================
+
+/**
+ * Admin-managed news category (the colored tag on each article card). `color`
+ * is a hex string; `news.category_id` is a FK to {@link NewsCategory.id} with
+ * ON DELETE RESTRICT, so a category still in use cannot be deleted.
+ */
+export interface NewsCategory extends BaseEntity {
+  name: string;
+  color: string;
+  sort_order: number;
+}
+
+export interface CreateNewsCategoryDto {
+  name: string;
+  color?: string;
+  sort_order?: number;
+}
+
+export interface UpdateNewsCategoryDto extends Partial<CreateNewsCategoryDto> {}
+
+/**
+ * "Hot News" article shown on the student home dashboard and a public detail
+ * page. `body` is markdown. `is_published` hides an article from students
+ * without deleting it; `is_featured` flags the home hero card. On list/detail
+ * responses the joined `category` (name + color) is included for rendering.
+ */
+export interface News extends BaseEntity {
+  title: string;
+  summary: string | null;
+  body: string;
+  cover_image_url: string | null;
+  author_name: string | null;
+  category_id: string | null;
+  is_featured: boolean;
+  is_published: boolean;
+  published_at: string;
+  /** Joined category for display (name + color). Present on read responses. */
+  category?: Pick<NewsCategory, 'id' | 'name' | 'color'> | null;
+}
+
+export interface CreateNewsDto {
+  title: string;
+  summary?: string | null;
+  body: string;
+  cover_image_url?: string | null;
+  author_name?: string | null;
+  category_id?: string | null;
+  is_featured?: boolean;
+  is_published?: boolean;
+  published_at?: string;
+}
+
+export interface UpdateNewsDto extends Partial<CreateNewsDto> {}
+
+// =====================================================
 // AUDIT LOG
 // =====================================================
 

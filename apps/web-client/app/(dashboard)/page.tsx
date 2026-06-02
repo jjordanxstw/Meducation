@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Volume2, ArrowRight, MapPin } from 'lucide-react';
 import { formatDateShort } from '@medical-portal/shared';
 import { useAuthStore } from '@/stores/auth.store';
-import { CalendarSection } from '@/components/CalendarSection';
+import { HotNewsSection } from '@/components/HotNewsSection';
 import { PageTransition } from '@/components/PageTransition';
 import { DataFreshnessDot } from '@/components/ui/DataFreshnessDot';
 import { useAnnouncements, useAnnouncementsSeen, type AnnouncementData } from '@/hooks/use-announcements';
@@ -247,9 +247,9 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Calendar */}
-      <section id="calendar" className="scroll-mt-24">
-        <CalendarSection />
+      {/* Hot News */}
+      <section id="news" className="scroll-mt-24">
+        <HotNewsSection />
       </section>
     </PageTransition>
   );

@@ -48,7 +48,7 @@ const SAFE_REDIRECT_EXACT_PATHS = new Set([
   '/about-us',
 ]);
 
-const SAFE_REDIRECT_PREFIXES = ['/subjects/'];
+const SAFE_REDIRECT_PREFIXES = ['/subjects/', '/news/'];
 
 let lastAuthCheckAt = 0;
 let sessionCheckPromise: Promise<void> | null = null;
@@ -347,6 +347,13 @@ export const api = {
       apiClient.get('/announcements', { params }),
     get: (id: string) =>
       apiClient.get(`/announcements/${id}`),
+  },
+
+  // Hot News
+  hotNews: {
+    list: (params?: { page?: number; pageSize?: number; category?: string }) =>
+      apiClient.get('/news', { params }),
+    get: (id: string) => apiClient.get(`/news/${id}`),
   },
 
   // Profile — read-only from the client; students cannot edit their profile.

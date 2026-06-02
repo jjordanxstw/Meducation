@@ -200,3 +200,39 @@ export type CreateTeamMemberInput = z.infer<typeof createTeamMemberSchema>;
 
 export const updateTeamMemberSchema = createTeamMemberSchema.partial();
 export type UpdateTeamMemberInput = z.infer<typeof updateTeamMemberSchema>;
+
+// ---------------------------------------------------------------------------
+// News category (admin-managed lookup, mirrors event types)
+// ---------------------------------------------------------------------------
+export const createNewsCategorySchema = z.object({
+  name: z.string().trim().min(1, 'Please enter a category name'),
+  color: hexColor.optional(),
+  sort_order: z.number().int().optional(),
+});
+export type CreateNewsCategoryInput = z.infer<typeof createNewsCategorySchema>;
+
+export const updateNewsCategorySchema = createNewsCategorySchema.partial();
+export type UpdateNewsCategoryInput = z.infer<typeof updateNewsCategorySchema>;
+
+// ---------------------------------------------------------------------------
+// News article
+// ---------------------------------------------------------------------------
+// category_id accepts a uuid, an empty string (cleared in the admin form) or
+// null; the service maps blanks to null. published_at is an ISO date string.
+const optionalUuid = z.union([z.string().trim().uuid(), z.literal('')]).nullable().optional();
+
+export const createNewsSchema = z.object({
+  title: z.string().trim().min(1, 'Please enter a title'),
+  summary: optionalText,
+  body: z.string().trim().min(1, 'Please enter the article body'),
+  cover_image_url: optionalLink,
+  author_name: optionalText,
+  category_id: optionalUuid,
+  is_featured: z.boolean().optional(),
+  is_published: z.boolean().optional(),
+  published_at: z.string().trim().min(1).optional(),
+});
+export type CreateNewsInput = z.infer<typeof createNewsSchema>;
+
+export const updateNewsSchema = createNewsSchema.partial();
+export type UpdateNewsInput = z.infer<typeof updateNewsSchema>;

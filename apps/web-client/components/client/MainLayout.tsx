@@ -15,6 +15,7 @@ import {
   Home,
   Layers,
   BookOpen,
+  CalendarDays,
   User,
   Users,
   LogOut,
@@ -37,6 +38,7 @@ type NavItem = { name: string; href: string; icon: LucideIcon };
 const NAV_ITEMS: NavItem[] = [
   { name: 'Home', href: '/', icon: Home },
   { name: 'Subjects', href: '/subjects', icon: Layers },
+  { name: 'Calendar', href: '/calendar', icon: CalendarDays },
   { name: 'Learning Hub', href: '/learning-hub', icon: BookOpen },
   { name: 'About Us', href: '/about-us', icon: Users },
 ];
