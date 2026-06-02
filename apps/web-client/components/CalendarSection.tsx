@@ -559,44 +559,50 @@ export function CalendarSection() {
 
       {/* Day timeline — one click shows every event with full details */}
       <Dialog open={showDayModal} onOpenChange={setShowDayModal}>
-        <DialogContent className="max-h-[85vh] max-w-5xl overflow-y-auto">
+        <DialogContent className="flex max-h-[88vh] w-[calc(100vw-2rem)] max-w-7xl flex-col gap-0 overflow-hidden p-0">
           {dayClickDate && (
             <>
-              <DialogHeader>
-                <DialogTitle>{dayClickDate.format('dddd, D MMMM YYYY')}</DialogTitle>
+              <DialogHeader className="shrink-0 border-b border-slate-200/70 px-6 py-4">
+                <DialogTitle className="text-xl">{dayClickDate.format('dddd, D MMMM YYYY')}</DialogTitle>
                 <DialogDescription className="sr-only">
                   Schedule and all-day events for {dayClickDate.format('dddd, D MMMM YYYY')}
                 </DialogDescription>
               </DialogHeader>
 
               {dayEvents.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+                <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
                   <Calendar className="h-8 w-8 text-slate-300" />
                   <p className="text-sm text-slate-400">No events on this day</p>
                 </div>
               ) : (
-                <div className="mt-1 space-y-5">
+                <div className="flex-1 space-y-7 overflow-y-auto px-6 py-5">
                   {allDayEvents.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">All day</p>
-                      {allDayEvents.map((ev) => (
-                        <EventDetailCard key={ev.id} event={ev} accent onSubject={goToSubject} />
-                      ))}
-                    </div>
+                    <section className="space-y-3">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        All day · {allDayEvents.length}
+                      </p>
+                      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                        {allDayEvents.map((ev) => (
+                          <EventDetailCard key={ev.id} event={ev} accent onSubject={goToSubject} />
+                        ))}
+                      </div>
+                    </section>
                   )}
 
                   {timedEvents.length > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Schedule</p>
-                      {/* Horizontal timeline overview */}
+                    <section className="space-y-3">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        Schedule · {timedEvents.length}
+                      </p>
+                      {/* Horizontal timeline overview — spans the full modal width */}
                       <HorizontalDayTimeline day={dayClickDate} events={timedEvents} />
                       {/* Full detail cards — every event's info without extra clicks */}
-                      <div className="space-y-2">
+                      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                         {timedEvents.map((ev) => (
                           <EventDetailCard key={ev.id} event={ev} accent onSubject={goToSubject} />
                         ))}
                       </div>
-                    </div>
+                    </section>
                   )}
                 </div>
               )}
