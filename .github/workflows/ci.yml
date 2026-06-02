@@ -50,6 +50,14 @@ jobs:
 
       - name: Build web-client
         run: pnpm --filter web-client build
+        env:
+          # Build-only placeholders. NEXT_PUBLIC_* vars are inlined at build time
+          # and lib/env.ts validates required vars at module load, so the build
+          # needs them present. CI only verifies the build compiles (no deploy),
+          # so non-secret placeholders are sufficient here.
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ci-build-placeholder.apps.googleusercontent.com
+          NEXTAUTH_SECRET: ci-build-placeholder-secret
+          GOOGLE_CLIENT_SECRET: ci-build-placeholder-secret
 
       - name: Build web-admin
         run: pnpm --filter web-admin build
