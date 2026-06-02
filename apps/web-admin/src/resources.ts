@@ -7,6 +7,7 @@ import React from 'react';
 import {
   LayoutDashboard,
   Database,
+  BookOpen,
   CalendarDays,
   Tags,
   Megaphone,
@@ -22,6 +23,16 @@ export const buildResources = () => [
     meta: {
       label: 'Dashboard',
       icon: React.createElement(LayoutDashboard),
+    },
+  },
+  {
+    name: 'subjects',
+    list: '/subjects',
+    create: '/subjects/create',
+    edit: '/subjects/edit/:id',
+    meta: {
+      label: 'Subjects',
+      icon: React.createElement(BookOpen),
     },
   },
   {

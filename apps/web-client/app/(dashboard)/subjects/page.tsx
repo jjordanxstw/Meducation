@@ -50,15 +50,17 @@ function YearFilterTab({
 
 function SubjectSkeletonGrid() {
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-      {[...Array(10)].map((_, i) => (
-        <div key={i} className="flex h-44 flex-col gap-2 rounded-2xl border border-slate-200/70 bg-white p-4">
-          <Skeleton className="h-3 w-16 rounded" />
-          <Skeleton className="h-4 w-3/4 rounded" />
-          <Skeleton className="h-3 w-full rounded" />
-          <div className="mt-auto flex gap-2 pt-2">
-            <Skeleton className="h-5 w-16 rounded-full" />
-            <Skeleton className="h-5 w-20 rounded-full" />
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
+      {[...Array(8)].map((_, i) => (
+        <div key={i} className="flex min-h-[14rem] flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white">
+          <Skeleton className="h-28 w-full rounded-none sm:h-32 lg:h-36" />
+          <div className="flex flex-1 flex-col gap-2 p-4">
+            <Skeleton className="h-3 w-16 rounded" />
+            <Skeleton className="h-4 w-3/4 rounded" />
+            <div className="mt-auto flex gap-2 pt-2">
+              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-5 w-20 rounded-full" />
+            </div>
           </div>
         </div>
       ))}
@@ -167,7 +169,7 @@ function SubjectsContent() {
       {isLoading ? (
         <SubjectSkeletonGrid />
       ) : filteredSubjects.length > 0 ? (
-        <div className="relative grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="relative grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
           <DataFreshnessDot isFetching={isFetching && !isLoading} />
           {filteredSubjects.map((subject) => (
             <SubjectCard
@@ -177,6 +179,7 @@ function SubjectsContent() {
               name={subject.name}
               description={subject.description}
               yearLevel={subject.year_level}
+              thumbnailUrl={subject.thumbnail_url}
               searchQuery={debouncedQuery}
             />
           ))}

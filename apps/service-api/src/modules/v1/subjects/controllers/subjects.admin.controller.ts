@@ -14,14 +14,19 @@ import {
   Param,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { SubjectsService } from '../services/subjects.service';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { SubjectsService, UploadedImageFile } from '../services/subjects.service';
+import { AppException } from '../../../../common/errors';
 import { AuditService } from '../../audit/services/audit.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService, IdempotencyInterceptor, ZodValidationPipe } from '../../../../common';
-import { createSubjectSchema, CreateSubjectInput } from '@medical-portal/shared';
+import { createSubjectSchema, CreateSubjectInput, ErrorCode } from '@medical-portal/shared';
+
+const MAX_SUBJECT_IMAGE_BYTES = 1 * 1024 * 1024; // 1 MB
 
 const INVALIDATE_SUBJECT_GRAPH_PREFIXES = [
   'v1:subjects:',
@@ -77,6 +82,24 @@ export class SubjectsAdminController {
       : result.pagination;
 
     return { success: true, data, pagination };
+  }
+
+  // Multipart upload. Note: multipart bypasses the global express.json({ limit })
+  // body parser, so the small JSON cap does not apply; multer enforces the size
+  // limit below. Default (memory) storage populates file.buffer.
+  @Post('image')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_SUBJECT_IMAGE_BYTES } }))
+  @SkipEnvelope()
+  async uploadImage(@UploadedFile() file?: UploadedImageFile) {
+    if (!file) {
+      throw new AppException(
+        ErrorCode.RESOURCE_OPERATION_FAILED,
+        { resource: 'subject' },
+        'No image file provided',
+      );
+    }
+    const data = await this.subjectsService.uploadImage(file);
+    return { success: true, data };
   }
 
   @Get(':id')

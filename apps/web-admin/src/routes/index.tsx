@@ -12,6 +12,9 @@ import { AdminShell } from '@/components/layout/AdminShell';
 import { LoginPage } from './auth';
 import DashboardPage from './dashboard';
 import ResourcesList from './resources';
+import SubjectsList from './subjects';
+import SubjectsCreate from './subjects/create';
+import SubjectsEdit from './subjects/edit';
 import CalendarList from './calendar';
 import CalendarCreate from './calendar/create';
 import CalendarEdit from './calendar/edit';
@@ -68,10 +71,10 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <DashboardPage /> },
-      { path: 'subjects', element: <Navigate to="/resources" replace /> },
-      { path: 'subjects/create', element: <Navigate to="/resources" replace /> },
-      { path: 'subjects/edit/:id', element: <Navigate to="/resources" replace /> },
-      { path: 'subjects/show/:id', element: <Navigate to="/resources" replace /> },
+      { path: 'subjects', element: <SubjectsList /> },
+      { path: 'subjects/create', element: <SubjectsCreate /> },
+      { path: 'subjects/edit/:id', element: <SubjectsEdit /> },
+      { path: 'subjects/show/:id', element: <Navigate to="/subjects" replace /> },
       { path: 'sections', element: <Navigate to="/resources" replace /> },
       { path: 'sections/create', element: <Navigate to="/resources" replace /> },
       { path: 'sections/edit/:id', element: <Navigate to="/resources" replace /> },

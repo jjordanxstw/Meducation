@@ -5,9 +5,27 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'crypto';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { AppException } from '../../../../common/errors';
 import { ErrorCode } from '@medical-portal/shared';
+
+const SUBJECT_IMAGE_BUCKET = 'subject-images';
+
+// Minimal shape of a multer file (memoryStorage). Declared locally to avoid a
+// dependency on @types/multer; multer ships with @nestjs/platform-express.
+export interface UploadedImageFile {
+  buffer: Buffer;
+  mimetype: string;
+  originalname: string;
+  size: number;
+}
+
+const EXTENSION_BY_MIME: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+};
 
 @Injectable()
 export class SubjectsService {
@@ -246,5 +264,38 @@ export class SubjectsService {
     }
 
     return { message: 'Subjects reordered successfully' };
+  }
+
+  /**
+   * Admin: upload a subject cover image to the public `subject-images` bucket and
+   * return its public URL. The service-role key bypasses RLS, so no write policy
+   * on the bucket is required.
+   */
+  async uploadImage(file: UploadedImageFile): Promise<{ url: string }> {
+    const ext = EXTENSION_BY_MIME[file.mimetype];
+    if (!ext) {
+      throw new AppException(
+        ErrorCode.RESOURCE_OPERATION_FAILED,
+        { resource: 'subject' },
+        'Image must be a PNG, JPEG or WebP file',
+      );
+    }
+
+    const path = `${randomUUID()}.${ext}`;
+    const { error } = await this.supabaseAdmin.storage
+      .from(SUBJECT_IMAGE_BUCKET)
+      .upload(path, file.buffer, { contentType: file.mimetype, upsert: false });
+
+    if (error) {
+      this.logger.warn(`Failed to upload subject image (${error.message})`);
+      throw new AppException(
+        ErrorCode.RESOURCE_OPERATION_FAILED,
+        { resource: 'subject' },
+        'Failed to upload subject image',
+      );
+    }
+
+    const { data } = this.supabaseAdmin.storage.from(SUBJECT_IMAGE_BUCKET).getPublicUrl(path);
+    return { url: data.publicUrl };
   }
 }
