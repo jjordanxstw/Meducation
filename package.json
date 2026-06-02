@@ -65,7 +65,7 @@
       ]
     }
   },
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@9.15.9",
   "dependencies": {
     "@supabase/supabase-js": "^2.99.3",
     "bcrypt": "^6.0.0",
