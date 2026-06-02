@@ -1,9 +1,33 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useGetIdentity, useLogout, useMenu } from '@refinedev/core';
-import { LogOut, Menu } from 'lucide-react';
+import { ChevronRight, LogOut, Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+
+// Minimal shape of a Refine menu node (a resource with optional nested children
+// when a child resource declares `meta.parent`).
+type MenuNode = {
+  key: string;
+  name: string;
+  label?: string;
+  icon?: React.ReactNode;
+  route?: string;
+  children?: MenuNode[];
+};
+
+function isRouteActive(pathname: string, route?: string): boolean {
+  if (!route || route === '/') return pathname === route;
+  return pathname === route || pathname.startsWith(`${route}/`);
+}
+
+const navRowClass = (active: boolean) =>
+  cn(
+    'flex flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors [&_svg]:size-[18px]',
+    active
+      ? 'bg-brand-subtle font-semibold text-brand [&_svg]:text-brand'
+      : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 [&_svg]:text-slate-400',
+  );
 
 type AdminIdentity = { name?: string; avatar?: string; email?: string };
 
@@ -24,31 +48,88 @@ function Brand() {
   );
 }
 
+/** A single navigable row (used for top-level leaves and nested children). */
+function NavLeaf({
+  item,
+  pathname,
+  onNavigate,
+  nested = false,
+}: {
+  item: MenuNode;
+  pathname: string;
+  onNavigate?: () => void;
+  nested?: boolean;
+}) {
+  const route = item.route ?? '/';
+  const active = isRouteActive(pathname, route);
+  return (
+    <Link
+      to={route}
+      onClick={onNavigate}
+      aria-current={active ? 'page' : undefined}
+      className={cn(navRowClass(active), nested && 'py-2 text-[13px]')}
+    >
+      {item.icon}
+      <span>{item.label ?? item.name}</span>
+    </Link>
+  );
+}
+
+/** A parent row that is itself a link, with a chevron that expands its children. */
+function NavGroup({
+  item,
+  pathname,
+  onNavigate,
+}: {
+  item: MenuNode;
+  pathname: string;
+  onNavigate?: () => void;
+}) {
+  const route = item.route ?? '/';
+  const children = item.children ?? [];
+  const selfActive = isRouteActive(pathname, route);
+  const childActive = children.some((c) => isRouteActive(pathname, c.route));
+  // Auto-open when this branch is active; `null` defers to that until the user
+  // toggles manually (then their choice sticks).
+  const [manualOpen, setManualOpen] = useState<boolean | null>(null);
+  const open = manualOpen ?? (selfActive || childActive);
+
+  return (
+    <div>
+      <div className="flex items-center gap-1">
+        <NavLeaf item={item} pathname={pathname} onNavigate={onNavigate} />
+        <button
+          type="button"
+          onClick={() => setManualOpen(!open)}
+          aria-label={open ? `Collapse ${item.label ?? item.name}` : `Expand ${item.label ?? item.name}`}
+          aria-expanded={open}
+          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          <ChevronRight className={cn('size-4 transition-transform duration-200', open && 'rotate-90')} />
+        </button>
+      </div>
+      {open && (
+        <div className="mt-1 space-y-1 border-l border-slate-200/70 pl-3 ml-4">
+          {children.map((child) => (
+            <NavLeaf key={child.key} item={child} pathname={pathname} onNavigate={onNavigate} nested />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NavList({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   const { menuItems } = useMenu();
   return (
     <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="Primary">
-      {menuItems.map((item) => {
-        const route = item.route ?? '/';
-        const active = pathname === route || pathname.startsWith(`${route}/`);
-        return (
-          <Link
-            key={item.key}
-            to={route}
-            onClick={onNavigate}
-            aria-current={active ? 'page' : undefined}
-            className={cn(
-              'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors [&_svg]:size-[18px]',
-              active
-                ? 'bg-brand-subtle font-semibold text-brand [&_svg]:text-brand'
-                : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 [&_svg]:text-slate-400',
-            )}
-          >
-            {item.icon}
-            <span>{item.label ?? item.name}</span>
-          </Link>
-        );
-      })}
+      {(menuItems as MenuNode[]).map((item) =>
+        item.children && item.children.length > 0 ? (
+          <NavGroup key={item.key} item={item} pathname={pathname} onNavigate={onNavigate} />
+        ) : (
+          <NavLeaf key={item.key} item={item} pathname={pathname} onNavigate={onNavigate} />
+        ),
+      )}
     </nav>
   );
 }

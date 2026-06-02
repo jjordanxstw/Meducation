@@ -65,6 +65,7 @@ export const buildResources = () => [
     meta: {
       label: 'Event Types',
       icon: React.createElement(Tags),
+      parent: 'calendar',
     },
   },
   {
@@ -105,6 +106,7 @@ export const buildResources = () => [
     meta: {
       label: 'News Categories',
       icon: React.createElement(Tag),
+      parent: 'news',
     },
   },
   {
