@@ -224,11 +224,25 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
       </Button>
 
       {/* Subject header */}
-      <div className="rounded-2xl border border-slate-200/70 bg-white p-6 shadow-subtle">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-subtle text-brand">
-            <Video className="h-7 w-7" />
-          </div>
+      <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-subtle">
+        {/* Cover band: subject image when present, otherwise a branded placeholder
+            so the header always reads as designed. */}
+        <div className="relative h-56 w-full overflow-hidden bg-brand-subtle sm:h-72 lg:h-80">
+          {subject.thumbnail_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={subject.thumbnail_url}
+              alt={`${subject.code} cover`}
+              className="h-full w-full object-contain"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-brand/30">
+              <Video className="h-12 w-12" />
+            </div>
+          )}
+        </div>
+
+        <div className="p-6">
           <div className="min-w-0 flex-1 space-y-2">
             <span className="inline-block rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600">
               {subject.code}

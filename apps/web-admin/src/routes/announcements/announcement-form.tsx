@@ -2,7 +2,7 @@
  * Shared create/edit form for announcements.
  * Refine headless `useForm` + react-hook-form + zod.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm as useRefineForm } from '@refinedev/core';
 import { useForm } from 'react-hook-form';
@@ -48,8 +48,10 @@ export function AnnouncementForm({ id }: { id?: string }) {
   });
 
   const record = queryResult?.data?.data;
+  const resetForId = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (record) {
+    if (record && resetForId.current !== record.id) {
+      resetForId.current = record.id;
       form.reset({
         title: record.title ?? '',
         content: record.content ?? '',

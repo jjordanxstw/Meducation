@@ -2,7 +2,7 @@
  * Shared create/edit form for calendar events (date-only).
  * Refine headless `useForm` + react-hook-form + zod.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm as useRefineForm, useList } from '@refinedev/core';
 import { useForm } from 'react-hook-form';
@@ -91,8 +91,10 @@ export function CalendarForm({ id }: { id?: string }) {
   });
 
   const record = queryResult?.data?.data;
+  const resetForId = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (record) {
+    if (record && resetForId.current !== record.id) {
+      resetForId.current = record.id;
       form.reset({
         title: record.title ?? '',
         type: record.type ?? '',

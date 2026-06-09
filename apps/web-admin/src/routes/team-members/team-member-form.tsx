@@ -88,8 +88,10 @@ export function TeamMemberForm({ id }: { id?: string }) {
   });
 
   const record = queryResult?.data?.data;
+  const resetForId = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (record) {
+    if (record && resetForId.current !== record.id) {
+      resetForId.current = record.id;
       form.reset({
         full_name: record.full_name ?? '',
         role: record.role ?? '',

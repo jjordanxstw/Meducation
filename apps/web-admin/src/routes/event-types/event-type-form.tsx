@@ -2,7 +2,7 @@
  * Shared create/edit form for calendar event types (name + color).
  * Renaming a type cascades to every event server-side (FK ON UPDATE CASCADE).
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm as useRefineForm } from '@refinedev/core';
 import { useForm } from 'react-hook-form';
@@ -48,8 +48,10 @@ export function EventTypeForm({ id }: { id?: string }) {
   });
 
   const record = queryResult?.data?.data;
+  const resetForId = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (record) {
+    if (record && resetForId.current !== record.id) {
+      resetForId.current = record.id;
       form.reset({ name: record.name ?? '', color: record.color ?? '#2f80ed' });
     }
   }, [record, form]);

@@ -65,11 +65,18 @@ const ProfilesList = () => {
       {
         id: 'avatar',
         header: '',
-        cell: ({ row }) => (
-          <span className="flex size-8 items-center justify-center rounded-full bg-brand-subtle text-xs font-semibold text-brand">
-            {row.original.full_name?.charAt(0)?.toUpperCase() ?? '?'}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const { full_name, avatar_url } = row.original;
+          return (
+            <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-subtle text-xs font-semibold text-brand">
+              {avatar_url ? (
+                <img src={avatar_url} alt={full_name} className="size-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                (full_name?.charAt(0)?.toUpperCase() ?? '?')
+              )}
+            </span>
+          );
+        },
       },
       { accessorKey: 'full_name', header: 'Full Name' },
       { accessorKey: 'email', header: 'Email' },
