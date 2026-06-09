@@ -1,7 +1,7 @@
 /**
  * Profiles Edit Page
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useForm as useRefineForm } from '@refinedev/core';
 import { useForm } from 'react-hook-form';
@@ -49,8 +49,10 @@ const ProfilesEdit = () => {
   });
 
   const record = queryResult?.data?.data;
+  const resetForId = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (record) {
+    if (record && resetForId.current !== record.id) {
+      resetForId.current = record.id;
       form.reset({
         email: record.email ?? '',
         full_name: record.full_name ?? '',

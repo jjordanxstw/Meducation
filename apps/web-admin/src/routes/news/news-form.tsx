@@ -94,8 +94,10 @@ export function NewsForm({ id }: { id?: string }) {
   });
 
   const record = queryResult?.data?.data;
+  const resetForId = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (record) {
+    if (record && resetForId.current !== record.id) {
+      resetForId.current = record.id;
       form.reset({
         title: record.title ?? '',
         summary: record.summary ?? '',
