@@ -36,6 +36,17 @@ import { buildResources } from './resources';
 
 const resolvedApiUrl = '/api/v1';
 
+/**
+ * True while the admin is on a create/edit form route. Used to suppress all
+ * window-focus refetching there (see refetchOnWindowFocus below): a focus
+ * re-check would refetch the record + the session, and an expired access token
+ * would cascade into a silent /refresh — any of which can disrupt unsaved
+ * input. Lists/dashboard keep refetching on focus for multi-admin freshness.
+ */
+function isOnFormRoute(): boolean {
+  return /\/(create|edit)(\/|$)/.test(window.location.pathname);
+}
+
 function assertValidApiUrl(apiUrl: string): void {
   if (apiUrl.startsWith('/')) {
     return;
@@ -76,14 +87,17 @@ const Root: React.FC = () => {
           undoableTimeout: 5000,
           // Hardened React Query defaults (M.3). Admin data changes via the
           // admin's own actions, so a slightly longer staleTime is fine; we
-          // still refetch on focus so multi-admin edits stay visible.
+          // still refetch on focus so multi-admin edits stay visible — except
+          // on create/edit form routes, where focus refetching (and the session
+          // re-check / token refresh it can trigger) is suppressed so unsaved
+          // input is never disrupted.
           reactQuery: {
             clientConfig: {
               defaultOptions: {
                 queries: {
                   staleTime: 60_000,
                   gcTime: 10 * 60_000,
-                  refetchOnWindowFocus: true,
+                  refetchOnWindowFocus: () => !isOnFormRoute(),
                   retry: (count: number, error: unknown) => {
                     const status = (error as { statusCode?: number } | null)?.statusCode;
                     if (status && [401, 403, 404, 422].includes(status)) {

@@ -391,6 +391,47 @@ export interface CreateNewsDto {
 
 export interface UpdateNewsDto extends Partial<CreateNewsDto> {}
 
+/**
+ * "Learning Hub" card — a curated learning resource shown on the student portal.
+ * `technologies` is a flat tag list. `categories` is card-owned sub-content
+ * stored inline as JSONB: each category groups a set of external `links`
+ * (label + url), rendered as an accordion on the public detail page.
+ * `is_published` hides a card from students without deleting it.
+ */
+export interface LearningResourceLink {
+  label: string;
+  url: string;
+}
+
+export interface LearningResourceCategory {
+  name: string;
+  links: LearningResourceLink[];
+}
+
+export interface LearningResource extends BaseEntity {
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  author_name: string | null;
+  technologies: string[];
+  categories: LearningResourceCategory[];
+  is_published: boolean;
+  order_index: number;
+}
+
+export interface CreateLearningResourceDto {
+  title: string;
+  description?: string | null;
+  image_url?: string | null;
+  author_name?: string | null;
+  technologies?: string[];
+  categories?: LearningResourceCategory[];
+  is_published?: boolean;
+  order_index?: number;
+}
+
+export interface UpdateLearningResourceDto extends Partial<CreateLearningResourceDto> {}
+
 // =====================================================
 // AUDIT LOG
 // =====================================================

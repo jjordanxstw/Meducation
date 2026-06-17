@@ -277,6 +277,27 @@ export const ERROR_DEFINITIONS: Record<ErrorCode, ErrorDefinition> = {
     category: 'RESOURCE',
     httpStatus: 409,
   },
+  [ErrorCode.LEARNING_RESOURCE_NOT_FOUND]: {
+    code: ErrorCode.LEARNING_RESOURCE_NOT_FOUND,
+    i18nKey: 'errors.learningResource.notFound',
+    defaultMessage: 'Learning resource not found',
+    category: 'RESOURCE',
+    httpStatus: 404,
+  },
+  [ErrorCode.LEARNING_RESOURCE_OPERATION_FAILED]: {
+    code: ErrorCode.LEARNING_RESOURCE_OPERATION_FAILED,
+    i18nKey: 'errors.learningResource.operationFailed',
+    defaultMessage: 'Learning resource operation failed',
+    category: 'RESOURCE',
+    httpStatus: 400,
+  },
+  [ErrorCode.LEARNING_RESOURCE_UPLOAD_FAILED]: {
+    code: ErrorCode.LEARNING_RESOURCE_UPLOAD_FAILED,
+    i18nKey: 'errors.learningResource.uploadFailed',
+    defaultMessage: 'Failed to upload image',
+    category: 'RESOURCE',
+    httpStatus: 400,
+  },
   [ErrorCode.SYSTEM_INTERNAL_ERROR]: {
     code: ErrorCode.SYSTEM_INTERNAL_ERROR,
     i18nKey: 'errors.system.internalError',

@@ -29,6 +29,7 @@ const ADMIN_RESOURCE_SET = new Set([
   'team-members',
   'news',
   'news-categories',
+  'learning-resources',
   'profiles',
   'audit-logs',
 ]);

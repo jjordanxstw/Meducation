@@ -163,6 +163,11 @@ async function refreshAccessToken(): Promise<boolean> {
           'X-Auth-Refresh': '1',
         },
       });
+      // Recovery succeeded — clear the circuit-breaker so a concurrent check()
+      // (e.g. the window-focus session re-check) doesn't bounce to /login while
+      // the freshly refreshed session is actually valid.
+      hasTokenFailed = false;
+      tokenFailureTime = 0;
       return true;
     } catch {
       return false;
@@ -220,11 +225,24 @@ authAxios.interceptors.response.use(
     // Mark token as failed to prevent further auth checks
     markTokenFailed();
 
-    // For /auth/me with 401, clear cookies and redirect to login
-    if (isMeRequest && status === 401 && !isRedirecting && !isOnLoginPage) {
-      isRedirecting = true;
-      clearCache();
-      window.location.href = '/login';
+    // For /auth/me with 401, try a silent refresh before giving up. An access
+    // token that expired while the tab was backgrounded would otherwise bounce
+    // the admin to /login on the next window-focus session re-check, discarding
+    // any unsaved form input. Refresh-first keeps the session alive; we only
+    // redirect when the refresh itself fails (the session is truly gone).
+    if (isMeRequest && status === 401) {
+      if (!originalRequest._retry) {
+        originalRequest._retry = true;
+        const refreshed = await refreshAccessToken();
+        if (refreshed) {
+          return authAxios(originalRequest);
+        }
+      }
+      if (!isRedirecting && !isOnLoginPage) {
+        isRedirecting = true;
+        clearCache();
+        window.location.href = '/login';
+      }
       return Promise.reject(error);
     }
 

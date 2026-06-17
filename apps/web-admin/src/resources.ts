@@ -15,6 +15,7 @@ import {
   UsersRound,
   Newspaper,
   Tag,
+  GraduationCap,
   ScrollText,
 } from 'lucide-react';
 
@@ -107,6 +108,16 @@ export const buildResources = () => [
       label: 'News Categories',
       icon: React.createElement(Tag),
       parent: 'news',
+    },
+  },
+  {
+    name: 'learning-resources',
+    list: '/learning-resources',
+    create: '/learning-resources/create',
+    edit: '/learning-resources/edit/:id',
+    meta: {
+      label: 'Learning Hub',
+      icon: React.createElement(GraduationCap),
     },
   },
   {
