@@ -33,6 +33,9 @@ import NewsEdit from './news/edit';
 import NewsCategoriesList from './news-categories';
 import NewsCategoriesCreate from './news-categories/create';
 import NewsCategoriesEdit from './news-categories/edit';
+import LearningResourcesList from './learning-resources';
+import LearningResourcesCreate from './learning-resources/create';
+import LearningResourcesEdit from './learning-resources/edit';
 import ProfilesList from './profiles';
 import ProfilesEdit from './profiles/edit';
 import ProfilesShow from './profiles/show';
@@ -108,6 +111,9 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
       { path: 'news-categories', element: <NewsCategoriesList /> },
       { path: 'news-categories/create', element: <NewsCategoriesCreate /> },
       { path: 'news-categories/edit/:id', element: <NewsCategoriesEdit /> },
+      { path: 'learning-resources', element: <LearningResourcesList /> },
+      { path: 'learning-resources/create', element: <LearningResourcesCreate /> },
+      { path: 'learning-resources/edit/:id', element: <LearningResourcesEdit /> },
       { path: 'profiles', element: <ProfilesList /> },
       { path: 'profiles/edit/:id', element: <ProfilesEdit /> },
       { path: 'profiles/show/:id', element: <ProfilesShow /> },

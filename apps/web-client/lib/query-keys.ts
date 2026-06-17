@@ -27,6 +27,11 @@ export const queryKeys = {
       ['hotNews', 'list', filters] as const,
     detail: (id: string) => ['hotNews', 'detail', id] as const,
   },
+  learningHub: {
+    all: () => ['learningHub'] as const,
+    list: (filters: { pageSize?: number }) => ['learningHub', 'list', filters] as const,
+    detail: (id: string) => ['learningHub', 'detail', id] as const,
+  },
   teamMembers: {
     all: () => ['teamMembers'] as const,
   },
