@@ -7,7 +7,6 @@
 
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Badge } from '@/components/ui/badge';
 import { Volume2, ArrowRight, MapPin } from 'lucide-react';
 import { formatDateShort } from '@medical-portal/shared';
 import { useAuthStore } from '@/stores/auth.store';
@@ -18,17 +17,6 @@ import { useAnnouncements, useAnnouncementsSeen, type AnnouncementData } from '@
 import { useIntersectionObserver } from '@/hooks/use-intersection-observer';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-const MARQUEE_ITEMS = [
-  'Anatomy I',
-  'SCID01',
-  'Year 1 · 2 Lectures',
-  'Academic Calendar',
-  'New Announcements',
-  'Learning Hub Coming Soon',
-  'Check Your Schedule',
-  'Fast Track Available',
-];
 
 const QUICK_FILTERS = [
   { label: 'All Years', href: '/subjects' },
@@ -228,23 +216,6 @@ export default function HomePage() {
             </div>
           </div>
         </aside>
-      </div>
-
-      {/* Marquee strip */}
-      <div
-        className="relative overflow-hidden py-1"
-        style={{
-          maskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)',
-          WebkitMaskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)',
-        }}
-      >
-        <div className="flex w-max animate-marquee gap-2.5">
-          {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, index) => (
-            <Badge key={index} variant="outline" className="shrink-0 px-3 py-1 text-slate-500">
-              {item}
-            </Badge>
-          ))}
-        </div>
       </div>
 
       {/* Hot News */}

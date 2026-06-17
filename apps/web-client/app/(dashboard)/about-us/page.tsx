@@ -294,23 +294,33 @@ export default function AboutUsPage() {
 
       {/* Additional Info Section */}
       <Card className="mt-8">
-        <div className="p-5">
+        <div className="space-y-3 p-5">
           <h3 className="mb-2 font-serif text-xl font-semibold tracking-tight text-slate-900">Our Mission</h3>
           <p className="text-sm leading-relaxed text-slate-600">
-            We are a dedicated team of developers, designers, and educators working together to create the best
-            learning experience for medical students. Our goal is to make medical education more accessible,
-            organized, and engaging through technology.
+            เว็บไซต์วิชาการแห่งนี้ถูกพัฒนาขึ้นโดยทีมงานนักศึกษาแพทย์
+            เพื่อเป็นศูนย์กลางการเรียนรู้ที่รวบรวมเนื้อหาวิชาการและเครื่องมือสนับสนุนการศึกษาไว้ในที่เดียว
+            โดยมุ่งเน้นให้ผู้ใช้งานสามารถเข้าถึงความรู้ได้อย่างสะดวก รวดเร็ว และมีประสิทธิภาพ
+          </p>
+          <p className="text-sm leading-relaxed text-slate-600">
+            ภายในเว็บไซต์ประกอบด้วยฟีเจอร์หลากหลาย เช่น ระบบคลังข้อสอบและแบบฝึกหัด ระบบสรุปเนื้อหาวิชา
+            การค้นหาข้อมูลทางการแพทย์ ระบบติดตามความก้าวหน้าการเรียนรู้ พื้นที่แลกเปลี่ยนความรู้ระหว่างผู้ใช้งาน
+            รวมถึง Learning Hub ที่เปิดโอกาสให้ผู้เชี่ยวชาญและนักศึกษาร่วมแบ่งปันความรู้และทักษะในหัวข้อต่าง ๆ
+          </p>
+          <p className="text-sm leading-relaxed text-slate-600">
+            เราหวังว่าเว็บไซต์นี้จะเป็นเครื่องมือที่ช่วยส่งเสริมการเรียนรู้ตลอดชีวิต
+            และเป็นพื้นที่ที่ทุกคนสามารถเข้าถึงองค์ความรู้คุณภาพได้อย่างเท่าเทียม
           </p>
         </div>
       </Card>
 
-      {/* Contact Section */}
+      {/* Thank-you Section */}
       <Card>
         <div className="p-5">
-          <h3 className="mb-2 font-serif text-xl font-semibold tracking-tight text-slate-900">Get in Touch</h3>
-          <p className="text-sm text-slate-600">
-            Have questions or feedback? We&apos;d love to hear from you. Reach out to us through the MedPi Portal
-            team.
+          <h3 className="mb-2 font-serif text-xl font-semibold tracking-tight text-slate-900">
+            Thank you to Academic team
+          </h3>
+          <p className="text-sm leading-relaxed text-slate-600">
+            ขอบคุณพวกเราทุกคนที่ช่วยกันพัฒนาความรู้และความสามารถของนักศึกษาในคณะโดยไม่หวังสิ่งตอบแทน
           </p>
         </div>
       </Card>

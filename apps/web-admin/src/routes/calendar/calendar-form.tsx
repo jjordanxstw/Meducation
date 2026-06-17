@@ -17,6 +17,7 @@ import { Input, Textarea } from '@/components/ui/input';
 import { DatePicker } from '@/components/ui/date-picker';
 import { TimePicker } from '@/components/ui/time-picker';
 import { Combobox } from '@/components/ui/combobox';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import {
   Form,
@@ -42,6 +43,7 @@ const schema = z
     end_date: z.string().optional(),
     start_time: timeField,
     end_time: timeField,
+    daily_schedule: z.boolean().optional(),
     subject_id: z.string().optional(),
     location: z.string().optional(),
     description: z.string().optional(),
@@ -51,8 +53,14 @@ const schema = z
     path: ['end_time'],
   })
   .refine(
-    // On a single day, end time must be on/after start time.
-    (v) => !(v.start_time && v.end_time && (!v.end_date || v.end_date === v.start_date)) || v.end_time >= v.start_time,
+    // End must be on/after start when both times share a day window: either a
+    // single-day event, or a daily-schedule event (same window each day).
+    (v) => {
+      if (!v.start_time || !v.end_time) return true;
+      const singleDay = !v.end_date || v.end_date === v.start_date;
+      if (singleDay || v.daily_schedule) return v.end_time >= v.start_time;
+      return true;
+    },
     { message: 'End time must be after start time', path: ['end_time'] },
   );
 
@@ -84,6 +92,7 @@ export function CalendarForm({ id }: { id?: string }) {
       end_date: '',
       start_time: '',
       end_time: '',
+      daily_schedule: false,
       subject_id: '',
       location: '',
       description: '',
@@ -102,6 +111,7 @@ export function CalendarForm({ id }: { id?: string }) {
         end_date: toDateInput(record.end_date),
         start_time: toTimeInput(record.start_time),
         end_time: toTimeInput(record.end_time),
+        daily_schedule: record.daily_schedule ?? false,
         subject_id: record.subject_id ?? '',
         location: record.location ?? '',
         description: record.description ?? '',
@@ -115,6 +125,7 @@ export function CalendarForm({ id }: { id?: string }) {
       end_date: values.end_date ? values.end_date : null,
       start_time: values.start_time ? values.start_time : null,
       end_time: values.end_time ? values.end_time : null,
+      daily_schedule: values.start_time ? !!values.daily_schedule : false,
       subject_id: values.subject_id ? values.subject_id : null,
     });
   });
@@ -233,6 +244,36 @@ export function CalendarForm({ id }: { id?: string }) {
                   )}
                 />
               </div>
+              {(() => {
+                const hasEndDate = !!form.watch('end_date') && form.watch('end_date') !== form.watch('start_date');
+                const hasTime = !!form.watch('start_time');
+                const enabled = hasEndDate && hasTime;
+                return (
+                  <FormField
+                    control={form.control}
+                    name="daily_schedule"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border border-slate-200 p-3">
+                        <div className="space-y-0.5 pr-3">
+                          <FormLabel>Repeat these times each day</FormLabel>
+                          <FormDescription>
+                            On — every day in the range uses the same start/end time (a daily schedule). Off — one
+                            continuous block from the start day/time to the end day/time. Only applies to multi-day
+                            timed events.
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={!!field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={!enabled}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                );
+              })()}
               <FormField
                 control={form.control}
                 name="subject_id"

@@ -9,7 +9,6 @@ import { useState, Suspense, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuthStore } from '@/stores/auth.store';
 import { Search, Book, X } from 'lucide-react';
 import { SubjectCard } from '@/components/ui/SubjectCard';
 import { PageTransition } from '@/components/PageTransition';
@@ -81,7 +80,6 @@ function SubjectsLoading() {
 }
 
 function SubjectsContent() {
-  const { profile } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -89,10 +87,9 @@ function SubjectsContent() {
   const queryParam = searchParams.get('q') ?? '';
 
   const selectedYear = useMemo(() => {
-    if (yearParam === 'all') return 'all';
     if (yearParam && ['1', '2', '3', '4', '5', '6'].includes(yearParam)) return yearParam;
-    return profile?.year_level?.toString() || 'all';
-  }, [yearParam, profile?.year_level]);
+    return 'all';
+  }, [yearParam]);
 
   const [searchQuery, setSearchQuery] = useState(queryParam);
   const debouncedQuery = useDebounce(searchQuery, 300);
@@ -120,6 +117,19 @@ function SubjectsContent() {
     if (!query) return true;
     return subject.name.toLowerCase().includes(query) || subject.code.toLowerCase().includes(query);
   });
+
+  // In the "All" view, present subjects under per-year headings so the list
+  // stays scannable; a specific year renders as a single flat grid.
+  const groupedByYear = useMemo(() => {
+    if (selectedYear !== 'all') return null;
+    const groups = new Map<number, typeof filteredSubjects>();
+    for (const subject of filteredSubjects) {
+      const year = subject.year_level;
+      if (!groups.has(year)) groups.set(year, []);
+      groups.get(year)!.push(subject);
+    }
+    return [...groups.entries()].sort(([a], [b]) => a - b);
+  }, [selectedYear, filteredSubjects]);
 
   return (
     <PageTransition className="space-y-6">
@@ -169,21 +179,46 @@ function SubjectsContent() {
       {isLoading ? (
         <SubjectSkeletonGrid />
       ) : filteredSubjects.length > 0 ? (
-        <div className="relative grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
-          <DataFreshnessDot isFetching={isFetching && !isLoading} />
-          {filteredSubjects.map((subject) => (
-            <SubjectCard
-              key={subject.id}
-              id={subject.id}
-              code={subject.code}
-              name={subject.name}
-              description={subject.description}
-              yearLevel={subject.year_level}
-              thumbnailUrl={subject.thumbnail_url}
-              searchQuery={debouncedQuery}
-            />
-          ))}
-        </div>
+        groupedByYear ? (
+          <div className="relative space-y-8">
+            <DataFreshnessDot isFetching={isFetching && !isLoading} />
+            {groupedByYear.map(([year, yearSubjects]) => (
+              <section key={year} className="space-y-3">
+                <h2 className="text-lg font-semibold tracking-tight text-slate-900">Year {year}</h2>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
+                  {yearSubjects.map((subject) => (
+                    <SubjectCard
+                      key={subject.id}
+                      id={subject.id}
+                      code={subject.code}
+                      name={subject.name}
+                      description={subject.description}
+                      yearLevel={subject.year_level}
+                      thumbnailUrl={subject.thumbnail_url}
+                      searchQuery={debouncedQuery}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        ) : (
+          <div className="relative grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
+            <DataFreshnessDot isFetching={isFetching && !isLoading} />
+            {filteredSubjects.map((subject) => (
+              <SubjectCard
+                key={subject.id}
+                id={subject.id}
+                code={subject.code}
+                name={subject.name}
+                description={subject.description}
+                yearLevel={subject.year_level}
+                thumbnailUrl={subject.thumbnail_url}
+                searchQuery={debouncedQuery}
+              />
+            ))}
+          </div>
+        )
       ) : (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200/70 bg-white px-6 py-16 text-center shadow-subtle">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-subtle">
