@@ -20,6 +20,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import {
   Form,
   FormField,
@@ -247,16 +248,23 @@ export function SubjectForm({ id }: { id?: string }) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel required>Year level</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={6}
-                        className="w-40"
-                        value={field.value}
-                        onChange={(e) => field.onChange(e.target.value === '' ? 1 : Number(e.target.value))}
-                      />
-                    </FormControl>
+                    <Select
+                      value={field.value ? String(field.value) : undefined}
+                      onValueChange={(v) => field.onChange(Number(v))}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-40">
+                          <SelectValue placeholder="Select year" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5, 6].map((year) => (
+                          <SelectItem key={year} value={String(year)}>
+                            Year {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

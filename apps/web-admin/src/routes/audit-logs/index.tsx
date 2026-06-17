@@ -18,6 +18,7 @@ import { DataTable, type ColumnDef } from '@/components/ui/data-table';
 interface AuditLog {
   id: string;
   user_id: string | null;
+  user_email: string | null;
   action: string;
   table_name: string;
   record_id: string;
@@ -98,6 +99,13 @@ const AuditLogsList = () => {
 
   const columns: ColumnDef<AuditLog, unknown>[] = useMemo(
     () => [
+      {
+        accessorKey: 'user_email',
+        header: 'Admin',
+        cell: ({ getValue }) => (
+          <span className="text-sm text-slate-600">{(getValue() as string | null) ?? '—'}</span>
+        ),
+      },
       {
         accessorKey: 'table_name',
         header: 'Table',

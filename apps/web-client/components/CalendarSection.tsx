@@ -54,6 +54,10 @@ function eventTimeLabel(event: CalendarEvent): string {
   if (!event.start_time) return 'All day';
   const start = fmtTime(event.start_time);
   const end = fmtTime(event.end_time);
+  // Daily-schedule events repeat the same window every day — show just the window.
+  if (event.daily_schedule) {
+    return end ? `${start} – ${end}` : start;
+  }
   // Cross-day timed event: spell out the dates so "14:00 – 03:30" isn't ambiguous.
   if (event.end_date && event.end_date !== event.start_date) {
     const sd = dayjs(event.start_date).format('D MMM');
@@ -147,8 +151,10 @@ function HorizontalDayTimeline({ day, events }: { day: Dayjs; events: EventWithS
   const DAY_END = 24 * 60;
 
   const items = events.map((ev) => {
-    const startsBeforeToday = dayjs(ev.start_date).isBefore(day, 'day');
-    const endsAfterToday = !!ev.end_date && dayjs(ev.end_date).isAfter(day, 'day');
+    // Daily-schedule events use their own start/end window on every day, so they
+    // never "continue" across midnight — only continuous spans clamp to the day.
+    const startsBeforeToday = !ev.daily_schedule && dayjs(ev.start_date).isBefore(day, 'day');
+    const endsAfterToday = !ev.daily_schedule && !!ev.end_date && dayjs(ev.end_date).isAfter(day, 'day');
 
     const s = startsBeforeToday ? 0 : toMinutes(ev.start_time);
     let e = endsAfterToday

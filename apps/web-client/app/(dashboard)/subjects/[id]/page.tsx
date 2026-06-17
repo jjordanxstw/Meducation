@@ -215,13 +215,16 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <PageTransition className="mx-auto max-w-4xl space-y-6">
-      {/* Back button */}
-      <Button asChild variant="secondary" size="sm" className="rounded-full text-slate-600">
-        <Link href="/subjects">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Subjects
-        </Link>
-      </Button>
+      {/* Back button — sits at the top in flow, then sticks just below the
+          header so it stays reachable while scrolling. */}
+      <div className="sticky top-20 z-20 w-fit">
+        <Button asChild variant="secondary" size="sm" className="rounded-full text-slate-600 shadow-soft">
+          <Link href="/subjects">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Subjects
+          </Link>
+        </Button>
+      </div>
 
       {/* Subject header */}
       <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-subtle">

@@ -245,6 +245,11 @@ export interface CalendarEvent extends BaseEntity {
   /** Optional time-of-day (`HH:mm[:ss]`); null = all-day. */
   start_time: string | null;
   end_time: string | null;
+  /**
+   * When true, a multi-day timed event repeats its start/end window on each day
+   * in the range (e.g. 08:30–17:30 daily); when false it is one continuous span.
+   */
+  daily_schedule: boolean;
   /** Event type name — references {@link CalendarEventType.name}. */
   type: string;
   subject_id: string | null;
@@ -261,6 +266,7 @@ export interface CreateCalendarEventDto {
   end_date?: string;
   start_time?: string;
   end_time?: string;
+  daily_schedule?: boolean;
   type: string;
   subject_id?: string;
   location?: string;
