@@ -1,9 +1,10 @@
 import { useParams } from 'react-router-dom';
-import { SubjectForm } from './subject-form';
+import { SubjectTreeForm } from './subject-tree-form';
 
 const SubjectsEdit = () => {
   const { id } = useParams<{ id: string }>();
-  return <SubjectForm id={id} />;
+  if (!id) return null;
+  return <SubjectTreeForm id={id} />;
 };
 
 export default SubjectsEdit;

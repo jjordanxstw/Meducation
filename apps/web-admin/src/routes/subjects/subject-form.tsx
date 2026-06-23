@@ -55,7 +55,9 @@ export function SubjectForm({ id }: { id?: string }) {
     resource: 'subjects',
     action: id ? 'edit' : 'create',
     id,
-    redirect: 'list',
+    // After creating, jump straight to the edit screen where the full tree editor
+    // (sections / lectures / resources) lives.
+    redirect: id ? 'list' : 'edit',
   });
 
   const form = useForm<Values>({
