@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { AdminEmptyState } from '../../components/AdminEmptyState';
 import { DataTable, type ColumnDef } from '@/components/ui/data-table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface AuditLog {
   id: string;
@@ -47,11 +48,30 @@ function previewJson(value: unknown): string {
   }
 }
 
+function formatJson(value: unknown): string {
+  if (value === null || value === undefined) return '—';
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+/** Keys whose value changed between old and new (for UPDATE entries). */
+function changedKeys(oldData: unknown, newData: unknown): string[] {
+  if (!oldData || !newData || typeof oldData !== 'object' || typeof newData !== 'object') return [];
+  const a = oldData as Record<string, unknown>;
+  const b = newData as Record<string, unknown>;
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  return [...keys].filter((k) => JSON.stringify(a[k]) !== JSON.stringify(b[k])).sort();
+}
+
 const AuditLogsList = () => {
   const { tableQueryResult, current, setCurrent, pageSize, pageCount, setFilters, filters, sorters, setSorters } =
     useTable<AuditLog>({ resource: 'audit-logs', syncWithLocation: true });
   const { sorting, onSortingChange } = useTableSorting(sorters, setSorters);
 
+  const [selected, setSelected] = useState<AuditLog | null>(null);
   const [search, setSearch] = useState('');
   const [action, setAction] = useState<string | undefined>(undefined);
   const [tableName, setTableName] = useState<string | undefined>(undefined);
@@ -138,6 +158,16 @@ const AuditLogsList = () => {
         cell: ({ getValue }) =>
           new Date(getValue() as string).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }),
       },
+      {
+        id: 'actions',
+        header: '',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <Button size="sm" variant="ghost" onClick={() => setSelected(row.original)}>
+            View
+          </Button>
+        ),
+      },
     ],
     [],
   );
@@ -212,6 +242,78 @@ const AuditLogsList = () => {
         onSortingChange={onSortingChange}
         emptyState={<AdminEmptyState icon={<ScrollText />} title="No audit logs found" subtitle="Adjust your filters." />}
       />
+
+      <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Audit entry</DialogTitle>
+          </DialogHeader>
+          {selected && (
+            <div className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto">
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <div>
+                  <dt className="text-xs text-slate-400">Admin</dt>
+                  <dd className="text-slate-700">{selected.user_email ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-slate-400">Action</dt>
+                  <dd>
+                    <Badge variant={ACTION_BADGE[selected.action] ?? 'neutral'}>{selected.action}</Badge>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-slate-400">Table</dt>
+                  <dd className="text-slate-700">{selected.table_name}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-slate-400">Record ID</dt>
+                  <dd className="break-all font-mono text-xs text-slate-700">{selected.record_id}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-slate-400">IP address</dt>
+                  <dd className="text-slate-700">{selected.ip_address ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-slate-400">When</dt>
+                  <dd className="text-slate-700">{new Date(selected.created_at).toLocaleString()}</dd>
+                </div>
+              </dl>
+
+              {selected.action === 'UPDATE' && changedKeys(selected.old_data, selected.new_data).length > 0 && (
+                <div>
+                  <p className="mb-1 text-xs font-medium text-slate-400">Changed fields</p>
+                  <div className="flex flex-wrap gap-1">
+                    {changedKeys(selected.old_data, selected.new_data).map((k) => (
+                      <Badge key={k} variant="brand">
+                        {k}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                {selected.old_data && (
+                  <div>
+                    <p className="mb-1 text-xs font-medium text-slate-400">Old values</p>
+                    <pre className="max-h-64 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-xs text-slate-600">
+                      {formatJson(selected.old_data)}
+                    </pre>
+                  </div>
+                )}
+                {selected.new_data && (
+                  <div>
+                    <p className="mb-1 text-xs font-medium text-slate-400">New values</p>
+                    <pre className="max-h-64 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-xs text-slate-600">
+                      {formatJson(selected.new_data)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

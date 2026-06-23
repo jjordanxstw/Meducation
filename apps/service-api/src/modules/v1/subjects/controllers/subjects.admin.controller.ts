@@ -114,8 +114,11 @@ export class SubjectsAdminController {
   // Atomic save of the whole subject tree (subject fields + sections/lectures/resources).
   @Put(':id/tree')
   @SkipEnvelope()
-  async saveTree(@Param('id') id: string, @Body() body: any) {
+  async saveTree(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     const data = await this.subjectsService.saveTree(id, body);
+    // Log a single compact UPDATE (the RPC's per-level counts) — the main path for
+    // editing the curriculum. Avoids storing the whole tree to keep audit_logs small.
+    await this.audit.logAdminUpdate('subjects', id, null, data, req.admin, req);
     this.invalidateSubjectGraphCache();
     return { success: true, data };
   }
@@ -130,16 +133,18 @@ export class SubjectsAdminController {
   @Post()
   @UseInterceptors(IdempotencyInterceptor)
   @SkipEnvelope()
-  async create(@Body(new ZodValidationPipe(createSubjectSchema)) createDto: CreateSubjectInput) {
+  async create(@Body(new ZodValidationPipe(createSubjectSchema)) createDto: CreateSubjectInput, @Req() req: any) {
     const data = await this.subjectsService.create(createDto);
+    await this.audit.logAdminCreate('subjects', data?.id, data, req.admin, req);
     this.invalidateSubjectGraphCache();
     return { success: true, data };
   }
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any) {
+  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
     const data = await this.subjectsService.update(id, updateDto);
+    await this.audit.logAdminUpdate('subjects', id, data.oldData, data.newData, req.admin, req);
     this.invalidateSubjectGraphCache();
     return { success: true, data: data.newData };
   }

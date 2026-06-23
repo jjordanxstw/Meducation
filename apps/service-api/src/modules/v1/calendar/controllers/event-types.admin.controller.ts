@@ -57,16 +57,18 @@ export class EventTypesAdminController {
   @Post()
   @UseInterceptors(IdempotencyInterceptor)
   @SkipEnvelope()
-  async create(@Body() createDto: any) {
+  async create(@Body() createDto: any, @Req() req: any) {
     const data = await this.eventTypesService.create(createDto);
+    await this.audit.logAdminCreate('event_types', data?.id, data, req.admin, req);
     this.invalidateCaches();
     return { success: true, data };
   }
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any) {
+  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
     const data = await this.eventTypesService.update(id, updateDto);
+    await this.audit.logAdminUpdate('event_types', id, data.oldData, data.newData, req.admin, req);
     this.invalidateCaches();
     return { success: true, data: data.newData };
   }

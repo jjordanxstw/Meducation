@@ -86,16 +86,18 @@ export class LecturesAdminController {
 
   @Post()
   @SkipEnvelope()
-  async create(@Body() createDto: any) {
+  async create(@Body() createDto: any, @Req() req: any) {
     const data = await this.lecturesService.create(createDto);
+    await this.audit.logAdminCreate('lectures', data?.id, data, req.admin, req);
     this.invalidateLectureGraphCache();
     return { success: true, data };
   }
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any) {
+  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
     const data = await this.lecturesService.update(id, updateDto);
+    await this.audit.logAdminUpdate('lectures', id, data.oldData, data.newData, req.admin, req);
     this.invalidateLectureGraphCache();
     return { success: true, data: data.newData };
   }

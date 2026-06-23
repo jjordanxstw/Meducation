@@ -271,6 +271,61 @@ export class AuditService {
     }
   }
 
+  /**
+   * Record an admin-initiated create. Mirrors logAdminDelete: user_id is null
+   * (admins aren't profiles rows), the acting admin is captured via user_email.
+   */
+  async logAdminCreate(
+    tableName: string,
+    recordId: string,
+    newData: unknown,
+    admin: { id?: string; username?: string } | undefined,
+    req: { ip?: string; headers?: Record<string, unknown> },
+  ): Promise<void> {
+    const userAgent = req.headers?.['user-agent'];
+    const { error } = await this.supabaseAdmin.from('audit_logs').insert({
+      table_name: tableName,
+      record_id: recordId,
+      action: AuditAction.INSERT,
+      new_data: newData ?? null,
+      user_id: null,
+      user_email: admin?.username ?? 'admin',
+      ip_address: req.ip ?? null,
+      user_agent: typeof userAgent === 'string' ? userAgent : null,
+    });
+    if (error) {
+      this.logger.warn(`Failed to write create audit for ${tableName}:${recordId} (code=${error.code ?? 'unknown'})`);
+    }
+  }
+
+  /**
+   * Record an admin-initiated update (captures both old and new values).
+   */
+  async logAdminUpdate(
+    tableName: string,
+    recordId: string,
+    oldData: unknown,
+    newData: unknown,
+    admin: { id?: string; username?: string } | undefined,
+    req: { ip?: string; headers?: Record<string, unknown> },
+  ): Promise<void> {
+    const userAgent = req.headers?.['user-agent'];
+    const { error } = await this.supabaseAdmin.from('audit_logs').insert({
+      table_name: tableName,
+      record_id: recordId,
+      action: AuditAction.UPDATE,
+      old_data: oldData ?? null,
+      new_data: newData ?? null,
+      user_id: null,
+      user_email: admin?.username ?? 'admin',
+      ip_address: req.ip ?? null,
+      user_agent: typeof userAgent === 'string' ? userAgent : null,
+    });
+    if (error) {
+      this.logger.warn(`Failed to write update audit for ${tableName}:${recordId} (code=${error.code ?? 'unknown'})`);
+    }
+  }
+
   static getAuditContext(req: any): AuditContext {
     return {
       userId: req.user?.id || 'unknown',

@@ -87,16 +87,18 @@ export class NewsAdminController {
   @Post()
   @UseInterceptors(IdempotencyInterceptor)
   @SkipEnvelope()
-  async create(@Body() createDto: any) {
+  async create(@Body() createDto: any, @Req() req: any) {
     const data = await this.newsService.create(createDto);
+    await this.audit.logAdminCreate('news', data?.id, data, req.admin, req);
     this.invalidateNewsCache();
     return { success: true, data };
   }
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any) {
+  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
     const data = await this.newsService.update(id, updateDto);
+    await this.audit.logAdminUpdate('news', id, data.oldData, data.newData, req.admin, req);
     this.invalidateNewsCache();
     return { success: true, data: data.newData };
   }

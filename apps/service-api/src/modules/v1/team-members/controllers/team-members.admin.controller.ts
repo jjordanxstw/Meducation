@@ -91,16 +91,18 @@ export class TeamMembersAdminController {
   @Post()
   @UseInterceptors(IdempotencyInterceptor)
   @SkipEnvelope()
-  async create(@Body() createDto: any) {
+  async create(@Body() createDto: any, @Req() req: any) {
     const data = await this.teamMembersService.create(createDto);
+    await this.audit.logAdminCreate('team_members', data?.id, data, req.admin, req);
     this.invalidateTeamMemberCache();
     return { success: true, data };
   }
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any) {
+  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
     const data = await this.teamMembersService.update(id, updateDto);
+    await this.audit.logAdminUpdate('team_members', id, data.oldData, data.newData, req.admin, req);
     this.invalidateTeamMemberCache();
     return { success: true, data: data.newData };
   }

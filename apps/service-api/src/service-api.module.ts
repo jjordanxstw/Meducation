@@ -1,5 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ServiceApiController } from './service-api.controller';
 import { ServiceApiService } from './service-api.service';
 import { V1Module } from './modules/v1/v1.module';
@@ -26,6 +27,7 @@ envFilePath.push('.env');
       isGlobal: true,
       envFilePath,
     }),
+    ScheduleModule.forRoot(),
     CommonModule,
     HealthModule,
     V1Module,

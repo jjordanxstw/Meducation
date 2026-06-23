@@ -72,14 +72,16 @@ export class AnnouncementsAdminController {
   @SkipEnvelope()
   async create(@Body() createDto: any, @Req() req: any) {
     const data = await this.announcementsService.create(createDto, req.admin?.id);
+    await this.audit.logAdminCreate('announcements', data?.id, data, req.admin, req);
     this.invalidateAnnouncementCache();
     return { success: true, data };
   }
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any) {
+  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
     const data = await this.announcementsService.update(id, updateDto);
+    await this.audit.logAdminUpdate('announcements', id, data.oldData, data.newData, req.admin, req);
     this.invalidateAnnouncementCache();
     return { success: true, data: data.newData };
   }
