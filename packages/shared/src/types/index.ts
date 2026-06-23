@@ -215,6 +215,75 @@ export interface ResourceFullCreateResponse {
 }
 
 // =====================================================
+// SUBJECT TREE EDITOR (unified atomic save)
+// =====================================================
+
+/**
+ * Input shape for the admin "save the whole subject tree" workflow
+ * (PUT /admin/subjects/:id/tree → admin_save_subject_tree RPC). Items with an
+ * `id` are updated; items without one are inserted; existing rows omitted from
+ * the payload are deleted (sections/lectures soft, resources hard). order_index
+ * is derived server-side from array position and is therefore not sent.
+ */
+export interface SubjectTreeResourceInput {
+  id?: string;
+  label: string;
+  url: string;
+  type: ResourceType;
+  is_active: boolean;
+  file_size_bytes?: number | null;
+  duration_seconds?: number | null;
+}
+
+export interface SubjectTreeLectureInput {
+  id?: string;
+  title: string;
+  description?: string | null;
+  lecture_date?: string | null;
+  lecturer_name?: string | null;
+  is_active: boolean;
+  resources: SubjectTreeResourceInput[];
+}
+
+export interface SubjectTreeSectionInput {
+  id?: string;
+  name: string;
+  description?: string | null;
+  is_active: boolean;
+  lectures: SubjectTreeLectureInput[];
+}
+
+export interface SaveSubjectTreeDto {
+  subject_id: string;
+  subject: {
+    code?: string;
+    name?: string;
+    year_level?: number;
+    description?: string | null;
+    thumbnail_url?: string | null;
+    order_index?: number;
+    is_active?: boolean;
+  };
+  sections: SubjectTreeSectionInput[];
+}
+
+/** Full editable hierarchy returned by GET /admin/subjects/:id/tree. */
+export interface SubjectEditableTree extends Subject {
+  sections: SectionWithLectures[];
+}
+
+/** Per-level counts returned by the tree save RPC. */
+export interface SaveSubjectTreeResult {
+  subject_id: string;
+  sections_upserted: number;
+  lectures_upserted: number;
+  resources_upserted: number;
+  sections_deleted: number;
+  lectures_deleted: number;
+  resources_deleted: number;
+}
+
+// =====================================================
 // CALENDAR EVENT
 // =====================================================
 

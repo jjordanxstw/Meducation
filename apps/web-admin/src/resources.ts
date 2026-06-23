@@ -39,10 +39,10 @@ export const buildResources = () => [
     },
   },
   {
+    // Read-only cross-subject search view. All resource editing now happens in the
+    // unified subject tree editor (Subjects → edit), so no create/edit routes here.
     name: 'resources',
     list: '/resources',
-    create: '/resources/create',
-    edit: '/resources/edit/:id',
     meta: {
       label: 'Resources',
       icon: React.createElement(Database),

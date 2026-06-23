@@ -102,6 +102,24 @@ export class SubjectsAdminController {
     return { success: true, data };
   }
 
+  // Full editable hierarchy (includes inactive sections/lectures/resources) for
+  // the unified tree editor. Declared before ':id' so it matches first.
+  @Get(':id/tree')
+  @SkipEnvelope()
+  async findOneTree(@Param('id') id: string) {
+    const data = await this.subjectsService.findOneForEdit(id);
+    return { success: true, data };
+  }
+
+  // Atomic save of the whole subject tree (subject fields + sections/lectures/resources).
+  @Put(':id/tree')
+  @SkipEnvelope()
+  async saveTree(@Param('id') id: string, @Body() body: any) {
+    const data = await this.subjectsService.saveTree(id, body);
+    this.invalidateSubjectGraphCache();
+    return { success: true, data };
+  }
+
   @Get(':id')
   @SkipEnvelope()
   async findOne(@Param('id') id: string) {
