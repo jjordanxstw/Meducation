@@ -91,16 +91,18 @@ export class LearningResourcesAdminController {
   @Post()
   @UseInterceptors(IdempotencyInterceptor)
   @SkipEnvelope()
-  async create(@Body() createDto: any) {
+  async create(@Body() createDto: any, @Req() req: any) {
     const data = await this.learningResourcesService.create(createDto);
+    await this.audit.logAdminCreate('learning_resources', data?.id, data, req.admin, req);
     this.invalidateCache();
     return { success: true, data };
   }
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any) {
+  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
     const data = await this.learningResourcesService.update(id, updateDto);
+    await this.audit.logAdminUpdate('learning_resources', id, data.oldData, data.newData, req.admin, req);
     this.invalidateCache();
     return { success: true, data: data.newData };
   }

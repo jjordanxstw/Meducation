@@ -91,8 +91,9 @@ export class ResourcesAdminController {
 
   @Post()
   @SkipEnvelope()
-  async create(@Body() createDto: any) {
+  async create(@Body() createDto: any, @Req() req: any) {
     const data = await this.resourcesService.create(createDto);
+    await this.audit.logAdminCreate('resources', data?.id, data, req.admin, req);
     this.invalidateResourceGraphCache();
     return { success: true, data };
   }
@@ -115,8 +116,9 @@ export class ResourcesAdminController {
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any) {
+  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
     const data = await this.resourcesService.update(id, updateDto);
+    await this.audit.logAdminUpdate('resources', id, data.oldData, data.newData, req.admin, req);
     this.invalidateResourceGraphCache();
     return { success: true, data: data.newData };
   }

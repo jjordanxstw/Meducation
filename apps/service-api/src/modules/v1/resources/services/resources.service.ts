@@ -213,7 +213,8 @@ export class ResourcesService {
       const { data: sections, error: sectionsError } = await this.supabaseAdmin
         .from('sections')
         .select('id')
-        .eq('subject_id', subjectId);
+        .eq('subject_id', subjectId)
+        .is('deleted_at', null);
 
       if (sectionsError) {
         this.logger.warn(`Failed to fetch sections for subject filter (code=${sectionsError.code ?? 'unknown'})`);
@@ -246,7 +247,8 @@ export class ResourcesService {
       const { data: lectures, error: lecturesError } = await this.supabaseAdmin
         .from('lectures')
         .select('id')
-        .in('section_id', sectionId ? [sectionId] : scopedSectionIds || []);
+        .in('section_id', sectionId ? [sectionId] : scopedSectionIds || [])
+        .is('deleted_at', null);
 
       if (lecturesError) {
         this.logger.warn(`Failed to fetch lectures for section filter (code=${lecturesError.code ?? 'unknown'})`);
@@ -276,27 +278,36 @@ export class ResourcesService {
       }
     }
 
+    // !inner joins + deleted_at filters hide resources whose ancestor subject,
+    // section or lecture has been soft-deleted (consistent with the student view),
+    // so deleting a subject removes its resources from this search tab too.
     let query = this.supabaseAdmin
       .from('resources')
       .select(`
         *,
-        lecture:lectures!resources_lecture_id_fkey(
+        lecture:lectures!resources_lecture_id_fkey!inner(
           id,
           title,
           section_id,
-          section:sections!lectures_section_id_fkey(
+          deleted_at,
+          section:sections!lectures_section_id_fkey!inner(
             id,
             name,
             subject_id,
-            subject:subjects!sections_subject_id_fkey(
+            deleted_at,
+            subject:subjects!sections_subject_id_fkey!inner(
               id,
               code,
               name,
-              year_level
+              year_level,
+              deleted_at
             )
           )
         )
-      `, shouldPaginate ? { count: 'exact' } : undefined);
+      `, shouldPaginate ? { count: 'exact' } : undefined)
+      .is('lecture.deleted_at', null)
+      .is('lecture.section.deleted_at', null)
+      .is('lecture.section.subject.deleted_at', null);
 
     if (lectureId) {
       query = query.eq('lecture_id', lectureId);

@@ -378,27 +378,18 @@ export class SubjectsService {
   }
 
   async delete(id: string) {
-    // Get old data for audit
-    const { data: oldData } = await this.supabaseAdmin
-      .from('subjects')
-      .select('*')
-      .eq('id', id)
-      .is('deleted_at', null)
-      .single();
-
-    // Soft delete: preserve child records (sections/lectures/resources) instead
-    // of CASCADE delete.
-    const { error } = await this.supabaseAdmin
-      .from('subjects')
-      .update({ deleted_at: new Date().toISOString(), is_active: false })
-      .eq('id', id)
-      .is('deleted_at', null);
+    // Cascade soft-delete: marks the subject and all of its sections/lectures as
+    // deleted and deactivates their resources atomically (admin_soft_delete_subject).
+    const { data, error } = await this.supabaseAdmin.rpc('admin_soft_delete_subject', {
+      p_subject_id: id,
+    });
 
     if (error) {
       this.logger.warn(`Failed to delete subject (code=${error.code ?? 'unknown'})`);
       throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'subject', id }, 'Failed to delete subject');
     }
 
+    const oldData = (data as { subject?: unknown } | null)?.subject ?? null;
     return { oldData };
   }
 

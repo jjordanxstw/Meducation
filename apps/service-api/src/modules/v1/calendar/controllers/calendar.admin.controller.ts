@@ -100,14 +100,16 @@ export class CalendarAdminController {
   @SkipEnvelope()
   async create(@Body() createDto: any, @Req() req: any) {
     const data = await this.calendarService.create(createDto, req.admin?.id);
+    await this.audit.logAdminCreate('calendar_events', data?.id, data, req.admin, req);
     this.invalidateCalendarCache();
     return { success: true, data };
   }
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any) {
+  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
     const data = await this.calendarService.update(id, updateDto);
+    await this.audit.logAdminUpdate('calendar_events', id, data.oldData, data.newData, req.admin, req);
     this.invalidateCalendarCache();
     return { success: true, data: data.newData };
   }

@@ -85,16 +85,18 @@ export class SectionsAdminController {
 
   @Post()
   @SkipEnvelope()
-  async create(@Body() createDto: any) {
+  async create(@Body() createDto: any, @Req() req: any) {
     const data = await this.sectionsService.create(createDto);
+    await this.audit.logAdminCreate('sections', data?.id, data, req.admin, req);
     this.invalidateSectionGraphCache();
     return { success: true, data };
   }
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any) {
+  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
     const data = await this.sectionsService.update(id, updateDto);
+    await this.audit.logAdminUpdate('sections', id, data.oldData, data.newData, req.admin, req);
     this.invalidateSectionGraphCache();
     return { success: true, data: data.newData };
   }
