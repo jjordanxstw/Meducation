@@ -33,6 +33,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
         return ErrorCode.RESOURCE_NOT_FOUND;
       case HttpStatus.CONFLICT:
         return ErrorCode.RESOURCE_CONFLICT;
+      case HttpStatus.PAYLOAD_TOO_LARGE:
+        return ErrorCode.VALIDATION_FAILED;
       default:
         return ErrorCode.SYSTEM_INTERNAL_ERROR;
     }
@@ -51,15 +53,28 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return;
     }
 
+    // Express-level errors (body-parser, raw-body, etc.) are not HttpExceptions
+    // but carry a proper client-facing status (e.g. 413 entity.too.large).
+    // Honor it so they don't get misreported as 500s.
+    const expressStatus =
+      !(exception instanceof HttpException) &&
+      typeof (exception as { status?: unknown })?.status === 'number' &&
+      (exception as { status: number }).status >= 400 &&
+      (exception as { status: number }).status < 600
+        ? (exception as { status: number }).status
+        : undefined;
+
     const status =
       exception instanceof HttpException
         ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+        : expressStatus ?? HttpStatus.INTERNAL_SERVER_ERROR;
 
     const exceptionResponse =
       exception instanceof HttpException
         ? exception.getResponse()
-        : 'Internal server error';
+        : expressStatus && exception instanceof Error && exception.message
+          ? exception.message
+          : 'Internal server error';
 
     let message: string | string[] | object;
     let error: string | undefined;
@@ -123,8 +138,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
     };
 
     if (status >= 500) {
+      // Include the underlying exception: 5xx responses carry a generic message
+      // to the client, so the log is the only place the real cause survives.
       this.logger.error(
         `${request.method} ${request.url} ${status} [${requestId}] [${errorCode}]`,
+        exception instanceof Error ? exception.stack : String(exception),
       );
     } else {
       this.logger.warn(

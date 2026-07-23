@@ -212,8 +212,11 @@ async function bootstrap() {
   app.use('/api/v1/auth/verify', authLimiter);
   app.use('/api/v1/admin/auth/change-password', passwordLimiter);
 
-  // JSON body parser with size limit to prevent DoS
-  app.use(express.json({ limit: '10kb' }));
+  // JSON body parser with size limit to prevent DoS. The cap must comfortably
+  // fit the largest legitimate payload: PUT /admin/subjects/:id/tree sends the
+  // whole subject hierarchy (sections -> lectures -> resources) in one body,
+  // which easily exceeds a few-kb cap for real subjects.
+  app.use(express.json({ limit: '1mb' }));
 
   // Cookie parser for httpOnly cookie support
   app.use(cookieParser());
