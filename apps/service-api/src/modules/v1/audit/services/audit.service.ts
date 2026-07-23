@@ -3,6 +3,7 @@
  * Handles audit logging
  */
 
+import { isIP } from 'net';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -72,8 +73,27 @@ export class AuditService {
     if (params.startDate) q = q.gte('created_at', params.startDate);
     if (params.endDate) q = q.lte('created_at', params.endDate);
     if (params.search?.trim()) {
-      const term = `%${params.search.trim()}%`;
-      q = q.or(`table_name.ilike.${term},action.ilike.${term},record_id.ilike.${term},user_email.ilike.${term},ip_address.ilike.${term}`);
+      const term = params.search.trim();
+      // PostgREST's or= filter is comma/paren-delimited, so double-quote the
+      // pattern to keep those characters in the term from breaking the syntax.
+      const pattern = `"%${term.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}%"`;
+      const clauses = [
+        `table_name.ilike.${pattern}`,
+        `record_id.ilike.${pattern}`,
+        `user_email.ilike.${pattern}`,
+      ];
+      // `action` is a Postgres enum and `ip_address` is inet; ilike only works
+      // on text, so match these with exact operators instead.
+      const actions = Object.values(AuditAction).filter((action) =>
+        action.toLowerCase().includes(term.toLowerCase()),
+      );
+      if (actions.length > 0) {
+        clauses.push(`action.in.(${actions.join(',')})`);
+      }
+      if (isIP(term)) {
+        clauses.push(`ip_address.eq.${term}`);
+      }
+      q = q.or(clauses.join(','));
     }
     return q;
   }
