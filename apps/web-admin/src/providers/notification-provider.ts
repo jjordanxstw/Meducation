@@ -3,7 +3,7 @@ import type { NotificationProvider } from '@refinedev/core';
 
 /**
  * Refine notification provider backed by sonner. Preserves the undoable
- * mutation UX: for `type: 'progress'` (e.g. the 5s soft-delete window), the
+ * mutation UX: for `type: 'progress'` (e.g. the 5s delete undo window), the
  * toast shows a live countdown and an "Undo" action wired to Refine's
  * `cancelMutation`. Refine re-calls `open` each second with a decremented
  * `undoableTimeout`; sonner updates the toast in place because we reuse `key`.

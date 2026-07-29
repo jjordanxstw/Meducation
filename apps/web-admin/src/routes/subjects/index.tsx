@@ -77,7 +77,7 @@ const SubjectsList = () => {
             </Button>
             <ConfirmButton
               title="Delete subject?"
-              description="Sections, lectures and resources under it are preserved. You can undo within a few seconds."
+              description="This permanently deletes the subject and every section, lecture and resource under it. Calendar events keep their details but lose the subject link. You can undo within a few seconds."
               confirmLabel="Delete"
               onConfirm={() => deleteOne({ resource: 'subjects', id: row.original.id })}
               trigger={

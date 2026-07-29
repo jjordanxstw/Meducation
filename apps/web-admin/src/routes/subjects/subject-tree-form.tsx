@@ -360,7 +360,7 @@ function LectureEditor({
         />
         <ConfirmButton
           title="Remove this lecture?"
-          description="The lecture and its resources will be removed when you save. Existing students lose access on save."
+          description="The lecture and its resources are permanently deleted when you save. This cannot be undone."
           confirmLabel="Remove"
           onConfirm={onRemove}
           trigger={
@@ -472,7 +472,7 @@ function SectionEditor({
         </button>
         <ConfirmButton
           title="Remove this section?"
-          description="The section, its lectures and their resources will be removed when you save."
+          description="The section, its lectures and their resources are permanently deleted when you save. This cannot be undone."
           confirmLabel="Remove"
           onConfirm={onRemove}
           trigger={

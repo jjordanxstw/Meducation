@@ -107,8 +107,7 @@ export class SectionsService {
 
     let query = this.supabaseAdmin
       .from('sections')
-      .select('*', shouldPaginate ? { count: 'exact' } : undefined)
-      .is('deleted_at', null);
+      .select('*', shouldPaginate ? { count: 'exact' } : undefined);
 
     if (subjectId) {
       query = query.eq('subject_id', subjectId);
@@ -156,7 +155,6 @@ export class SectionsService {
       .from('sections')
       .select(`*, lectures:lectures(*, resources:resources(*))`)
       .eq('id', id)
-      .is('deleted_at', null)
       .single();
 
     if (error) {
@@ -214,15 +212,11 @@ export class SectionsService {
       .from('sections')
       .select('*')
       .eq('id', id)
-      .is('deleted_at', null)
       .single();
 
-    // Soft delete to preserve child lectures/resources.
-    const { error } = await this.supabaseAdmin
-      .from('sections')
-      .update({ deleted_at: new Date().toISOString(), is_active: false })
-      .eq('id', id)
-      .is('deleted_at', null);
+    // Hard delete. The FK cascade removes this section's lectures and their
+    // resources (0001:103,124).
+    const { error } = await this.supabaseAdmin.from('sections').delete().eq('id', id);
 
     if (error) {
       this.logger.warn(`Failed to delete section (code=${error.code ?? 'unknown'})`);

@@ -121,8 +121,7 @@ export class SubjectsService {
 
     let query = this.supabaseAdmin
       .from('subjects')
-      .select('*', shouldPaginate ? { count: 'exact' } : undefined)
-      .is('deleted_at', null);
+      .select('*', shouldPaginate ? { count: 'exact' } : undefined);
 
     if (yearLevel !== undefined) {
       query = query.eq('year_level', yearLevel);
@@ -173,7 +172,6 @@ export class SubjectsService {
       .from('subjects')
       .select('*')
       .eq('id', id)
-      .is('deleted_at', null)
       .single();
 
     if (subjectError) {
@@ -192,7 +190,6 @@ export class SubjectsService {
       `)
       .eq('subject_id', id)
       .eq('is_active', true)
-      .is('deleted_at', null)
       .order('order_index');
 
     if (sectionsError) {
@@ -203,7 +200,7 @@ export class SubjectsService {
     const sortedSections = sections?.map(section => ({
       ...section,
       lectures: section.lectures
-        ?.filter((l: { is_active: boolean; deleted_at: string | null }) => l.is_active && !l.deleted_at)
+        ?.filter((l: { is_active: boolean }) => l.is_active)
         .sort((a: { order_index: number }, b: { order_index: number }) => a.order_index - b.order_index)
         .map((lecture: { resources: Array<{ is_active: boolean; order_index: number }> }) => ({
           ...lecture,
@@ -221,16 +218,14 @@ export class SubjectsService {
 
   /**
    * Admin-only variant of findOne for the unified tree editor. Returns the full
-   * subject hierarchy INCLUDING inactive sections/lectures/resources (still
-   * excluding soft-deleted sections/lectures). `findOne` stays untouched because
-   * it is shared with the student-facing read path.
+   * subject hierarchy INCLUDING inactive sections/lectures/resources. `findOne`
+   * stays untouched because it is shared with the student-facing read path.
    */
   async findOneForEdit(id: string) {
     const { data: subject, error: subjectError } = await this.supabaseAdmin
       .from('subjects')
       .select('*')
       .eq('id', id)
-      .is('deleted_at', null)
       .single();
 
     if (subjectError) {
@@ -247,7 +242,6 @@ export class SubjectsService {
         )
       `)
       .eq('subject_id', id)
-      .is('deleted_at', null)
       .order('order_index');
 
     if (sectionsError) {
@@ -257,7 +251,6 @@ export class SubjectsService {
     const sortedSections = (sections ?? []).map((section: any) => ({
       ...section,
       lectures: (section.lectures ?? [])
-        .filter((l: { deleted_at: string | null }) => !l.deleted_at)
         .sort((a: { order_index: number }, b: { order_index: number }) => a.order_index - b.order_index)
         .map((lecture: { resources: Array<{ order_index: number }> }) => ({
           ...lecture,
@@ -378,18 +371,22 @@ export class SubjectsService {
   }
 
   async delete(id: string) {
-    // Cascade soft-delete: marks the subject and all of its sections/lectures as
-    // deleted and deactivates their resources atomically (admin_soft_delete_subject).
-    const { data, error } = await this.supabaseAdmin.rpc('admin_soft_delete_subject', {
-      p_subject_id: id,
-    });
+    const { data: oldData } = await this.supabaseAdmin
+      .from('subjects')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    // Hard delete. The FK cascade (0001:85,103,124) removes the subject's
+    // sections, their lectures and those lectures' resources. Calendar events on
+    // this subject survive but have their subject_id set to NULL (0001:151).
+    const { error } = await this.supabaseAdmin.from('subjects').delete().eq('id', id);
 
     if (error) {
       this.logger.warn(`Failed to delete subject (code=${error.code ?? 'unknown'})`);
       throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'subject', id }, 'Failed to delete subject');
     }
 
-    const oldData = (data as { subject?: unknown } | null)?.subject ?? null;
     return { oldData };
   }
 

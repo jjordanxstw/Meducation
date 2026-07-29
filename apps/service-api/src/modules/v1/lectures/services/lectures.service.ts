@@ -134,8 +134,7 @@ export class LecturesService {
       const { data: sections, error: sectionsError } = await this.supabaseAdmin
         .from('sections')
         .select('id')
-        .eq('subject_id', subjectId)
-        .is('deleted_at', null);
+        .eq('subject_id', subjectId);
 
       if (sectionsError) {
         this.logger.warn(`Failed to fetch sections for subject filter (code=${sectionsError.code ?? 'unknown'})`);
@@ -167,8 +166,7 @@ export class LecturesService {
 
     let query = this.supabaseAdmin
       .from('lectures')
-      .select('*', shouldPaginate ? { count: 'exact' } : undefined)
-      .is('deleted_at', null);
+      .select('*', shouldPaginate ? { count: 'exact' } : undefined);
 
     if (sectionId) {
       query = query.eq('section_id', sectionId);
@@ -218,7 +216,6 @@ export class LecturesService {
       .from('lectures')
       .select(`*, resources:resources(*)`)
       .eq('id', id)
-      .is('deleted_at', null)
       .single();
 
     if (error) {
@@ -289,15 +286,10 @@ export class LecturesService {
       .from('lectures')
       .select('*')
       .eq('id', id)
-      .is('deleted_at', null)
       .single();
 
-    // Soft delete to preserve child resources.
-    const { error } = await this.supabaseAdmin
-      .from('lectures')
-      .update({ deleted_at: new Date().toISOString(), is_active: false })
-      .eq('id', id)
-      .is('deleted_at', null);
+    // Hard delete. The FK cascade removes this lecture's resources (0001:124).
+    const { error } = await this.supabaseAdmin.from('lectures').delete().eq('id', id);
 
     if (error) {
       this.logger.warn(`Failed to delete lecture (code=${error.code ?? 'unknown'})`);
