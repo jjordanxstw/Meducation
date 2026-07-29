@@ -82,7 +82,9 @@ const Root: React.FC = () => {
           projectId: 'medical-portal-admin',
           disableTelemetry: true,
           // Deletes are optimistic with a 5s "Undo" window surfaced by the
-          // sonner-backed notification provider (K.2 soft-delete UX).
+          // sonner-backed notification provider. The window is client-side only:
+          // Refine defers the HTTP request, and once it fires the delete is
+          // permanent (there is no restore endpoint).
           mutationMode: 'undoable',
           undoableTimeout: 5000,
           // Hardened React Query defaults (M.3). Admin data changes via the
