@@ -28,6 +28,13 @@
     "db:reset": "tsx database/scripts/reset.ts",
     "db:seed": "tsx database/scripts/seed.ts",
     "db:generate": "tsx database/scripts/generate-migration.ts",
+    "db:local:start": "npx -y supabase@2.121.0 start",
+    "db:local:stop": "npx -y supabase@2.121.0 stop",
+    "db:local:status": "npx -y supabase@2.121.0 status",
+    "db:local:migrate": "tsx database/scripts/migrate-apply.ts --local",
+    "db:local:seed": "tsx database/scripts/seed-mock.ts",
+    "db:local:types": "npx -y supabase@2.121.0 gen types typescript --local --schema public > packages/shared/src/types/database.generated.ts.tmp && node database/scripts/write-db-types.mjs",
+    "db:local:reset": "tsx database/scripts/reset.ts --local --confirm && pnpm db:local:migrate && pnpm db:local:seed",
     "admin:create": "tsx database/scripts/create-admin.ts"
   },
   "devDependencies": {

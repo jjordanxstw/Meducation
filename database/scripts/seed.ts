@@ -11,6 +11,7 @@ import { Client } from 'pg';
 import { existsSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { assertLocalDatabase, isLocalDatabase, localUrlFromArgs } from './lib/db-target';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -21,9 +22,10 @@ function loadEnv(): { dbUrl: string } {
     join(__dirname, '../../.env'),
   ];
 
-  let dbUrl = process.env.SUPABASE_DB_URL || '';
+  let dbUrl = localUrlFromArgs() || process.env.SUPABASE_DB_URL || '';
 
-  for (const envPath of envPaths) {
+  // `--local` or an explicit SUPABASE_DB_URL wins over any .env file.
+  for (const envPath of dbUrl ? [] : envPaths) {
     if (existsSync(envPath)) {
       const envContent = readFileSync(envPath, 'utf-8');
       for (const line of envContent.split('\n')) {
@@ -45,7 +47,8 @@ function loadEnv(): { dbUrl: string } {
 
 async function main(): Promise<void> {
   const { dbUrl } = loadEnv();
-  const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+  assertLocalDatabase(dbUrl, 'db:seed');
+  const client = new Client({ connectionString: dbUrl, ssl: isLocalDatabase(dbUrl) ? false : { rejectUnauthorized: false } });
 
   try {
     await client.connect();

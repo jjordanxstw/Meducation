@@ -1,0 +1,63 @@
+name: Nightly DB backup
+
+# Free-tier safety net: Supabase Free has no point-in-time recovery, and
+# staging + production share one database. Every night this dumps the whole
+# database, encrypts it, and keeps it as a workflow artifact for 30 days.
+#
+# Required repository secrets:
+#   SUPABASE_BACKUP_DB_URL  Session-pooler connection string (port 5432, not the
+#                           6543 transaction pooler, which breaks pg_dump).
+#   BACKUP_PASSPHRASE       Long random passphrase; store a copy outside GitHub.
+#
+# Restore (locally, never straight into prod without a second look):
+#   gpg --decrypt medpi-YYYY-MM-DD.dump.gpg > medpi.dump
+#   pg_restore --no-owner --no-acl -d "$TARGET_DB_URL" medpi.dump
+
+on:
+  schedule:
+    - cron: '0 19 * * *' # 02:00 Asia/Bangkok
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Dump database
+        env:
+          DB_URL: ${{ secrets.SUPABASE_BACKUP_DB_URL }}
+        run: |
+          if [ -z "$DB_URL" ]; then
+            echo "SUPABASE_BACKUP_DB_URL is not set; skipping." >&2
+            exit 1
+          fi
+          docker run --rm -v "$PWD:/out" -e DB_URL postgres:17-alpine \
+            sh -c 'pg_dump "$DB_URL" --format=custom --no-owner --no-acl \
+              --schema=public --schema=storage --file=/out/medpi.dump'
+          ls -lh medpi.dump
+
+      - name: Encrypt dump
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "BACKUP_PASSPHRASE is not set; refusing to upload an unencrypted dump." >&2
+            exit 1
+          fi
+          name="medpi-$(date -u +%Y-%m-%d).dump.gpg"
+          gpg --batch --yes --pinentry-mode loopback --symmetric --cipher-algo AES256 \
+            --passphrase "$BACKUP_PASSPHRASE" --output "$name" medpi.dump
+          rm medpi.dump
+          echo "BACKUP_FILE=$name" >> "$GITHUB_ENV"
+
+      - name: Upload encrypted dump
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BACKUP_FILE }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 30
+          if-no-files-found: error
