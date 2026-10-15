@@ -17,6 +17,19 @@ export function useUpcomingEvents(limit = 20) {
   });
 }
 
+/** Most recent past events, newest first (Today tops up "Coming up" with these). */
+export function useRecentEvents(limit = 4, enabled = true) {
+  return useQuery({
+    enabled,
+    queryKey: queryKeys.calendar.recent(limit),
+    queryFn: async ({ signal }) => {
+      const res = await apiClient.get('/calendar/recent', { params: { limit }, signal });
+      return (res.data?.data ?? []) as UpcomingEvent[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 /** Whole days from today (local) to an ISO date; 0 = today. */
 export function daysUntil(isoDate: string, now = new Date()): number {
   const [y, m, d] = isoDate.slice(0, 10).split('-').map(Number);

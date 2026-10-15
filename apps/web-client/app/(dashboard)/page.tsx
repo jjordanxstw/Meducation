@@ -2,8 +2,8 @@
 
 /**
  * Today — the first page after sign-in (Brilliant: Student Desktop / Home,
- * Student Mobile / Today). News first, then Continue + the next exam, the
- * student's year, announcements and what's coming up.
+ * Student Mobile / Today). Announcements first, then news, Continue + the
+ * next exam, the student's year and the calendar.
  */
 
 import { useMemo, useState, useSyncExternalStore } from 'react';
@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/states/EmptyState';
 import { useHotNews } from '@/hooks/use-hot-news';
 import { useSubjectDetail, useSubjects } from '@/hooks/use-subjects';
-import { daysUntil, useUpcomingEvents, type UpcomingEvent } from '@/hooks/use-upcoming';
+import { daysUntil, useRecentEvents, useUpcomingEvents, type UpcomingEvent } from '@/hooks/use-upcoming';
 import { useAnnouncements, useAnnouncementsSeen, type AnnouncementData } from '@/hooks/use-announcements';
 import { useRecentlyOpened, type RecentLecture } from '@/lib/recently-opened';
 import { useStudyYear } from '@/lib/study-year';
@@ -363,6 +363,9 @@ function Announcements() {
     return [...all.filter((item) => item.is_pinned), ...all.filter((item) => !item.is_pinned)];
   }, [data]);
 
+  // Announcements sit at the top of Today, so an empty card would just be noise.
+  if (!isLoading && items.length === 0) return null;
+
   return (
     <section className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-subtle" aria-labelledby="announcements">
       <div className="flex items-center justify-between">
@@ -380,8 +383,6 @@ function Announcements() {
           <Skeleton className="h-10 rounded-lg" />
           <Skeleton className="h-10 rounded-lg" />
         </div>
-      ) : items.length === 0 ? (
-        <p className="mt-3 text-sm text-ink-3">No announcements right now.</p>
       ) : (
         <ul className="mt-1 divide-y divide-slate-100">
           {(showAll ? items : items.slice(0, 3)).map((item) => (
@@ -393,42 +394,59 @@ function Announcements() {
   );
 }
 
-function ComingUp({ events, isLoading }: { events: UpcomingEvent[]; isLoading: boolean }) {
+const CALENDAR_ROWS = 4;
+
+/**
+ * The next few events; when fewer than four are ahead, the most recent past
+ * ones fill the list so it never looks empty. Shown in date order, past ones
+ * muted and labelled.
+ */
+function ComingUp({ upcoming, recent, isLoading }: { upcoming: UpcomingEvent[]; recent: UpcomingEvent[]; isLoading: boolean }) {
+  const ahead = upcoming.slice(0, CALENDAR_ROWS);
+  const past = recent.slice(0, CALENDAR_ROWS - ahead.length).reverse();
+  const rows = [...past.map((event) => ({ event, isPast: true })), ...ahead.map((event) => ({ event, isPast: false }))];
+  const title = past.length === 0 ? 'Coming up' : ahead.length === 0 ? 'Latest on the calendar' : 'On the calendar';
+
   return (
     <section className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-subtle" aria-labelledby="coming-up">
       <div className="flex items-center justify-between">
         <h2 id="coming-up" className="text-base font-semibold text-ink-1">
-          Coming up
+          {title}
         </h2>
         <Link href="/calendar" className="text-sm font-semibold text-brand-hover hover:text-brand">
           Calendar
         </Link>
       </div>
       {isLoading ? (
-        <div className="mt-3 space-y-3">
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <Skeleton className="h-11 rounded-lg" />
           <Skeleton className="h-11 rounded-lg" />
         </div>
-      ) : events.length === 0 ? (
+      ) : rows.length === 0 ? (
         <p className="mt-3 text-sm text-ink-3">Nothing on the calendar yet.</p>
       ) : (
-        <ul className="mt-2 divide-y divide-slate-100">
-          {events.slice(0, 4).map((event) => {
+        <ul className="mt-2 grid gap-x-6 sm:grid-cols-2">
+          {rows.map(({ event, isPast }) => {
             const date = new Date(`${event.start_date.slice(0, 10)}T00:00:00`);
             const isExam = event.type === 'exam';
             return (
-              <li key={event.id} className="flex items-center gap-3 py-2.5">
-                <span className={cn('w-10 shrink-0 text-center leading-tight', isExam ? 'text-red-700' : 'text-ink-1')}>
+              <li key={event.id} className="flex items-center gap-3 border-b border-slate-100 py-2.5 last:border-0 sm:[&:nth-last-child(2):nth-child(odd)]:border-0">
+                <span className={cn('w-10 shrink-0 text-center leading-tight', isPast ? 'text-ink-3' : isExam ? 'text-red-700' : 'text-ink-1')}>
                   <span className="block text-[10px] font-semibold uppercase tracking-wider">
-                    {date.toLocaleDateString('en-GB', { weekday: 'short' })}
+                    {date.toLocaleDateString('en-GB', { month: 'short' })}
                   </span>
                   <span className="block text-xl font-bold tabular">{date.getDate()}</span>
                 </span>
-                <span className="h-9 w-[3px] shrink-0 rounded-full" style={{ backgroundColor: event.color ?? '#2f80ed' }} aria-hidden />
+                <span
+                  className={cn('h-9 w-[3px] shrink-0 rounded-full', isPast && 'opacity-40')}
+                  style={{ backgroundColor: event.color ?? '#2f80ed' }}
+                  aria-hidden
+                />
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-ink-1">{event.title}</span>
-                  <span className="block truncate text-xs capitalize text-ink-3">
-                    {[event.type, timeRange(event) ?? 'all day', event.location].filter(Boolean).join(' · ')}
+                  <span className={cn('block truncate text-sm font-semibold', isPast ? 'text-ink-2' : 'text-ink-1')}>{event.title}</span>
+                  <span className="block truncate text-xs text-ink-3">
+                    {isPast ? <span className="font-semibold">Past · </span> : null}
+                    <span className="capitalize">{[event.type, timeRange(event) ?? 'all day', event.location].filter(Boolean).join(' · ')}</span>
                   </span>
                 </span>
               </li>
@@ -448,6 +466,9 @@ export default function TodayPage() {
   const { year } = useStudyYear();
   const [latestRecent] = useRecentlyOpened();
   const { data: events = [], isLoading: eventsLoading } = useUpcomingEvents(20);
+  // Past events only matter when fewer than four are ahead.
+  const needPast = !eventsLoading && events.length < CALENDAR_ROWS;
+  const { data: recentEvents = [], isLoading: recentLoading } = useRecentEvents(CALENDAR_ROWS, needPast);
   const { data: subjects = [], isLoading: subjectsLoading } = useSubjects({ yearLevel: 'all' });
   const hour = useSyncExternalStore(noopSubscribe, () => new Date().getHours(), () => 9);
 
@@ -473,6 +494,8 @@ export default function TodayPage() {
         </h1>
         {summary.length > 0 ? <p className="mt-1 text-sm text-ink-2 sm:text-base">{summary.join(' ')}</p> : null}
       </header>
+
+      <Announcements />
 
       <LatestNews />
 
@@ -526,10 +549,7 @@ export default function TodayPage() {
         )}
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Announcements />
-        <ComingUp events={events} isLoading={eventsLoading} />
-      </div>
+      <ComingUp upcoming={events} recent={recentEvents} isLoading={eventsLoading || (needPast && recentLoading)} />
     </PageTransition>
   );
 }

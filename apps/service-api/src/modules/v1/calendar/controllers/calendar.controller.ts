@@ -116,6 +116,35 @@ export class CalendarPublicController {
     return payload;
   }
 
+  /** Most recent past events, newest first — Today shows these when little is coming up. */
+  @Get('recent')
+  @UseGuards(GoogleAuthGuard)
+  @SkipEnvelope()
+  async getRecent(
+    @Query('limit') limit?: string,
+    @Req() req?: Request,
+    @Res({ passthrough: true }) res?: Response,
+  ) {
+    const cacheKey = buildRequestCacheKey('v1:calendar:recent', (req?.query ?? {}) as Record<string, unknown>, ['limit']);
+    const cached = this.responseCache.get<{ success: true; data: unknown }>(cacheKey);
+    if (cached) {
+      if (res) {
+        applyCacheHeaders(res, { ttlSeconds: CALENDAR_UPCOMING_CACHE_TTL_SECONDS });
+      }
+      return cached;
+    }
+
+    const data = await this.calendarService.getRecent(limit ? parseInt(limit, 10) : 4);
+    const payload = { success: true, data };
+
+    this.responseCache.set(cacheKey, payload, CALENDAR_UPCOMING_CACHE_TTL_SECONDS);
+    if (res) {
+      applyCacheHeaders(res, { ttlSeconds: CALENDAR_UPCOMING_CACHE_TTL_SECONDS });
+    }
+
+    return payload;
+  }
+
   @Get(':id')
   @UseGuards(GoogleAuthGuard)
   @SkipEnvelope()

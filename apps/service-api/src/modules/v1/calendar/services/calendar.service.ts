@@ -281,6 +281,27 @@ export class CalendarService {
     return this.withResolvedColors(data);
   }
 
+  /** Events that started before today, newest first (capped at 20). */
+  async getRecent(limit: number = 4) {
+    const today = new Date().toISOString().split('T')[0];
+    const safeLimit = Math.min(20, Math.max(1, Number(limit) || 4));
+
+    const { data, error } = await this.supabaseAdmin
+      .from('calendar_events')
+      .select('*, subjects:subject_id(name, code)')
+      .lt('start_date', today)
+      .order('start_date', { ascending: false })
+      .order('start_time', { ascending: false, nullsFirst: false })
+      .limit(safeLimit);
+
+    if (error) {
+      this.logger.warn(`Failed to fetch recent events (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'calendar_event' }, 'Failed to fetch recent events');
+    }
+
+    return this.withResolvedColors(data);
+  }
+
   async findOne(id: string) {
     const { data, error } = await this.supabaseAdmin
       .from('calendar_events')

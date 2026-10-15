@@ -17,8 +17,6 @@ import { signOut, useSession } from 'next-auth/react';
 import {
   BookOpen,
   CalendarDays,
-  Check,
-  ChevronsUpDown,
   CircleUser,
   Info,
   Layers,
@@ -32,11 +30,10 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
-import { YEAR_LEVELS } from '@medical-portal/shared';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { forgetRecentlyOpened, useRecentlyOpened } from '@/lib/recently-opened';
-import { setStudyYear, useStudyYear } from '@/lib/study-year';
+import { useStudyYear } from '@/lib/study-year';
 import { daysUntil, useUpcomingEvents } from '@/hooks/use-upcoming';
 import { useAuthStore } from '@/stores/auth.store';
 import {
@@ -97,36 +94,6 @@ function Brand() {
         <span className="block text-[11px] text-ink-3">Lecture library</span>
       </span>
     </Link>
-  );
-}
-
-/** "Studying: Year N" — which year Today and Subjects open on. */
-function StudyYearPicker() {
-  const { year, profileYear } = useStudyYear();
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left transition-colors hover:border-slate-300"
-        >
-          <span className="min-w-0 flex-1">
-            <span className="block text-[11px] text-ink-3">Studying</span>
-            <span className="block truncate text-sm font-semibold text-ink-1">{year ? `Year ${year}` : 'All years'}</span>
-          </span>
-          <ChevronsUpDown className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-52">
-        {YEAR_LEVELS.map((option) => (
-          <DropdownMenuItem key={option} onSelect={() => setStudyYear(option === profileYear ? null : option)}>
-            <Check className={cn('h-4 w-4', option === year ? 'opacity-100' : 'opacity-0')} aria-hidden />
-            Year {option}
-            {option === profileYear ? <span className="ml-auto text-xs text-ink-3">your year</span> : null}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }
 
@@ -359,9 +326,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         <Rail pathname={pathname} onSearch={() => setSearchOpen(true)} />
       ) : (
         <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-slate-200/70 bg-white lg:flex">
-          <div className="space-y-4 px-4 pb-4 pt-5">
+          <div className="px-4 pb-4 pt-5">
             <Brand />
-            <StudyYearPicker />
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
             <SidebarNav pathname={pathname} examIn={examIn} />
