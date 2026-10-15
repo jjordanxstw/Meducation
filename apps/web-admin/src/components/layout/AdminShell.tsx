@@ -1,8 +1,15 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useGetIdentity, useLogout, useMenu } from '@refinedev/core';
-import { ChevronRight, LogOut, Menu } from 'lucide-react';
+import { Cross, Ellipsis, ExternalLink, LogOut, Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
 // Minimal shape of a Refine menu node (a resource with optional nested children
@@ -21,15 +28,10 @@ function isRouteActive(pathname: string, route?: string): boolean {
   return pathname === route || pathname.startsWith(`${route}/`);
 }
 
-const navRowClass = (active: boolean) =>
-  cn(
-    'flex flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors [&_svg]:size-[18px]',
-    active
-      ? 'bg-brand-subtle font-semibold text-brand [&_svg]:text-brand'
-      : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 [&_svg]:text-slate-400',
-  );
-
 type AdminIdentity = { name?: string; avatar?: string; email?: string };
+
+/** Where "Open student site" points; override per environment with VITE_STUDENT_SITE_URL. */
+const STUDENT_SITE_URL = import.meta.env.VITE_STUDENT_SITE_URL || 'http://localhost:3001';
 
 function getInitials(name: string | undefined): string {
   if (!name) return 'A';
@@ -41,95 +43,81 @@ function getInitials(name: string | undefined): string {
 function Brand() {
   return (
     <Link to="/dashboard" className="flex items-center gap-2.5" aria-label="MedPi Admin">
-      <span className="font-serif text-base font-semibold tracking-tight text-slate-900">
-        MedPi <span className="text-brand">Admin</span>
+      <span className="flex size-8 items-center justify-center rounded-lg bg-ink-1 text-white">
+        <Cross className="size-4" aria-hidden />
+      </span>
+      <span className="leading-tight">
+        <span className="block text-sm font-semibold tracking-tight text-ink-1">MedPi Admin</span>
+        <span className="block text-[11px] text-ink-3">Content studio</span>
       </span>
     </Link>
   );
 }
 
-/** A single navigable row (used for top-level leaves and nested children). */
-function NavLeaf({
-  item,
-  pathname,
-  onNavigate,
-  nested = false,
-}: {
-  item: MenuNode;
-  pathname: string;
-  onNavigate?: () => void;
-  nested?: boolean;
-}) {
-  const route = item.route ?? '/';
-  const active = isRouteActive(pathname, route);
-  return (
-    <Link
-      to={route}
-      onClick={onNavigate}
-      aria-current={active ? 'page' : undefined}
-      className={cn(navRowClass(active), nested && 'py-2 text-[13px]')}
-    >
-      {item.icon}
-      <span>{item.label ?? item.name}</span>
-    </Link>
-  );
-}
+/**
+ * Sidebar groups (Brilliant: 04 Admin). Child resources (event types, news
+ * categories) are flattened so every destination is one click away; resources
+ * not listed fall into "More".
+ */
+const NAV_SECTIONS: Array<{ label: string | null; names: string[] }> = [
+  { label: null, names: ['dashboard'] },
+  { label: 'Content', names: ['subjects', 'resources', 'learning-resources', 'news', 'announcements'] },
+  { label: 'Schedule', names: ['calendar', 'event-types'] },
+  { label: 'People & system', names: ['profiles', 'team-members', 'audit-logs'] },
+];
+/** Reachable from their parent page instead of the sidebar. */
+const HIDDEN = new Set(['news-categories']);
 
-/** A parent row that is itself a link, with a chevron that expands its children. */
-function NavGroup({
-  item,
-  pathname,
-  onNavigate,
-}: {
-  item: MenuNode;
-  pathname: string;
-  onNavigate?: () => void;
-}) {
-  const route = item.route ?? '/';
-  const children = item.children ?? [];
-  const selfActive = isRouteActive(pathname, route);
-  const childActive = children.some((c) => isRouteActive(pathname, c.route));
-  // Auto-open when this branch is active; `null` defers to that until the user
-  // toggles manually (then their choice sticks).
-  const [manualOpen, setManualOpen] = useState<boolean | null>(null);
-  const open = manualOpen ?? (selfActive || childActive);
-
-  return (
-    <div>
-      <div className="flex items-center gap-1">
-        <NavLeaf item={item} pathname={pathname} onNavigate={onNavigate} />
-        <button
-          type="button"
-          onClick={() => setManualOpen(!open)}
-          aria-label={open ? `Collapse ${item.label ?? item.name}` : `Expand ${item.label ?? item.name}`}
-          aria-expanded={open}
-          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        >
-          <ChevronRight className={cn('size-4 transition-transform duration-200', open && 'rotate-90')} />
-        </button>
-      </div>
-      {open && (
-        <div className="mt-1 space-y-1 border-l border-slate-200/70 pl-3 ml-4">
-          {children.map((child) => (
-            <NavLeaf key={child.key} item={child} pathname={pathname} onNavigate={onNavigate} nested />
-          ))}
-        </div>
-      )}
-    </div>
-  );
+function flatten(items: MenuNode[]): MenuNode[] {
+  return items.flatMap((item) => [item, ...flatten(item.children ?? [])]);
 }
 
 function NavList({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   const { menuItems } = useMenu();
+  const items = flatten(menuItems as MenuNode[]).filter((item) => !HIDDEN.has(item.name));
+  const listed = new Set(NAV_SECTIONS.flatMap((section) => section.names));
+  const sections = [
+    ...NAV_SECTIONS.map((section) => ({
+      label: section.label,
+      items: section.names
+        .map((name) => items.find((item) => item.name === name))
+        .filter((item): item is MenuNode => Boolean(item)),
+    })),
+    { label: 'More', items: items.filter((item) => !listed.has(item.name)) },
+  ].filter((section) => section.items.length > 0);
+
   return (
-    <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="Primary">
-      {(menuItems as MenuNode[]).map((item) =>
-        item.children && item.children.length > 0 ? (
-          <NavGroup key={item.key} item={item} pathname={pathname} onNavigate={onNavigate} />
-        ) : (
-          <NavLeaf key={item.key} item={item} pathname={pathname} onNavigate={onNavigate} />
-        ),
-      )}
+    <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-2" aria-label="Primary">
+      {sections.map((section) => (
+        <div key={section.label ?? 'top'}>
+          {section.label ? (
+            <p className="px-2.5 pb-1 text-[10.5px] font-semibold uppercase tracking-wider text-ink-3">{section.label}</p>
+          ) : null}
+          <div className="space-y-0.5">
+            {section.items.map((item) => {
+              const route = item.route ?? '/';
+              const active = isRouteActive(pathname, route);
+              return (
+                <Link
+                  key={item.key}
+                  to={route}
+                  onClick={onNavigate}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-colors [&_svg]:size-4',
+                    active
+                      ? 'bg-brand-subtle font-semibold text-brand-hover [&_svg]:text-brand'
+                      : 'font-medium text-ink-2 hover:bg-slate-100 hover:text-ink-1 [&_svg]:text-ink-3',
+                  )}
+                >
+                  {item.icon}
+                  <span>{item.label ?? item.name}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </nav>
   );
 }
@@ -137,26 +125,35 @@ function NavList({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
 function UserBlock({ identity, onLogout }: { identity?: AdminIdentity; onLogout: () => void }) {
   return (
     <div className="border-t border-slate-200/70 p-3">
-      <div className="flex items-center gap-3 rounded-xl p-1.5">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-semibold text-white">
+      <div className="flex items-center gap-2.5 rounded-xl p-1">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-hover">
           {getInitials(identity?.name)}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold text-slate-900">
-            {identity?.name ?? 'Admin'}
-          </span>
-          {identity?.email ? (
-            <span className="block truncate text-xs text-slate-400">{identity.email}</span>
-          ) : null}
+          <span className="block truncate text-[13px] font-semibold text-ink-1">{identity?.name ?? 'Admin'}</span>
+          {identity?.email ? <span className="block truncate text-[11px] text-ink-3">{identity.email}</span> : null}
         </span>
-        <button
-          type="button"
-          onClick={onLogout}
-          aria-label="Log out"
-          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        >
-          <LogOut className="size-4" />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label="Account menu"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-slate-100 hover:text-ink-1"
+          >
+            <Ellipsis className="size-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" side="top">
+            <DropdownMenuItem asChild>
+              <a href={STUDENT_SITE_URL} target="_blank" rel="noopener noreferrer">
+                <ExternalLink />
+                Open student site
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="danger" onSelect={onLogout}>
+              <LogOut />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
@@ -173,43 +170,36 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="relative min-h-screen">
-      {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-slate-200/70 bg-white lg:flex">
-        <div className="flex h-16 items-center px-5">
+      {/* Desktop sidebar — no top bar on desktop; page headers carry the actions. */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col border-r border-slate-200/70 bg-white lg:flex">
+        <div className="flex h-16 items-center px-4">
           <Brand />
         </div>
         <NavList pathname={pathname} />
         <UserBlock identity={identity} onLogout={handleLogout} />
       </aside>
 
-      {/* Content column */}
-      <div className="flex min-h-screen flex-col lg:pl-60">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-slate-200/70 bg-white/80 px-4 backdrop-blur-xl sm:px-6">
+      <div className="flex min-h-screen flex-col lg:pl-56">
+        {/* Mobile/tablet top bar */}
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-slate-200/70 bg-white/90 px-4 backdrop-blur-xl lg:hidden">
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
             aria-label="Open menu"
-            className="flex size-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:hidden"
+            className="flex size-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100"
           >
             <Menu className="size-5" />
           </button>
-          <div className="lg:hidden">
-            <Brand />
-          </div>
-          <div className="flex-1" />
-          {identity?.name ? (
-            <span className="text-sm font-medium text-slate-600">{identity.name}</span>
-          ) : null}
+          <Brand />
         </header>
 
-        <main className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-6">{children}</main>
+        <main className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-8 lg:py-8">{children}</main>
       </div>
 
-      {/* Mobile drawer */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="left" className="p-0">
+        <SheetContent side="left" className="flex flex-col p-0">
           <SheetTitle>Navigation</SheetTitle>
-          <div className="flex h-16 items-center px-5">
+          <div className="flex h-16 items-center px-4">
             <Brand />
           </div>
           <NavList pathname={pathname} onNavigate={() => setDrawerOpen(false)} />

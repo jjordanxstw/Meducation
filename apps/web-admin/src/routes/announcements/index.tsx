@@ -1,188 +1,244 @@
 /**
- * Announcements List Page
- * Admin management of system announcements.
+ * Announcements (Brilliant: 04 Admin — Announcements): short notices for the
+ * student Today page, edited in a side panel with a live student preview.
+ * ?new=1 / ?edit=id open the panel, so the old create/edit URLs redirect here.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useDelete, useTable } from '@refinedev/core';
-import { Plus, Pencil, Megaphone } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useDelete, useForm as useRefineForm, useList } from '@refinedev/core';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { EyeOff, Megaphone, Pin, Plus, X } from 'lucide-react';
 import type { Announcement } from '@medical-portal/shared';
-import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
-import { useTableSorting } from '../../utils/use-table-sorting';
+import { formatUpdated } from '../../utils/relative-time';
+import { AdminEmptyState } from '../../components/AdminEmptyState';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Input, Textarea } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ConfirmButton } from '@/components/ui/confirm-button';
-import { AdminEmptyState } from '../../components/AdminEmptyState';
-import { DataTable, type ColumnDef } from '@/components/ui/data-table';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { useMediaQuery } from '@/lib/use-media-query';
+import { cn } from '@/lib/utils';
 
-const AnnouncementsList = () => {
-  const { tableQueryResult, current, setCurrent, pageSize, pageCount, setFilters, filters, sorters, setSorters } =
-    useTable<Announcement>({ resource: 'announcements', syncWithLocation: true });
-  const { sorting, onSortingChange } = useTableSorting(sorters, setSorters);
+const TITLE_MAX = 120;
+
+const schema = z.object({
+  title: z.string().trim().min(1, 'Please enter a title').max(TITLE_MAX, `Keep it under ${TITLE_MAX} characters`),
+  content: z.string().trim().min(1, 'Please enter a message'),
+  is_pinned: z.boolean(),
+});
+type Values = z.infer<typeof schema>;
+
+function AnnouncementEditor({ id, onClose }: { id?: string; onClose: () => void }) {
+  const { onFinish, queryResult, formLoading } = useRefineForm<Announcement>({
+    resource: 'announcements',
+    action: id ? 'edit' : 'create',
+    id,
+    redirect: false,
+    onMutationSuccess: onClose,
+    queryOptions: { enabled: Boolean(id) },
+  });
   const { mutate: deleteOne } = useDelete();
+  const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { title: '', content: '', is_pinned: false } });
 
-  const [search, setSearch] = useState('');
-  const [isPublished, setIsPublished] = useState<string | undefined>(undefined);
-  const [isPinned, setIsPinned] = useState<string | undefined>(undefined);
-  const debouncedSearch = useDebouncedValue(search, 350);
-  const hasHydratedFromUrl = useRef(false);
-
-  const buildFilters = useCallback(
-    (searchValue: string) => {
-      const next: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
-      if (searchValue.trim()) next.push({ field: 'search', operator: 'contains', value: searchValue.trim() });
-      if (isPublished !== undefined) next.push({ field: 'is_published', operator: 'eq', value: isPublished });
-      if (isPinned !== undefined) next.push({ field: 'is_pinned', operator: 'eq', value: isPinned });
-      return next;
-    },
-    [isPublished, isPinned],
-  );
-
+  const record = id ? queryResult?.data?.data : undefined;
+  const resetFor = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (hasHydratedFromUrl.current) return;
-    const searchValue = getFilterValue(filters, 'search');
-    const publishedValue = getFilterValue(filters, 'is_published');
-    const pinnedValue = getFilterValue(filters, 'is_pinned');
-    setSearch(typeof searchValue === 'string' ? searchValue : '');
-    setIsPublished(typeof publishedValue === 'string' ? publishedValue : undefined);
-    setIsPinned(typeof pinnedValue === 'string' ? pinnedValue : undefined);
-    hasHydratedFromUrl.current = true;
-  }, [filters]);
+    if (record && resetFor.current !== record.id) {
+      resetFor.current = record.id;
+      form.reset({ title: record.title ?? '', content: record.content ?? '', is_pinned: Boolean(record.is_pinned) });
+    }
+  }, [record, form]);
 
-  useEffect(() => {
-    if (!hasHydratedFromUrl.current) return;
-    setFilters(buildFilters(debouncedSearch), 'replace');
-  }, [buildFilters, debouncedSearch, setFilters]);
+  const [title, pinned] = form.watch(['title', 'is_pinned']);
+  const save = (publish: boolean) => form.handleSubmit((values) => onFinish({ ...values, is_published: publish }));
+  const published = record?.is_published ?? false;
 
-  const resetFilters = () => {
-    setSearch('');
-    setIsPublished(undefined);
-    setIsPinned(undefined);
-    setFilters([], 'replace');
-  };
-
-  const columns: ColumnDef<Announcement, unknown>[] = useMemo(
-    () => [
-      { accessorKey: 'title', header: 'Title' },
-      {
-        accessorKey: 'is_published',
-        header: 'Status',
-        cell: ({ getValue }) =>
-          getValue() ? <Badge variant="success">Published</Badge> : <Badge variant="neutral">Draft</Badge>,
-      },
-      {
-        accessorKey: 'is_pinned',
-        header: 'Pinned',
-        cell: ({ getValue }) => (getValue() ? <Badge variant="warning">📌 Pinned</Badge> : <span className="text-slate-400">—</span>),
-      },
-      {
-        accessorKey: 'created_at',
-        header: 'Created',
-        cell: ({ getValue }) => new Date(getValue() as string).toLocaleDateString(),
-      },
-      {
-        id: 'actions',
-        header: 'Actions',
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`/announcements/edit/${row.original.id}`}>
-                <Pencil />
-                Edit
-              </Link>
-            </Button>
+  return (
+    <Form {...form}>
+      <form onSubmit={save(id ? published : true)} className="flex flex-col gap-4 p-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-[15px] font-semibold text-ink-1">{id ? 'Edit announcement' : 'New announcement'}</h2>
+          <Button type="button" variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close editor">
+            <X />
+          </Button>
+        </div>
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Title</FormLabel>
+              <FormControl>
+                <Input autoFocus placeholder="e.g. GI 204 lecture 3 moved to Friday" {...field} />
+              </FormControl>
+              <p className="text-[11px] text-ink-3 tabular-nums">
+                {title.length} / {TITLE_MAX}
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="content"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Message</FormLabel>
+              <FormControl>
+                <Textarea rows={4} placeholder="What changed, when, and where" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="is_pinned"
+          render={({ field }) => (
+            <label className="flex cursor-pointer items-center justify-between">
+              <span className="text-[13px] font-medium text-ink-1">Pin to top</span>
+              <Switch checked={field.value} onCheckedChange={field.onChange} aria-label="Pin to top" />
+            </label>
+          )}
+        />
+        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+          <p className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-ink-3">Student preview</p>
+          <div className="flex items-start gap-2">
+            {pinned ? <Pin className="mt-0.5 size-3.5 shrink-0 fill-brand text-brand" aria-hidden /> : <span className="mt-1.5 size-2 shrink-0 rounded-full bg-brand" aria-hidden />}
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-semibold text-ink-1">{title || 'Your title'}</p>
+              <p className="text-[11px] text-ink-3">{pinned ? 'Pinned · ' : ''}New · just now</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {id ? (
             <ConfirmButton
-              title="Delete announcement?"
+              title="Delete this announcement?"
               description="You can undo this within a few seconds."
               confirmLabel="Delete"
-              onConfirm={() => deleteOne({ resource: 'announcements', id: row.original.id })}
+              onConfirm={() => {
+                deleteOne({ resource: 'announcements', id });
+                onClose();
+              }}
               trigger={
-                <Button size="sm" variant="danger-ghost">
+                <button type="button" className="text-xs font-semibold text-red-600 hover:text-red-700">
                   Delete
-                </Button>
+                </button>
               }
             />
-          </div>
-        ),
-      },
-    ],
-    [deleteOne],
+          ) : null}
+          <span className="flex-1" />
+          <Button type="button" variant="secondary" size="sm" loading={formLoading} onClick={save(false)}>
+            {published ? 'Unpublish' : 'Save draft'}
+          </Button>
+          <Button type="button" size="sm" loading={formLoading} onClick={save(true)}>
+            {published ? 'Update' : 'Publish now'}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
+}
+
+const AnnouncementsList = () => {
+  const [params, setParams] = useSearchParams();
+  const editId = params.get('edit');
+  const creating = params.get('new') === '1';
+  const panelOpen = creating || Boolean(editId);
+  const wide = useMediaQuery('(min-width: 1280px)');
+  const { data, isLoading } = useList<Announcement>({
+    resource: 'announcements',
+    pagination: { mode: 'off' },
+    sorters: [{ field: 'created_at', order: 'desc' }],
+  });
+  const items = [...(data?.data ?? [])].sort((a, b) => Number(b.is_pinned) - Number(a.is_pinned));
+
+  const open = (updates: Record<string, string | null>) =>
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete('new');
+        next.delete('edit');
+        for (const [key, value] of Object.entries(updates)) if (value) next.set(key, value);
+        return next;
+      },
+      { replace: true },
+    );
+  const close = () => open({});
+  const editor = <AnnouncementEditor key={editId ?? 'new'} id={editId ?? undefined} onClose={close} />;
 
   return (
     <div>
       <PageHeader
         title="Announcements"
-        description="Publish and pin announcements for students."
+        description="Short, time-sensitive notices on the student Today page. Pinned ones stay on top."
         actions={
-          <Button asChild>
-            <Link to="/announcements/create">
+          panelOpen ? null : (
+            <Button size="sm" onClick={() => open({ new: '1' })}>
               <Plus />
-              Create
-            </Link>
-          </Button>
+              New announcement
+            </Button>
+          )
         }
       />
-
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200/70 bg-white p-4 shadow-subtle">
-        <Input
-          className="w-full sm:w-60"
-          placeholder="Search announcements…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <div className="w-full sm:w-40">
-          <Select value={isPublished ?? '__all'} onValueChange={(v) => setIsPublished(v === '__all' ? undefined : v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all">All status</SelectItem>
-              <SelectItem value="true">Published</SelectItem>
-              <SelectItem value="false">Draft</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="w-full sm:w-40">
-          <Select value={isPinned ?? '__all'} onValueChange={(v) => setIsPinned(v === '__all' ? undefined : v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Pinned" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all">All</SelectItem>
-              <SelectItem value="true">Pinned</SelectItem>
-              <SelectItem value="false">Not pinned</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <Button variant="ghost" size="sm" onClick={resetFilters}>
-          Clear
-        </Button>
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <ul className="overflow-hidden rounded-xl border border-slate-200/70 bg-white shadow-subtle">
+          {isLoading ? (
+            <li className="space-y-2 p-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </li>
+          ) : items.length === 0 ? (
+            <li>
+              <AdminEmptyState icon={<Megaphone />} title="No announcements" subtitle="Post one when a room, time or recording changes." />
+            </li>
+          ) : (
+            items.map((item) => {
+              const Icon = !item.is_published ? EyeOff : item.is_pinned ? Pin : Megaphone;
+              return (
+                <li key={item.id} className="border-b border-slate-100 last:border-0">
+                  <button
+                    type="button"
+                    onClick={() => open({ edit: item.id })}
+                    className={cn('flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50/70', editId === item.id && 'bg-brand/[0.07]')}
+                  >
+                    <Icon
+                      className={cn('size-4 shrink-0', item.is_pinned && item.is_published ? 'fill-brand text-brand' : 'text-ink-3')}
+                      aria-hidden
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] font-semibold text-ink-1">{item.title}</span>
+                      <span className="block text-[11px] text-ink-3">
+                        {!item.is_published
+                          ? 'Draft · not visible to students'
+                          : `${item.is_pinned ? 'Pinned · ' : ''}Published ${formatUpdated(item.created_at).toLowerCase()}`}
+                      </span>
+                    </span>
+                    <span className="text-xs font-semibold text-brand">Edit</span>
+                  </button>
+                </li>
+              );
+            })
+          )}
+        </ul>
+        {panelOpen && wide ? (
+          <aside className="sticky top-6 rounded-xl border border-brand/40 bg-white shadow-soft" aria-label="Announcement editor">
+            {editor}
+          </aside>
+        ) : null}
       </div>
-
-      <DataTable
-        columns={columns}
-        data={tableQueryResult?.data?.data ?? []}
-        loading={tableQueryResult?.isLoading}
-        getRowId={(row) => row.id}
-        pageIndex={current - 1}
-        pageSize={pageSize}
-        pageCount={pageCount}
-        total={tableQueryResult?.data?.total}
-        onPageChange={(idx) => setCurrent(idx + 1)}
-        sorting={sorting}
-        onSortingChange={onSortingChange}
-        emptyState={
-          <AdminEmptyState
-            icon={<Megaphone />}
-            title="No announcements yet"
-            subtitle="Create your first announcement to reach students."
-          />
-        }
-      />
+      <Sheet open={panelOpen && !wide} onOpenChange={(next) => !next && close()}>
+        <SheetContent side="right" className="p-0">
+          <SheetTitle>Announcement editor</SheetTitle>
+          {editor}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

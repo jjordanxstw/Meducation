@@ -1,8 +1,6 @@
-/**
- * Calendar Events Create Page
- */
-import { CalendarForm } from './calendar-form';
+import { Navigate } from 'react-router-dom';
 
-const CalendarCreate = () => <CalendarForm />;
+/** Old URL — new events open in the Calendar page's editor modal. */
+const CalendarCreate = () => <Navigate to="/calendar?new=1" replace />;
 
 export default CalendarCreate;

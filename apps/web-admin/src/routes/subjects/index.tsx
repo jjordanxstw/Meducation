@@ -1,131 +1,214 @@
 /**
- * Subjects List Page
- * Admin management of subject metadata, including cover images shown on the
- * student portal's subject cards.
+ * Subjects & lectures (Brilliant: 04 Admin — Subjects list). One row per
+ * subject with its content size and health; clicking a row opens the tree
+ * editor. Data comes from /admin/statistics/subjects-health, filtered and
+ * paged on the client (a faculty has tens of subjects, not thousands).
  */
-import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { useDelete, useTable } from '@refinedev/core';
-import { Plus, Pencil, BookOpen } from 'lucide-react';
-import type { Subject } from '@medical-portal/shared';
+import { useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { AlertCircle, CheckCircle2, CircleMinus, Layers, ListVideo, Plus, Search } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ConfirmButton } from '@/components/ui/confirm-button';
-import { AdminEmptyState } from '../../components/AdminEmptyState';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DataTable, type ColumnDef } from '@/components/ui/data-table';
+import { AdminEmptyState } from '../../components/AdminEmptyState';
+import { StatusPill } from '../../components/StatusPill';
+import { formatUpdated } from '../../utils/relative-time';
+import { NewSubjectDialog } from './NewSubjectDialog';
+import { ImportPlaylistLauncher } from './ImportPlaylistLauncher';
+import { nextOrderIndexFor, useSubjectsHealth, type SubjectHealth } from './subjects-health';
+
+function Health({ subject }: { subject: SubjectHealth }) {
+  if (subject.lectures_count === 0)
+    return (
+      <span className="inline-flex items-center gap-1.5 text-ink-3">
+        <CircleMinus className="size-3.5" aria-hidden />
+        Empty
+      </span>
+    );
+  if (subject.empty_lectures_count > 0)
+    return (
+      <span className="inline-flex items-center gap-1.5 text-amber-700">
+        <AlertCircle className="size-3.5 fill-amber-500 text-white" aria-hidden />
+        {subject.empty_lectures_count} empty {subject.empty_lectures_count === 1 ? 'lecture' : 'lectures'}
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-1.5 text-ink-2">
+      <CheckCircle2 className="size-3.5 fill-emerald-500 text-white" aria-hidden />
+      OK
+    </span>
+  );
+}
+
+const PAGE_SIZE = 15;
 
 const SubjectsList = () => {
-  const { tableQueryResult, current, setCurrent, pageSize, pageCount } = useTable<Subject>({
-    resource: 'subjects',
-    syncWithLocation: true,
-  });
-  const { mutate: deleteOne } = useDelete();
+  const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const { subjects, isLoading } = useSubjectsHealth();
+  const [search, setSearch] = useState('');
+  // /subjects/create and the dashboard's "New subject" land here with ?new=1.
+  const [newOpen, setNewOpen] = useState(() => params.get('new') === '1');
+  const [importOpen, setImportOpen] = useState(false);
+  const year = params.get('year') ?? 'all';
+  const status = params.get('status') ?? 'all';
+  const page = Math.max(1, Number(params.get('page')) || 1);
 
-  const columns: ColumnDef<Subject, unknown>[] = useMemo(
+  const setParam = (key: string, value: string) =>
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (value === 'all' || (key === 'page' && value === '1')) next.delete(key);
+        else next.set(key, value);
+        if (key !== 'page') next.delete('page');
+        return next;
+      },
+      { replace: true },
+    );
+
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return subjects.filter(
+      (subject) =>
+        (year === 'all' || String(subject.year_level) === year) &&
+        (status === 'all' || (status === 'live') === subject.is_active) &&
+        (!term || subject.name.toLowerCase().includes(term) || subject.code.toLowerCase().replace(/\s/g, '').includes(term.replace(/\s/g, ''))),
+    );
+  }, [subjects, search, year, status]);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageIndex = Math.min(page, pageCount) - 1;
+  const rows = filtered.slice(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE);
+
+  const totals = subjects.reduce(
+    (sum, subject) => ({ sections: sum.sections + subject.sections_count, lectures: sum.lectures + subject.lectures_count }),
+    { sections: 0, lectures: 0 },
+  );
+
+  const columns: ColumnDef<SubjectHealth, unknown>[] = useMemo(
     () => [
+      { accessorKey: 'code', header: 'Code', size: 110, cell: ({ row }) => <span className="font-semibold text-ink-1">{row.original.code}</span> },
+      { accessorKey: 'name', header: 'Subject', cell: ({ row }) => <span className="text-ink-1">{row.original.name}</span> },
+      { accessorKey: 'year_level', header: 'Year', size: 90, cell: ({ row }) => <span className="text-ink-2">Year {row.original.year_level}</span> },
       {
-        accessorKey: 'name',
-        header: 'Subject',
-        cell: ({ row }) => {
-          const { name, code, thumbnail_url } = row.original;
-          return (
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-12 shrink-0 overflow-hidden rounded-md bg-slate-100">
-                {thumbnail_url ? (
-                  <img src={thumbnail_url} alt={name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-slate-300">
-                    <BookOpen className="h-4 w-4" />
-                  </div>
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate font-medium text-slate-900">{name}</p>
-                <p className="truncate font-mono text-xs uppercase text-slate-500">{code}</p>
-              </div>
-            </div>
-          );
-        },
+        id: 'content',
+        header: 'Content',
+        size: 120,
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap text-ink-2 tabular-nums">
+            {row.original.sections_count} sec · {row.original.lectures_count} lec
+          </span>
+        ),
       },
-      {
-        accessorKey: 'year_level',
-        header: 'Year',
-        cell: ({ getValue }) => <span className="text-slate-500">Year {getValue() as number}</span>,
-      },
+      { id: 'health', header: 'Health', size: 160, cell: ({ row }) => <Health subject={row.original} /> },
       {
         accessorKey: 'is_active',
         header: 'Status',
-        cell: ({ getValue }) =>
-          getValue() ? <Badge variant="success">Active</Badge> : <Badge variant="neutral">Hidden</Badge>,
+        size: 90,
+        cell: ({ row }) => <StatusPill tone={row.original.is_active ? 'live' : 'hidden'}>{row.original.is_active ? 'Live' : 'Hidden'}</StatusPill>,
       },
       {
-        accessorKey: 'order_index',
-        header: 'Order',
-        cell: ({ getValue }) => <span className="text-slate-500">{(getValue() as number) ?? 0}</span>,
-      },
-      {
-        id: 'actions',
-        header: 'Actions',
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`/subjects/edit/${row.original.id}`}>
-                <Pencil />
-                Edit
-              </Link>
-            </Button>
-            <ConfirmButton
-              title="Delete subject?"
-              description="This permanently deletes the subject and every section, lecture and resource under it. Calendar events keep their details but lose the subject link. You can undo within a few seconds."
-              confirmLabel="Delete"
-              onConfirm={() => deleteOne({ resource: 'subjects', id: row.original.id })}
-              trigger={
-                <Button size="sm" variant="danger-ghost">
-                  Delete
-                </Button>
-              }
-            />
-          </div>
-        ),
+        accessorKey: 'content_updated_at',
+        header: 'Updated',
+        size: 110,
+        cell: ({ row }) => <span className="whitespace-nowrap text-ink-3">{formatUpdated(row.original.content_updated_at)}</span>,
       },
     ],
-    [deleteOne],
+    [],
   );
 
   return (
     <div>
       <PageHeader
-        title="Subjects"
-        description="Manage subjects and their cover images shown on the student portal."
+        title="Subjects & lectures"
+        description={`${subjects.length} subjects · ${totals.sections} sections · ${totals.lectures} lectures`}
         actions={
-          <Button asChild>
-            <Link to="/subjects/create">
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setImportOpen(true)}>
+              <ListVideo />
+              Import playlist
+            </Button>
+            <Button size="sm" onClick={() => setNewOpen(true)}>
               <Plus />
-              Create
-            </Link>
-          </Button>
+              New subject
+            </Button>
+          </>
         }
       />
 
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <Input
+          value={search}
+          onChange={(event) => {
+            setSearch(event.target.value);
+            setParam('page', '1');
+          }}
+          placeholder="Search name or code"
+          aria-label="Search subjects"
+          startContent={<Search className="size-4" />}
+          wrapperClassName="h-9 w-full sm:w-64"
+        />
+        <Select value={year} onValueChange={(value) => setParam('year', value)}>
+          <SelectTrigger className="h-9 w-auto gap-2" aria-label="Year">
+            <SelectValue>{year === 'all' ? 'Year: All' : `Year: ${year}`}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All years</SelectItem>
+            {[1, 2, 3, 4, 5, 6].map((value) => (
+              <SelectItem key={value} value={String(value)}>
+                Year {value}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={status} onValueChange={(value) => setParam('status', value)}>
+          <SelectTrigger className="h-9 w-auto gap-2" aria-label="Status">
+            <SelectValue>{status === 'all' ? 'Status: All' : status === 'live' ? 'Status: Live' : 'Status: Hidden'}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="live">Live</SelectItem>
+            <SelectItem value="hidden">Hidden</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <DataTable
         columns={columns}
-        data={tableQueryResult?.data?.data ?? []}
-        loading={tableQueryResult?.isLoading}
+        data={rows}
+        loading={isLoading}
         getRowId={(row) => row.id}
-        pageIndex={current - 1}
-        pageSize={pageSize}
+        pageIndex={pageIndex}
+        pageSize={PAGE_SIZE}
         pageCount={pageCount}
-        total={tableQueryResult?.data?.total}
-        onPageChange={(idx) => setCurrent(idx + 1)}
+        total={filtered.length}
+        onPageChange={(index) => setParam('page', String(index + 1))}
+        onRowClick={(row) => navigate(`/subjects/edit/${row.id}`)}
         emptyState={
-          <AdminEmptyState
-            icon={<BookOpen />}
-            title="No subjects yet"
-            subtitle="Create your first subject to show it on the student portal."
-          />
+          subjects.length === 0 ? (
+            <AdminEmptyState
+              icon={<Layers />}
+              title="No subjects yet"
+              subtitle="Create a subject, then add its sections and lectures."
+              action={{ label: 'New subject', onClick: () => setNewOpen(true) }}
+            />
+          ) : (
+            <AdminEmptyState icon={<Search />} title="No matching subjects" subtitle="Try another name, code or filter." />
+          )
         }
       />
+
+      <NewSubjectDialog
+        open={newOpen}
+        onOpenChange={(next) => {
+          setNewOpen(next);
+          if (!next && params.has('new')) setParam('new', 'all');
+        }}
+        defaultYear={year === 'all' ? 1 : Number(year)}
+        nextOrderIndex={nextOrderIndexFor(subjects)}
+      />
+      <ImportPlaylistLauncher open={importOpen} onOpenChange={setImportOpen} subjects={subjects} />
     </div>
   );
 };

@@ -1,12 +1,9 @@
-/**
- * Calendar Events Edit Page
- */
-import { useParams } from 'react-router-dom';
-import { CalendarForm } from './calendar-form';
+import { Navigate, useParams } from 'react-router-dom';
 
+/** Old URL — events open in the Calendar page's editor modal. */
 const CalendarEdit = () => {
   const { id } = useParams<{ id: string }>();
-  return <CalendarForm id={id} />;
+  return <Navigate to={id ? `/calendar?edit=${id}` : '/calendar'} replace />;
 };
 
 export default CalendarEdit;

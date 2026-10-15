@@ -39,24 +39,23 @@ body,
 }
 
 body {
-  font-family: 'Lato', 'IBM Plex Sans Thai Looped', system-ui, sans-serif;
+  font-family: 'Onest Variable', 'Onest', 'IBM Plex Sans Thai Looped', system-ui, sans-serif;
   background: var(--bg-canvas);
   color: var(--ink-1);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/* Two-font system — headings share the same Lato/Thai stack as body. */
-h1, h2, h3, h4, h5, h6,
-.font-serif {
-  font-family: 'Lato', 'IBM Plex Sans Thai Looped', system-ui, sans-serif;
+/* Two-font system — headings share the same Onest/Thai stack as body. */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Onest Variable', 'Onest', 'IBM Plex Sans Thai Looped', system-ui, sans-serif;
 }
 
 /* Calm focus ring for keyboard users (buttons, links, etc.). */
 :focus-visible {
   outline: 2px solid var(--brand);
-  outline-offset: 2px;
-  border-radius: 4px;
+  outline-offset: 0;
+  box-shadow: 0 0 0 5px rgba(47, 128, 237, 0.22);
 }
 
 /* Text/search fields and select-like triggers show focus via their border,
@@ -117,3 +116,12 @@ textarea:focus-visible,
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Markdown preview (news / Learning Hub editors). */
+.prose-admin h2 { font-size: 1.125rem; font-weight: 600; margin: 0.9em 0 0.4em; }
+.prose-admin h3, .prose-admin h4 { font-size: 1rem; font-weight: 600; margin: 0.8em 0 0.3em; }
+.prose-admin p { margin: 0.5em 0; }
+.prose-admin ul { list-style: disc; padding-left: 1.25rem; margin: 0.5em 0; }
+.prose-admin ol { list-style: decimal; padding-left: 1.25rem; margin: 0.5em 0; }
+.prose-admin a { color: var(--brand); text-decoration: underline; }
+.prose-admin blockquote { border-left: 3px solid #e2e8f0; padding-left: 0.75rem; color: var(--ink-2); margin: 0.5em 0; }

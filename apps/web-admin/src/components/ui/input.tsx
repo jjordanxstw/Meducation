@@ -2,7 +2,7 @@ import { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
 const fieldBase =
-  'h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-subtle transition-colors placeholder:text-slate-400 focus-visible:outline-none focus-visible:border-slate-300 disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-red-400';
+  'h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-subtle transition-colors placeholder:text-ink-3 focus-visible:outline-none focus-visible:border-slate-300 disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-red-400';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   startContent?: React.ReactNode;
@@ -20,16 +20,16 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             wrapperClassName,
           )}
         >
-          {startContent ? <span className="flex shrink-0 items-center text-slate-400">{startContent}</span> : null}
+          {startContent ? <span className="flex shrink-0 items-center text-ink-3">{startContent}</span> : null}
           <input
             ref={ref}
             className={cn(
-              'h-full w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60',
+              'h-full w-full bg-transparent text-slate-900 outline-none placeholder:text-ink-3 disabled:cursor-not-allowed disabled:opacity-60',
               className,
             )}
             {...props}
           />
-          {endContent ? <span className="flex shrink-0 items-center text-slate-400">{endContent}</span> : null}
+          {endContent ? <span className="flex shrink-0 items-center text-ink-3">{endContent}</span> : null}
         </div>
       );
     }
@@ -43,7 +43,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HT
     <textarea
       ref={ref}
       className={cn(
-        'min-h-[80px] w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-subtle transition-colors placeholder:text-slate-400 focus-visible:outline-none focus-visible:border-slate-300 disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-red-400',
+        'min-h-[80px] w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-subtle transition-colors placeholder:text-ink-3 focus-visible:outline-none focus-visible:border-slate-300 disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-red-400',
         className,
       )}
       {...props}

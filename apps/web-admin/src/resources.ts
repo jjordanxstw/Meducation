@@ -6,17 +6,17 @@
 import React from 'react';
 import {
   LayoutDashboard,
-  Database,
-  BookOpen,
+  Layers,
+  Files,
+  BookOpenText,
+  History,
+  Contact,
   CalendarDays,
   Tags,
   Megaphone,
   Users,
-  UsersRound,
   Newspaper,
   Tag,
-  GraduationCap,
-  ScrollText,
 } from 'lucide-react';
 
 export const buildResources = () => [
@@ -34,8 +34,8 @@ export const buildResources = () => [
     create: '/subjects/create',
     edit: '/subjects/edit/:id',
     meta: {
-      label: 'Subjects',
-      icon: React.createElement(BookOpen),
+      label: 'Subjects & lectures',
+      icon: React.createElement(Layers),
     },
   },
   {
@@ -44,8 +44,8 @@ export const buildResources = () => [
     name: 'resources',
     list: '/resources',
     meta: {
-      label: 'Resources',
-      icon: React.createElement(Database),
+      label: 'All files',
+      icon: React.createElement(Files),
     },
   },
   {
@@ -64,7 +64,7 @@ export const buildResources = () => [
     create: '/event-types/create',
     edit: '/event-types/edit/:id',
     meta: {
-      label: 'Event Types',
+      label: 'Event types',
       icon: React.createElement(Tags),
       parent: 'calendar',
     },
@@ -85,8 +85,8 @@ export const buildResources = () => [
     create: '/team-members/create',
     edit: '/team-members/edit/:id',
     meta: {
-      label: 'Team Members',
-      icon: React.createElement(UsersRound),
+      label: 'Team members',
+      icon: React.createElement(Contact),
     },
   },
   {
@@ -95,7 +95,7 @@ export const buildResources = () => [
     create: '/news/create',
     edit: '/news/edit/:id',
     meta: {
-      label: 'Hot News',
+      label: 'News',
       icon: React.createElement(Newspaper),
     },
   },
@@ -105,7 +105,7 @@ export const buildResources = () => [
     create: '/news-categories/create',
     edit: '/news-categories/edit/:id',
     meta: {
-      label: 'News Categories',
+      label: 'Categories',
       icon: React.createElement(Tag),
       parent: 'news',
     },
@@ -117,7 +117,7 @@ export const buildResources = () => [
     edit: '/learning-resources/edit/:id',
     meta: {
       label: 'Learning Hub',
-      icon: React.createElement(GraduationCap),
+      icon: React.createElement(BookOpenText),
     },
   },
   {
@@ -126,7 +126,7 @@ export const buildResources = () => [
     edit: '/profiles/edit/:id',
     show: '/profiles/show/:id',
     meta: {
-      label: 'Profiles',
+      label: 'Students',
       icon: React.createElement(Users),
     },
   },
@@ -134,8 +134,8 @@ export const buildResources = () => [
     name: 'audit-logs',
     list: '/audit-logs',
     meta: {
-      label: 'Audit Logs',
-      icon: React.createElement(ScrollText),
+      label: 'Audit log',
+      icon: React.createElement(History),
     },
   },
 ];

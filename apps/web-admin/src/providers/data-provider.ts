@@ -74,6 +74,9 @@ function buildListRequestKey(path: string, params: Record<string, unknown>): str
   return `${path}?${queryString}`;
 }
 
+/** Page size used when a list asks for every row (the API caps pages at 100). */
+const ALL_PAGE_SIZE = 100;
+
 export const dataProvider = (apiUrl: string): DataProvider => ({
   getList: async <TData extends BaseRecord = BaseRecord>({
     resource,
@@ -103,6 +106,22 @@ export const dataProvider = (apiUrl: string): DataProvider => ({
       }
 
       const requestPath = `${apiUrl}/${resourcePath}`;
+
+      // `pagination: { mode: 'off' }` means "everything": the admin API always
+      // pages (max 100 per page), so walk the pages instead of silently
+      // returning only the first one.
+      if (pagination?.mode === 'off') {
+        const all: BaseRecord[] = [];
+        for (let current = 1; current <= 50; current += 1) {
+          const { data } = await axiosInstance.get(requestPath, { params: { ...params, page: current, pageSize: ALL_PAGE_SIZE } });
+          const rows = (data.data || []) as BaseRecord[];
+          all.push(...rows);
+          const total = data.pagination?.total;
+          if (rows.length < ALL_PAGE_SIZE || (typeof total === 'number' && all.length >= total)) break;
+        }
+        return { data: all as TData[], total: all.length };
+      }
+
       const requestKey = buildListRequestKey(requestPath, params);
 
       let requestPromise = inFlightListRequests.get(requestKey);

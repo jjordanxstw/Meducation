@@ -1,178 +1,129 @@
 /**
- * Resources List Page — read-only cross-subject search view.
- *
- * Lets admins find any lecture resource across every subject/section/lecture and
- * jump to the subject's unified tree editor to change it. All create/edit/delete
- * now lives in the subject tree editor (Subjects → edit), so this page is purely
- * for searching and navigation.
+ * All files (Brilliant: 04 Admin — All files): every link on every lecture,
+ * searchable and filterable by type, with duplicates flagged. Read-only —
+ * clicking a row opens its subject in the tree editor, where links are edited.
+ * Filters live in the URL (?q=, ?type=, ?duplicates=true, ?page=) so the
+ * dashboard can deep-link to "Duplicates only".
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useList, useTable } from '@refinedev/core';
-import { Database, Share2, RotateCcw, SquarePen } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useList } from '@refinedev/core';
+import { AlertTriangle, Files, Search } from 'lucide-react';
 import { ResourceType } from '@medical-portal/shared';
-import type { ResourceWithHierarchy, Section, Subject, Lecture } from '@medical-portal/shared';
-import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
+import type { ResourceWithHierarchy } from '@medical-portal/shared';
+import { useDebouncedValue } from '../../utils/table-filters';
 import { ResourceTypeTag } from '../../components/ResourceTypeTag';
 import { AdminEmptyState } from '../../components/AdminEmptyState';
-import { notify } from '../../utils/notify';
+import { StatusPill } from '../../components/StatusPill';
 import { PageHeader } from '@/components/ui/page-header';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Combobox } from '@/components/ui/combobox';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { DataTable, type ColumnDef, type SortingState } from '@/components/ui/data-table';
+import { Segmented } from '@/components/ui/segmented';
+import { DataTable, type ColumnDef } from '@/components/ui/data-table';
+import { cn } from '@/lib/utils';
 
-const RESOURCE_TYPE_OPTIONS = [
-  { label: '🎬 YouTube', value: ResourceType.YOUTUBE },
-  { label: '📹 Google Drive Video', value: ResourceType.GDRIVE_VIDEO },
-  { label: '📄 Google Drive PDF', value: ResourceType.GDRIVE_PDF },
-  { label: '🔗 External Link', value: ResourceType.EXTERNAL },
+type FileRow = ResourceWithHierarchy & {
+  lecture_title?: string | null;
+  section_name?: string | null;
+  subject_id?: string | null;
+  subject_code?: string | null;
+  is_duplicate?: boolean;
+};
+
+const PAGE_SIZE = 25;
+const TYPE_OPTIONS = [
+  { label: 'All', value: 'all' },
+  { label: 'YouTube', value: ResourceType.YOUTUBE },
+  { label: 'Drive video', value: ResourceType.GDRIVE_VIDEO },
+  { label: 'Drive PDF', value: ResourceType.GDRIVE_PDF },
+  { label: 'External', value: ResourceType.EXTERNAL },
 ];
 
+/** "youtube.com/watch?v=…" — the URL without its scheme, for a dense column. */
+const shortUrl = (url: string) => url.replace(/^https?:\/\/(www\.)?/, '');
+
 const ResourcesList = () => {
-  const {
-    tableQueryResult,
-    current,
-    setCurrent,
-    pageSize,
-    pageCount,
-    sorters,
-    setSorters,
-    filters,
-    setFilters,
-  } = useTable<ResourceWithHierarchy>({ resource: 'resources', syncWithLocation: true });
-
-  const rows = tableQueryResult?.data?.data ?? [];
-  const total = tableQueryResult?.data?.total ?? 0;
-
-  // Filter bar state.
-  const [search, setSearch] = useState('');
-  const [subjectId, setSubjectId] = useState<string | undefined>(undefined);
-  const [sectionId, setSectionId] = useState<string | undefined>(undefined);
-  const [lectureId, setLectureId] = useState<string | undefined>(undefined);
-  const [resourceType, setResourceType] = useState<string | undefined>(undefined);
-  const [isActive, setIsActive] = useState<boolean | undefined>(undefined);
+  const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const [search, setSearch] = useState(() => params.get('q') ?? '');
   const debouncedSearch = useDebouncedValue(search, 350);
-  const hasHydratedFromUrl = useRef(false);
+  const type = params.get('type') ?? 'all';
+  const duplicatesOnly = params.get('duplicates') === 'true';
+  const page = Math.max(1, Number(params.get('page')) || 1);
 
-  // Reference data for the cascading filter dropdowns.
-  const { data: subjectsData } = useList<Subject>({ resource: 'subjects', pagination: { mode: 'off' } });
-  const { data: filterSectionsData } = useList<Section>({
-    resource: 'sections',
-    filters: subjectId ? [{ field: 'subject_id', operator: 'eq', value: subjectId }] : [],
-    queryOptions: { enabled: !!subjectId },
+  const setParam = (key: string, value: string | null) =>
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (value === null || value === 'all') next.delete(key);
+        else next.set(key, value);
+        if (key !== 'page') next.delete('page');
+        return next;
+      },
+      { replace: true },
+    );
+
+  const filters = useMemo(() => {
+    const list: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
+    if (debouncedSearch.trim()) list.push({ field: 'search', operator: 'contains', value: debouncedSearch.trim() });
+    if (type !== 'all') list.push({ field: 'type', operator: 'eq', value: type });
+    if (duplicatesOnly) list.push({ field: 'duplicates', operator: 'eq', value: 'true' });
+    return list;
+  }, [debouncedSearch, type, duplicatesOnly]);
+
+  const { data, isLoading } = useList<FileRow>({
+    resource: 'resources',
+    filters,
+    pagination: { current: page, pageSize: PAGE_SIZE },
   });
-  const { data: filterLecturesData } = useList<Lecture>({
-    resource: 'lectures',
-    filters: sectionId ? [{ field: 'section_id', operator: 'eq', value: sectionId }] : [],
-    queryOptions: { enabled: !!sectionId },
+  // Header totals: every link, and how many are duplicates.
+  const { data: allData } = useList<FileRow>({ resource: 'resources', pagination: { current: 1, pageSize: 1 } });
+  const { data: dupData } = useList<FileRow>({
+    resource: 'resources',
+    filters: [{ field: 'duplicates', operator: 'eq', value: 'true' }],
+    pagination: { current: 1, pageSize: 1 },
   });
 
-  const subjects = subjectsData?.data ?? [];
-  const filterSections = filterSectionsData?.data ?? [];
-  const filterLectures = filterLecturesData?.data ?? [];
-  const subjectOptions = subjects.map((s) => ({ value: s.id, label: `${s.code} - ${s.name}` }));
+  const rows = data?.data ?? [];
+  const total = data?.total ?? 0;
+  const duplicateCount = dupData?.total ?? 0;
 
-  // --- Filters → Refine ---
-  const buildFilters = useCallback(
-    (searchValue: string) => {
-      const next: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
-      if (searchValue.trim()) next.push({ field: 'search', operator: 'contains', value: searchValue.trim() });
-      if (subjectId) next.push({ field: 'subject_id', operator: 'eq', value: subjectId });
-      if (sectionId) next.push({ field: 'section_id', operator: 'eq', value: sectionId });
-      if (lectureId) next.push({ field: 'lecture_id', operator: 'eq', value: lectureId });
-      if (resourceType) next.push({ field: 'type', operator: 'eq', value: resourceType });
-      if (typeof isActive === 'boolean') next.push({ field: 'is_active', operator: 'eq', value: isActive });
-      return next;
-    },
-    [isActive, lectureId, resourceType, sectionId, subjectId],
-  );
-
-  useEffect(() => {
-    if (hasHydratedFromUrl.current) return;
-    setSearch(typeof getFilterValue(filters, 'search') === 'string' ? (getFilterValue(filters, 'search') as string) : '');
-    setSubjectId(typeof getFilterValue(filters, 'subject_id') === 'string' ? (getFilterValue(filters, 'subject_id') as string) : undefined);
-    setSectionId(typeof getFilterValue(filters, 'section_id') === 'string' ? (getFilterValue(filters, 'section_id') as string) : undefined);
-    setLectureId(typeof getFilterValue(filters, 'lecture_id') === 'string' ? (getFilterValue(filters, 'lecture_id') as string) : undefined);
-    setResourceType(typeof getFilterValue(filters, 'type') === 'string' ? (getFilterValue(filters, 'type') as string) : undefined);
-    const activeValue = getFilterValue(filters, 'is_active');
-    setIsActive(typeof activeValue === 'boolean' ? activeValue : undefined);
-    hasHydratedFromUrl.current = true;
-  }, [filters]);
-
-  useEffect(() => {
-    if (!hasHydratedFromUrl.current) return;
-    setFilters(buildFilters(debouncedSearch), 'replace');
-  }, [buildFilters, debouncedSearch, setFilters]);
-
-  const hasActiveFilters = Boolean(
-    search || subjectId || sectionId || lectureId || resourceType || typeof isActive === 'boolean',
-  );
-
-  const resetFilters = () => {
-    setSearch('');
-    setSubjectId(undefined);
-    setSectionId(undefined);
-    setLectureId(undefined);
-    setResourceType(undefined);
-    setIsActive(undefined);
-    setFilters([], 'replace');
-  };
-
-  // --- Sorting ---
-  const sorting: SortingState = useMemo(
-    () => sorters.filter((s) => s.order).map((s) => ({ id: s.field, desc: s.order === 'desc' })),
-    [sorters],
-  );
-  const handleSortingChange = (updater: SortingState | ((old: SortingState) => SortingState)) => {
-    const next = typeof updater === 'function' ? updater(sorting) : updater;
-    setSorters(next.map((s) => ({ field: s.id, order: s.desc ? 'desc' : 'asc' })));
-  };
-
-  // --- Columns ---
-  const columns: ColumnDef<ResourceWithHierarchy, unknown>[] = useMemo(
+  const columns: ColumnDef<FileRow, unknown>[] = useMemo(
     () => [
+      { id: 'type', header: 'Type', size: 70, cell: ({ row }) => <ResourceTypeTag type={row.original.type} compact /> },
+      { accessorKey: 'label', header: 'Label', cell: ({ row }) => <span className="text-ink-1">{row.original.label}</span> },
       {
-        id: 'subject_name',
-        header: 'Subject',
-        enableSorting: true,
-        cell: ({ row }) =>
-          row.original.subject_code && row.original.subject_name
-            ? `${row.original.subject_code} - ${row.original.subject_name}`
-            : '-',
+        id: 'lecture',
+        header: 'Lecture',
+        cell: ({ row }) => (
+          <div className="min-w-0">
+            <p className="truncate text-ink-1">{row.original.lecture_title ?? '—'}</p>
+            <p className="truncate text-[11px] text-ink-3">
+              {[row.original.subject_code, row.original.section_name].filter(Boolean).join(' · ')}
+            </p>
+          </div>
+        ),
       },
-      { accessorKey: 'section_name', header: 'Section', enableSorting: true },
-      { accessorKey: 'lecture_title', header: 'Lecture', enableSorting: true },
-      { accessorKey: 'label', header: 'Button Label', enableSorting: true },
       {
-        accessorKey: 'type',
-        header: 'Type',
-        enableSorting: true,
-        cell: ({ getValue }) => <ResourceTypeTag type={getValue() as string} />,
+        accessorKey: 'url',
+        header: 'URL',
+        cell: ({ row }) => (
+          <span className={cn('block max-w-[22rem] truncate text-xs', row.original.is_duplicate ? 'text-amber-700' : 'text-ink-2')} title={row.original.url}>
+            {shortUrl(row.original.url)}
+          </span>
+        ),
       },
-      { accessorKey: 'url', header: 'URL / Video ID', enableSorting: true },
-      { accessorKey: 'order_index', header: 'Order', enableSorting: true },
       {
-        accessorKey: 'is_active',
+        id: 'status',
         header: 'Status',
-        enableSorting: true,
-        cell: ({ getValue }) =>
-          getValue() ? <Badge variant="success">Active</Badge> : <Badge variant="danger">Inactive</Badge>,
-      },
-      {
-        id: 'actions',
-        header: 'Actions',
+        size: 100,
         cell: ({ row }) =>
-          row.original.subject_id ? (
-            <Button asChild size="sm" variant="secondary">
-              <Link to={`/subjects/edit/${row.original.subject_id}`}>
-                <SquarePen />
-                Edit in subject
-              </Link>
-            </Button>
-          ) : null,
+          row.original.is_duplicate ? (
+            <StatusPill tone="hidden">Duplicate</StatusPill>
+          ) : row.original.is_active ? (
+            <StatusPill tone="live">Live</StatusPill>
+          ) : (
+            <StatusPill tone="neutral">Hidden</StatusPill>
+          ),
       },
     ],
     [],
@@ -181,134 +132,60 @@ const ResourcesList = () => {
   return (
     <div>
       <PageHeader
-        title="Resources"
-        description="Search lecture resources across every subject. Editing happens in the subject's tree editor."
+        title="All files"
+        description={`${(allData?.total ?? 0).toLocaleString()} links across every lecture · find broken or duplicate links fast`}
       />
 
-      {/* Filter bar */}
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200/70 bg-white p-4 shadow-subtle">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <Input
-          className="w-full sm:w-60"
-          placeholder="Search resources…"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <div className="w-full sm:w-64">
-          <Combobox
-            options={subjectOptions}
-            value={subjectId}
-            onChange={(v) => {
-              setSubjectId(v);
-              setSectionId(undefined);
-              setLectureId(undefined);
-            }}
-            placeholder="All subjects"
-          />
-        </div>
-        <div className="w-full sm:w-56">
-          <Combobox
-            options={filterSections.map((s) => ({ value: s.id, label: s.name }))}
-            value={sectionId}
-            onChange={(v) => {
-              setSectionId(v);
-              setLectureId(undefined);
-            }}
-            placeholder="All sections"
-            disabled={!subjectId}
-          />
-        </div>
-        <div className="w-full sm:w-56">
-          <Combobox
-            options={filterLectures.map((l) => ({ value: l.id, label: l.title }))}
-            value={lectureId}
-            onChange={setLectureId}
-            placeholder="All lectures"
-            disabled={!sectionId}
-          />
-        </div>
-        <div className="w-full sm:w-44">
-          <Select
-            value={resourceType ?? '__all'}
-            onValueChange={(v) => setResourceType(v === '__all' ? undefined : v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="All types" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all">All types</SelectItem>
-              {RESOURCE_TYPE_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="w-full sm:w-36">
-          <Select
-            value={isActive === undefined ? '__all' : isActive ? 'active' : 'inactive'}
-            onValueChange={(v) => setIsActive(v === '__all' ? undefined : v === 'active')}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all">All status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={resetFilters}>
-            <RotateCcw />
-            Clear all
-          </Button>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            void navigator.clipboard
-              ?.writeText(window.location.href)
-              .then(() => notify.success('Filter URL copied'))
-              .catch(() => notify.error('Could not copy link'));
+          onChange={(event) => {
+            setSearch(event.target.value);
+            setParam('q', event.target.value || null);
           }}
+          placeholder="Search label, URL or lecture"
+          aria-label="Search files"
+          startContent={<Search className="size-4" />}
+          wrapperClassName="h-9 w-full sm:w-64"
+        />
+        <Segmented aria-label="Type" value={type} onChange={(value) => setParam('type', value)} options={TYPE_OPTIONS} />
+        <button
+          type="button"
+          onClick={() => setParam('duplicates', duplicatesOnly ? null : 'true')}
+          aria-pressed={duplicatesOnly}
+          className={cn(
+            'inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors',
+            duplicatesOnly
+              ? 'border-amber-400 bg-amber-100 text-amber-900'
+              : 'border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-300',
+          )}
         >
-          <Share2 />
-          Share filters
-        </Button>
+          <AlertTriangle className="size-3.5" aria-hidden />
+          Duplicates only ({duplicateCount})
+        </button>
       </div>
 
-      {tableQueryResult?.isError ? (
-        <AdminEmptyState
-          icon={<Database />}
-          title="Failed to load resources"
-          subtitle={(tableQueryResult.error as { message?: string } | undefined)?.message || 'Something went wrong'}
-          action={{ label: 'Retry', onClick: () => void tableQueryResult.refetch() }}
-        />
-      ) : (
-        <DataTable
-          columns={columns}
-          data={rows}
-          loading={tableQueryResult?.isLoading}
-          getRowId={(row) => row.id}
-          pageIndex={current - 1}
-          pageSize={pageSize}
-          pageCount={pageCount}
-          total={total}
-          onPageChange={(idx) => setCurrent(idx + 1)}
-          sorting={sorting}
-          onSortingChange={handleSortingChange}
-          emptyState={
-            <AdminEmptyState
-              icon={<Database />}
-              title="No resources found"
-              subtitle="Adjust your filters, or add resources from a subject's tree editor."
-            />
-          }
-        />
-      )}
+      <DataTable
+        columns={columns}
+        data={rows}
+        loading={isLoading}
+        getRowId={(row) => row.id}
+        pageIndex={page - 1}
+        pageSize={PAGE_SIZE}
+        pageCount={Math.max(1, Math.ceil(total / PAGE_SIZE))}
+        total={total}
+        onPageChange={(index) => setParam('page', index === 0 ? null : String(index + 1))}
+        onRowClick={(row) => row.subject_id && navigate(`/subjects/edit/${row.subject_id}`)}
+        rowClassName={(row) => (row.is_duplicate ? 'bg-amber-50/60 hover:bg-amber-50' : undefined)}
+        emptyState={
+          duplicatesOnly && !debouncedSearch && type === 'all' ? (
+            <AdminEmptyState icon={<Files />} title="No duplicate links" subtitle="Every recording is used by one lecture only." />
+          ) : (
+            <AdminEmptyState icon={<Search />} title="No matching files" subtitle="Try another search or type." />
+          )
+        }
+      />
+      <p className="mt-1 text-[11px] text-ink-3">Click a row to open it in its subject editor.</p>
     </div>
   );
 };

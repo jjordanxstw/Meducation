@@ -5,41 +5,36 @@
  * Uses React Router v6 with Refine.dev v4
  */
 
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { Authenticated } from '@refinedev/core';
 import { AdminShell } from '@/components/layout/AdminShell';
 
 import { LoginPage } from './auth';
-import DashboardPage from './dashboard';
-import ResourcesList from './resources';
-import SubjectsList from './subjects';
-import SubjectsCreate from './subjects/create';
-import SubjectsEdit from './subjects/edit';
-import CalendarList from './calendar';
-import CalendarCreate from './calendar/create';
-import CalendarEdit from './calendar/edit';
-import EventTypesList from './event-types';
-import EventTypesCreate from './event-types/create';
-import EventTypesEdit from './event-types/edit';
-import AnnouncementsList from './announcements';
-import AnnouncementsCreate from './announcements/create';
-import AnnouncementsEdit from './announcements/edit';
-import TeamMembersList from './team-members';
-import TeamMembersCreate from './team-members/create';
-import TeamMembersEdit from './team-members/edit';
-import NewsList from './news';
-import NewsCreate from './news/create';
-import NewsEdit from './news/edit';
-import NewsCategoriesList from './news-categories';
-import NewsCategoriesCreate from './news-categories/create';
-import NewsCategoriesEdit from './news-categories/edit';
-import LearningResourcesList from './learning-resources';
-import LearningResourcesCreate from './learning-resources/create';
-import LearningResourcesEdit from './learning-resources/edit';
-import ProfilesList from './profiles';
-import ProfilesEdit from './profiles/edit';
-import ProfilesShow from './profiles/show';
-import AuditLogsList from './audit-logs';
+const DashboardPage = lazy(() => import('./dashboard'));
+const ResourcesList = lazy(() => import('./resources'));
+const SubjectsList = lazy(() => import('./subjects'));
+const SubjectsEdit = lazy(() => import('./subjects/edit'));
+const CalendarList = lazy(() => import('./calendar'));
+const CalendarCreate = lazy(() => import('./calendar/create'));
+const CalendarEdit = lazy(() => import('./calendar/edit'));
+const AnnouncementsList = lazy(() => import('./announcements'));
+const AnnouncementsCreate = lazy(() => import('./announcements/create'));
+const AnnouncementsEdit = lazy(() => import('./announcements/edit'));
+const TeamMembersList = lazy(() => import('./team-members'));
+const TeamMembersCreate = lazy(() => import('./team-members/create'));
+const TeamMembersEdit = lazy(() => import('./team-members/edit'));
+const NewsList = lazy(() => import('./news'));
+const NewsCreate = lazy(() => import('./news/create'));
+const NewsEdit = lazy(() => import('./news/edit'));
+const LearningResourcesList = lazy(() => import('./learning-resources'));
+const LearningResourcesCreate = lazy(() => import('./learning-resources/create'));
+const LearningResourcesEdit = lazy(() => import('./learning-resources/edit'));
+const ProfilesList = lazy(() => import('./profiles'));
+const ProfilesEdit = lazy(() => import('./profiles/edit'));
+const ProfilesShow = lazy(() => import('./profiles/show'));
+const AuditLogsList = lazy(() => import('./audit-logs'));
+const TaxonomiesPage = lazy(() => import('./taxonomies'));
 
 // Loading component
 const AuthLoadingFallback = () => (
@@ -56,6 +51,12 @@ const AuthLoadingFallback = () => (
   </div>
 );
 
+const PageLoadingFallback = () => (
+  <div className="flex min-h-[50vh] items-center justify-center" aria-busy="true">
+    <div className="size-5 animate-spin rounded-full border-2 border-slate-300 border-t-brand" />
+  </div>
+);
+
 // Protected layout wrapper - shared across all authenticated routes.
 const ProtectedLayout = () => (
   <Authenticated
@@ -64,7 +65,10 @@ const ProtectedLayout = () => (
     loading={<AuthLoadingFallback />}
   >
     <AdminShell>
-      <Outlet />
+      {/* Each page is its own chunk (lazy routes), so the first load stays small. */}
+      <Suspense fallback={<PageLoadingFallback />}>
+        <Outlet />
+      </Suspense>
     </AdminShell>
   </Authenticated>
 );
@@ -81,7 +85,7 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <DashboardPage /> },
       { path: 'subjects', element: <SubjectsList /> },
-      { path: 'subjects/create', element: <SubjectsCreate /> },
+      { path: 'subjects/create', element: <Navigate to="/subjects?new=1" replace /> },
       { path: 'subjects/edit/:id', element: <SubjectsEdit /> },
       { path: 'subjects/show/:id', element: <Navigate to="/subjects" replace /> },
       { path: 'sections', element: <Navigate to="/resources" replace /> },
@@ -96,9 +100,9 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
       { path: 'calendar', element: <CalendarList /> },
       { path: 'calendar/create', element: <CalendarCreate /> },
       { path: 'calendar/edit/:id', element: <CalendarEdit /> },
-      { path: 'event-types', element: <EventTypesList /> },
-      { path: 'event-types/create', element: <EventTypesCreate /> },
-      { path: 'event-types/edit/:id', element: <EventTypesEdit /> },
+      { path: 'event-types', element: <TaxonomiesPage /> },
+      { path: 'event-types/create', element: <Navigate to="/event-types" replace /> },
+      { path: 'event-types/edit/:id', element: <Navigate to="/event-types" replace /> },
       { path: 'announcements', element: <AnnouncementsList /> },
       { path: 'announcements/create', element: <AnnouncementsCreate /> },
       { path: 'announcements/edit/:id', element: <AnnouncementsEdit /> },
@@ -108,9 +112,9 @@ export const router: ReturnType<typeof createBrowserRouter> = createBrowserRoute
       { path: 'news', element: <NewsList /> },
       { path: 'news/create', element: <NewsCreate /> },
       { path: 'news/edit/:id', element: <NewsEdit /> },
-      { path: 'news-categories', element: <NewsCategoriesList /> },
-      { path: 'news-categories/create', element: <NewsCategoriesCreate /> },
-      { path: 'news-categories/edit/:id', element: <NewsCategoriesEdit /> },
+      { path: 'news-categories', element: <TaxonomiesPage /> },
+      { path: 'news-categories/create', element: <Navigate to="/news-categories" replace /> },
+      { path: 'news-categories/edit/:id', element: <Navigate to="/news-categories" replace /> },
       { path: 'learning-resources', element: <LearningResourcesList /> },
       { path: 'learning-resources/create', element: <LearningResourcesCreate /> },
       { path: 'learning-resources/edit/:id', element: <LearningResourcesEdit /> },

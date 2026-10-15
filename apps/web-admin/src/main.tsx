@@ -14,11 +14,8 @@ import { Refine } from '@refinedev/core';
 import routerBindings from '@refinedev/react-router-v6';
 import { Toaster } from 'sonner';
 
-// Two-font system: Lato for Latin, IBM Plex Sans Thai Looped for Thai.
-import '@fontsource/lato/300.css';
-import '@fontsource/lato/400.css';
-import '@fontsource/lato/700.css';
-import '@fontsource/lato/900.css';
+// Two-font system: Onest (variable) for Latin, IBM Plex Sans Thai Looped for Thai.
+import '@fontsource-variable/onest/wght.css';
 import '@fontsource/ibm-plex-sans-thai-looped/400.css';
 import '@fontsource/ibm-plex-sans-thai-looped/500.css';
 import '@fontsource/ibm-plex-sans-thai-looped/600.css';

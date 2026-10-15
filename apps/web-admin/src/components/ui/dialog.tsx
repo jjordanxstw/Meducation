@@ -39,7 +39,7 @@ const DialogContent = forwardRef<
     >
       {children}
       {!hideClose && (
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
+        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-lg p-1 text-ink-3 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
           <X className="size-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
@@ -68,7 +68,7 @@ const DialogTitle = forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn('font-serif text-lg font-semibold tracking-tight text-slate-900', className)}
+    className={cn('text-lg font-semibold tracking-tight text-slate-900', className)}
     {...props}
   />
 ));

@@ -52,29 +52,29 @@ export function Combobox({
           disabled={disabled}
           className={cn(
             'flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm shadow-subtle transition-colors focus:outline-none focus:border-slate-300 disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-red-400',
-            !selected && 'text-slate-400',
+            !selected && 'text-ink-3',
             className,
           )}
         >
           <span className="line-clamp-1 text-left">{selected ? selected.label : placeholder}</span>
-          <ChevronsUpDown className="size-4 shrink-0 text-slate-400" />
+          <ChevronsUpDown className="size-4 shrink-0 text-ink-3" />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <CommandPrimitive className="overflow-hidden rounded-xl" loop>
           <div className="flex items-center gap-2 border-b border-slate-100 px-3" cmdk-input-wrapper="">
-            <Search className="size-4 shrink-0 text-slate-400" />
+            <Search className="size-4 shrink-0 text-ink-3" />
             <CommandPrimitive.Input
               placeholder={searchPlaceholder}
-              className="h-10 w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+              className="h-10 w-full bg-transparent text-sm outline-none placeholder:text-ink-3"
             />
           </div>
           <CommandPrimitive.List className="max-h-60 overflow-y-auto p-1.5">
             {loading ? (
-              <div className="py-6 text-center text-sm text-slate-400">Loading…</div>
+              <div className="py-6 text-center text-sm text-ink-3">Loading…</div>
             ) : (
               <>
-                <CommandPrimitive.Empty className="py-6 text-center text-sm text-slate-400">
+                <CommandPrimitive.Empty className="py-6 text-center text-sm text-ink-3">
                   {emptyText}
                 </CommandPrimitive.Empty>
                 {options.map((option) => (
