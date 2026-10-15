@@ -5,6 +5,7 @@
  * public URL in `cover_image_url`. The body is authored as Markdown (rendered on
  * the web-client detail page).
  */
+import type * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApiUrl, useForm as useRefineForm, useList } from '@refinedev/core';

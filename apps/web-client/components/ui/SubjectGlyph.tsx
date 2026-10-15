@@ -1,4 +1,4 @@
-import { createElement } from 'react';
+import { createElement, type ReactElement } from 'react';
 import {
   Activity,
   Baby,
@@ -57,6 +57,6 @@ export function subjectGlyph(name: string): LucideIcon {
   return RULES.find(([pattern]) => pattern.test(name))?.[1] ?? BookOpen;
 }
 
-export function SubjectGlyph({ name, className }: { name: string; className?: string }) {
+export function SubjectGlyph({ name, className }: { name: string; className?: string }): ReactElement {
   return createElement(subjectGlyph(name), { className, strokeWidth: 1.5, 'aria-hidden': true });
 }

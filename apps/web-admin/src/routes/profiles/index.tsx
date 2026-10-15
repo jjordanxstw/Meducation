@@ -4,6 +4,7 @@
  * sessions and "Sign out all devices". Selection is kept in ?id= so the panel
  * can be linked to.
  */
+import type * as React from 'react';
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useApiUrl, useCustom, useList, useOne } from '@refinedev/core';

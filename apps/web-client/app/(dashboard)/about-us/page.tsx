@@ -5,6 +5,7 @@
  * to report a problem, and the team (admin-managed via the team-members API).
  */
 
+import type * as React from 'react';
 import { Mail, Users } from 'lucide-react';
 import type { TeamMember } from '@medical-portal/shared';
 import { PageTransition } from '@/components/PageTransition';

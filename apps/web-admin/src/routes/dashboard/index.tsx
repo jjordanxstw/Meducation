@@ -3,6 +3,7 @@
  * attention count and last change, four KPI cards, "Needs attention", recent
  * changes and lectures added per month.
  */
+import type * as React from 'react';
 import { useState } from 'react';
 import { useApiUrl, useCustom, useGetIdentity } from '@refinedev/core';
 import { ListVideo, Plus } from 'lucide-react';

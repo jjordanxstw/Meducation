@@ -10,6 +10,7 @@
  * /tree/version and shows a banner when someone else saved in the meantime;
  * saving after that banner deliberately overwrites their version.
  */
+import type * as React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useBlocker, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApiUrl, useDataProvider, useDelete, useInvalidate } from '@refinedev/core';

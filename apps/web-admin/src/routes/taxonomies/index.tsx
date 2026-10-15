@@ -4,6 +4,7 @@
  * place, drag to set the order students see. Both /news-categories and
  * /event-types land here.
  */
+import type * as React from 'react';
 import { useMemo, useState } from 'react';
 import { useCreate, useDelete, useList, useUpdate, type BaseRecord } from '@refinedev/core';
 import { DndContext, closestCenter } from '@dnd-kit/core';

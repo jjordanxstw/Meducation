@@ -1,3 +1,4 @@
+import type * as React from 'react';
 import type { Metadata, Viewport } from 'next';
 import { Onest, IBM_Plex_Sans_Thai_Looped } from 'next/font/google';
 import { Toaster } from 'sonner';

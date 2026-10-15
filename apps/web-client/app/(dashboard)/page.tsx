@@ -6,6 +6,7 @@
  * next exam, the student's year and the calendar.
  */
 
+import type * as React from 'react';
 import { useMemo, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { ArrowRight, ChevronRight, Newspaper, Pin, Play } from 'lucide-react';

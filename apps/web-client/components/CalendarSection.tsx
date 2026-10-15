@@ -7,6 +7,7 @@
  * upcoming exam countdowns.
  */
 
+import type * as React from 'react';
 import { useState, useMemo, useCallback, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';

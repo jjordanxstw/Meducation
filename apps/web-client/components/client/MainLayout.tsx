@@ -10,6 +10,7 @@
  * (Today, Subjects, Calendar, Search, Me).
  */
 
+import type * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useState, useSyncExternalStore } from 'react';

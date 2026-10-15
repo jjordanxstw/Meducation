@@ -3,6 +3,7 @@
  * page, in display order (drag to reorder), edited in a side panel.
  * ?new=1 / ?edit=id open the panel; the old create/edit URLs redirect here.
  */
+import type * as React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useApiUrl, useDelete, useForm as useRefineForm, useList, useUpdate } from '@refinedev/core';

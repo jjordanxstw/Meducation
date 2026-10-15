@@ -3,6 +3,7 @@
  * left, link groups on the right. Groups and links are stored inline as JSON
  * (`categories`); groups can be dragged into order and collapsed.
  */
+import type * as React from 'react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApiUrl, useDelete, useForm as useRefineForm } from '@refinedev/core';

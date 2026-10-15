@@ -3,6 +3,7 @@
  * a section header row, one grid row per lecture, and link rows inside an
  * expanded lecture. Everything reads the form through useFormContext.
  */
+import type * as React from 'react';
 import { useState } from 'react';
 import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import { DndContext, closestCenter } from '@dnd-kit/core';

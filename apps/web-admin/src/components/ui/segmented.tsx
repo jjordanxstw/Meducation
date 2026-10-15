@@ -1,3 +1,4 @@
+import type * as React from 'react';
 import { cn } from '@/lib/utils';
 
 type Option<T extends string> = { label: React.ReactNode; value: T; title?: string };
