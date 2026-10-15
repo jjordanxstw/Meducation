@@ -8,6 +8,7 @@ import { useSession } from 'next-auth/react';
 import { createQueryClient } from '../lib/queryClient';
 import { useAuthStore } from '@/stores/auth.store';
 import { TopLoadingBar } from '@/components/global/TopLoadingBar';
+import { ColdStartBanner } from '@/components/global/ColdStartBanner';
 
 function AuthStoreBridge({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -43,6 +44,7 @@ export function Providers({ children }: { children: ReactNode }) {
         <Suspense fallback={null}>
           <TopLoadingBar />
         </Suspense>
+        <ColdStartBanner />
         <AuthStoreBridge>{children}</AuthStoreBridge>
       </QueryClientProvider>
     </SessionProvider>

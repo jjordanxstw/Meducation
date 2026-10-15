@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, signOut, useSession } from 'next-auth/react';
-import { Lock, Shield } from 'lucide-react';
+import { CalendarDays, History, Play, PlayCircle, Plus, Shield } from 'lucide-react';
 
 // Google SVG icon component
 function GoogleIcon({ className }: { className?: string }) {
@@ -62,7 +62,7 @@ function LoginContent() {
     missing_token: 'Google sign-in completed but no id token was returned. Please sign in again.',
     sync_failed: 'Unable to establish backend session. Please try signing in again.',
     session_expired: 'Your session has expired. Please login again.',
-    domain_restricted: 'Please sign in with an email ending in @mahidol.student.edu.',
+    domain_restricted: 'Please sign in with your @student.mahidol.edu or @student.mahidol.ac.th account.',
     OAuthCallback: 'Google OAuth callback failed. Please retry sign-in.',
     AccessDenied: 'Access denied by Google or application policy.',
   };
@@ -99,84 +99,92 @@ function LoginContent() {
   const isSigningIn = status === 'loading' || isRedirecting;
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f5f8fe] p-3 sm:p-4">
-      {/* Animated gradient orbs — atmospheric depth */}
-      <div
-        className="pointer-events-none absolute left-[-4rem] top-[-4rem] h-96 w-96 animate-float rounded-full bg-[radial-gradient(circle_at_35%_35%,rgba(47,128,237,0.14),transparent_70%)] blur-3xl"
-      />
-      <div
-        className="pointer-events-none absolute bottom-[-5rem] right-[-4rem] h-96 w-96 animate-float rounded-full bg-[radial-gradient(circle_at_50%_50%,rgba(47,128,237,0.1),transparent_70%)] blur-3xl [animation-delay:3s]"
-      />
-
-      <div className="relative w-full max-w-[420px]">
-      {/* Main card */}
-      <div className="relative w-full rounded-3xl border border-slate-200/70 bg-white/95 p-8 shadow-lift backdrop-blur-xl">
-        {/* Title */}
-        <div className="flex flex-col items-center gap-2 text-center">
-          <h1 className="font-serif text-3xl font-semibold tracking-tight text-slate-900">MedPi Portal</h1>
-          <p className="text-sm text-slate-500">Secure sign-in for medical students</p>
+    <div className="grid min-h-screen bg-white lg:grid-cols-2">
+      {/* Brand panel (desktop) */}
+      <aside className="hidden flex-col justify-between bg-[#eef4fe] p-12 lg:flex">
+        <div className="flex items-center gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-white">
+            <Plus className="h-5 w-5" strokeWidth={3} aria-hidden />
+          </span>
+          <span className="text-xl font-semibold tracking-tight text-ink-1">MedPi</span>
         </div>
+        <div className="max-w-md space-y-6">
+          <h2 className="text-4xl font-semibold leading-tight tracking-tight text-ink-1">Every lecture, slide and exam date for your year.</h2>
+          <ul className="space-y-3">
+            {[
+              { icon: PlayCircle, text: 'Recorded lectures across Years 1–6' },
+              { icon: History, text: 'Pick up where you stopped, on any device' },
+              { icon: CalendarDays, text: 'Exam countdowns and the faculty calendar' },
+            ].map(({ icon: Icon, text }) => (
+              <li key={text} className="flex items-center gap-3 text-[15px] text-ink-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-brand shadow-subtle">
+                  <Icon className="h-4 w-4" aria-hidden />
+                </span>
+                {text}
+              </li>
+            ))}
+          </ul>
+          <div className="flex items-center gap-4 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-subtle" aria-hidden>
+            <span className="flex h-16 w-28 items-center justify-center rounded-lg bg-[#14284a]">
+              <Play className="h-5 w-5 fill-white text-white" />
+            </span>
+            <span>
+              <span className="block text-[11px] font-semibold uppercase tracking-wider text-brand-hover">Continue</span>
+              <span className="block text-sm font-semibold text-ink-1">Pick up your last lecture</span>
+              <span className="block text-xs text-ink-3">Right where you left it</span>
+            </span>
+          </div>
+        </div>
+        <p className="text-xs text-ink-3">Made by MedPi students · not an official faculty system</p>
+      </aside>
 
-        {/* Notice Banner */}
-        <div className="mt-6 rounded-xl border border-brand/20 bg-brand-subtle px-4 py-3">
-          <div className="flex items-start gap-3">
-            <Shield className="h-[18px] w-[18px] shrink-0 text-brand mt-0.5" />
-            <div className="min-w-0 text-left">
-              <p className="text-sm font-semibold text-brand">For Medical Students Only</p>
-              <p className="mt-0.5 text-xs text-slate-500">
-                Sign in with your @student.mahidol.edu Google account
-              </p>
+      {/* Sign-in */}
+      <main className="flex items-center justify-center p-6 sm:p-10">
+        <div className="w-full max-w-[400px]">
+          <div className="mb-10 flex items-center gap-2 lg:hidden">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-white">
+              <Plus className="h-5 w-5" strokeWidth={3} aria-hidden />
+            </span>
+            <span className="text-xl font-semibold tracking-tight text-ink-1">MedPi</span>
+          </div>
+
+          <h1 className="text-2xl font-semibold tracking-tight text-ink-1">Sign in</h1>
+          <p className="mt-1 text-sm text-ink-3">Use your Mahidol student Google account.</p>
+
+          {authErrorMessage ? (
+            <div role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {authErrorMessage}
             </div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={handleSignInClick}
+            disabled={isSigningIn}
+            className="mt-6 flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-ink-1 shadow-subtle transition-colors hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isSigningIn ? (
+              <>
+                <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-brand" aria-hidden />
+                {isRedirecting ? 'Redirecting to Google…' : 'Continue with Google'}
+              </>
+            ) : (
+              <>
+                <GoogleIcon className="h-5 w-5" />
+                Continue with Google
+              </>
+            )}
+          </button>
+
+          <div className="mt-4 flex gap-3 rounded-xl border border-slate-200/70 bg-slate-50 px-4 py-3">
+            <Shield className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden />
+            <p className="text-xs leading-relaxed text-ink-2">
+              Only <span className="font-medium">@student.mahidol.ac.th</span> and <span className="font-medium">@student.mahidol.edu</span> accounts can sign in.
+            </p>
           </div>
+          <p className="mt-4 text-xs text-ink-3">Trouble signing in? Contact the MedPi team.</p>
         </div>
-
-        {/* Auth Error */}
-        {authErrorMessage && (
-          <div className="mt-4 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {authErrorMessage}
-          </div>
-        )}
-
-        {/* Divider */}
-        <div className="mt-4 flex items-center gap-3">
-          <div className="flex-1 h-px bg-slate-200" />
-          <span className="text-xs text-slate-400">sign in with</span>
-          <div className="flex-1 h-px bg-slate-200" />
-        </div>
-
-        {/* Google Button */}
-        <button
-          type="button"
-          onClick={handleSignInClick}
-          disabled={isSigningIn}
-          className="mt-4 flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-gray-800 shadow-md shadow-slate-200/50 transition-all duration-200 hover:bg-slate-50 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed"
-        >
-          {isSigningIn ? (
-            <>
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-brand" />
-              {isRedirecting ? 'Redirecting…' : 'Continue with Google'}
-            </>
-          ) : (
-            <>
-              <GoogleIcon className="h-5 w-5" />
-              Continue with Google
-            </>
-          )}
-        </button>
-
-        {/* Security Note */}
-        <div className="mt-5 flex items-center justify-center gap-2">
-          <Lock className="h-3 w-3 text-slate-400" />
-          <span className="text-xs text-slate-400">Protected by NextAuth · Session verified</span>
-        </div>
-      </div>
-
-      {/* Accepted email domains notice */}
-      <p className="mt-4 text-center text-xs text-slate-400">
-        Only @student.mahidol.edu and @student.mahidol.ac.th email addresses are accepted.
-      </p>
-      </div>
-
+      </main>
     </div>
   );
 }
@@ -185,10 +193,8 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f5f8fe] p-3 sm:p-4">
-          <div className="w-full max-w-[420px] rounded-2xl border border-slate-200/70 bg-white/95 p-8 text-center shadow-lift">
-            <p className="text-sm font-medium text-slate-500">Loading sign-in screen...</p>
-          </div>
+        <div className="flex min-h-screen items-center justify-center bg-canvas p-4">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-brand" aria-label="Loading" />
         </div>
       }
     >

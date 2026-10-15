@@ -2,46 +2,57 @@
 
 import { useRef } from 'react';
 import Link from 'next/link';
-import { ArrowUpRight, BookOpen } from 'lucide-react';
 import { HighlightText } from '@/components/ui/HighlightText';
+import { SubjectGlyph } from '@/components/ui/SubjectGlyph';
 import { usePrefetchSubject } from '@/hooks/use-subjects';
+import { cn } from '@/lib/utils';
 
 interface SubjectCardProps {
   id: string;
   code: string;
   name: string;
   description?: string | null;
-  yearLevel: number;
-  /** Optional cover image shown as a band on top of the card. */
+  /** Cover image (subjects.thumbnail_url); a tinted cover with a glyph stands in when absent. */
   thumbnailUrl?: string | null;
-  /** Optional lecture count — badge is hidden when not provided. */
-  lectureCount?: number | null;
+  sectionsCount?: number | null;
+  lecturesCount?: number | null;
+  filesCount?: number | null;
+  /** Lectures uploaded in the last 7 days — shows the "N new" badge. */
+  newLecturesCount?: number | null;
   /** When set, matching characters in the name are highlighted. */
   searchQuery?: string;
-  href?: string;
+  /** Compact (Today): name + counts only; full (Subjects): adds the description and files. */
+  variant?: 'full' | 'compact';
+  className?: string;
 }
 
+/**
+ * Near-square subject card (Brilliant: Subjects / Today). Cover with the
+ * subject code chip, a "new lectures" badge and a line-art glyph; then the
+ * name, an optional description and the counts. No progress state — MedPi is
+ * a library, not a course.
+ */
 export function SubjectCard({
   id,
   code,
   name,
   description,
-  yearLevel,
   thumbnailUrl,
-  lectureCount,
+  sectionsCount,
+  lecturesCount,
+  filesCount,
+  newLecturesCount,
   searchQuery = '',
-  href = `/subjects/${id}`,
+  variant = 'full',
+  className,
 }: SubjectCardProps) {
   const prefetchSubject = usePrefetchSubject();
   const prefetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const empty = lecturesCount === 0;
 
-  // Warm the detail cache after a 150ms dwell so quick mouse-throughs don't
-  // trigger needless fetches.
   const startPrefetch = () => {
     if (prefetchTimer.current) return;
-    prefetchTimer.current = setTimeout(() => {
-      void prefetchSubject(id);
-    }, 150);
+    prefetchTimer.current = setTimeout(() => void prefetchSubject(id), 150);
   };
   const cancelPrefetch = () => {
     if (prefetchTimer.current) {
@@ -50,54 +61,69 @@ export function SubjectCard({
     }
   };
 
+  const counts = [
+    typeof sectionsCount === 'number' ? `${sectionsCount} ${sectionsCount === 1 ? 'section' : 'sections'}` : null,
+    typeof lecturesCount === 'number' ? `${lecturesCount} ${lecturesCount === 1 ? 'lecture' : 'lectures'}` : null,
+    variant === 'full' && typeof filesCount === 'number' ? `${filesCount} ${filesCount === 1 ? 'file' : 'files'}` : null,
+  ].filter(Boolean);
+
   return (
-    <Link href={href} className="group block">
+    <Link
+      href={`/subjects/${id}`}
+      onMouseEnter={startPrefetch}
+      onMouseLeave={cancelPrefetch}
+      onFocus={startPrefetch}
+      onBlur={cancelPrefetch}
+      className={cn(
+        'group flex flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-subtle transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-soft',
+        empty && 'opacity-75',
+        className,
+      )}
+    >
       <div
-        onMouseEnter={startPrefetch}
-        onMouseLeave={cancelPrefetch}
-        onFocus={startPrefetch}
-        onBlur={cancelPrefetch}
-        className="flex h-full min-h-[14rem] flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-subtle transition-all duration-200 group-hover:-translate-y-1 group-hover:border-brand/40 group-hover:shadow-soft"
+        className={cn(
+          'relative shrink-0 overflow-hidden',
+          variant === 'full' ? 'aspect-[16/9]' : 'aspect-[16/10]',
+          empty ? 'bg-slate-100' : 'bg-brand-subtle',
+        )}
       >
-        {/* Cover band: image when present, otherwise a subtle branded placeholder
-            so the grid stays uniform. */}
-        <div className="relative h-28 w-full shrink-0 overflow-hidden bg-brand-subtle sm:h-32 lg:h-36">
-          {thumbnailUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={thumbnailUrl}
-              alt={`${code} cover`}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-brand/30">
-              <BookOpen className="h-8 w-8" />
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-1 flex-col p-4">
-          <span className="font-mono text-[11px] uppercase tracking-wider text-slate-400">{code}</span>
-          <h3 className="mt-1.5 line-clamp-2 text-[15px] font-semibold leading-snug text-slate-900">
-            <HighlightText text={name} query={searchQuery} />
-          </h3>
-          {description ? (
-            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">{description}</p>
-          ) : null}
-
-          {/* Bottom row: year pill + lecture count + hover arrow */}
-          <div className="mt-auto flex items-center gap-2 pt-3">
-            <span className="rounded-full bg-brand-subtle px-2 py-0.5 text-[11px] font-semibold text-brand">
-              Year {yearLevel}
-            </span>
-            {typeof lectureCount === 'number' && (
-              <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[11px] text-slate-500">
-                {lectureCount} {lectureCount === 1 ? 'lecture' : 'lectures'}
-              </span>
+        {thumbnailUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={thumbnailUrl}
+            alt=""
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <SubjectGlyph
+            name={name}
+            className={cn(
+              'absolute bottom-3 right-3 h-10 w-10 sm:h-12 sm:w-12',
+              empty ? 'text-ink-4' : 'text-ink-2/80',
             )}
-            <ArrowUpRight className="ml-auto h-4 w-4 text-slate-300 transition-colors group-hover:text-brand" />
-          </div>
-        </div>
+          />
+        )}
+        <span className="absolute left-2.5 top-2.5 rounded-md bg-white/95 px-1.5 py-0.5 text-[11px] font-semibold text-ink-1 shadow-subtle">
+          {code}
+        </span>
+        {newLecturesCount ? (
+          <span className="absolute right-2.5 top-2.5 rounded-full bg-brand px-2 py-0.5 text-[11px] font-semibold text-white">
+            {newLecturesCount} new{variant === 'full' ? ` ${newLecturesCount === 1 ? 'lecture' : 'lectures'}` : ''}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="flex flex-1 flex-col gap-1 p-3 sm:p-4">
+        <h3 className={cn('line-clamp-2 text-sm font-semibold leading-snug sm:text-[15px]', empty ? 'text-ink-2' : 'text-ink-1')}>
+          <HighlightText text={name} query={searchQuery} />
+        </h3>
+        {variant === 'full' && description ? (
+          <p className="line-clamp-2 text-xs leading-relaxed text-ink-3 sm:text-[13px]">
+            {empty ? 'Lectures appear here once they are uploaded.' : description}
+          </p>
+        ) : null}
+        <p className="mt-auto pt-1 text-xs text-ink-3 tabular">{empty ? 'No lectures yet' : counts.join(' · ')}</p>
       </div>
     </Link>
   );

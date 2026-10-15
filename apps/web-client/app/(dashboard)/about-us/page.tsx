@@ -1,23 +1,22 @@
 'use client';
 
 /**
- * About Us Page - the team that built MedPi Portal.
- * Featured-center carousel: the active card is emphasised while neighbours peek
- * and dim. Data is admin-managed via the team-members API.
+ * About MedPi (Brilliant: Student Desktop / About) — what the portal is, how
+ * to report a problem, and the team (admin-managed via the team-members API).
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Mail, Users } from 'lucide-react';
-import { PageTransition } from '@/components/PageTransition';
-import { useTeamMembers } from '@/hooks/use-team-members';
+import { Mail, Users } from 'lucide-react';
 import type { TeamMember } from '@medical-portal/shared';
+import { PageTransition } from '@/components/PageTransition';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/states/EmptyState';
+import { useTeamMembers } from '@/hooks/use-team-members';
 
 // Brand glyphs (GitHub / Instagram / LinkedIn). The pinned lucide-react@1.17
 // has no brand icons, so these are inlined as currentColor fill paths.
-function BrandIcon({ size = 16, path }: { size?: number; path: string }) {
+function BrandIcon({ path }: { path: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d={path} />
     </svg>
   );
@@ -38,292 +37,101 @@ function initialsOf(name: string): string {
     .join('');
 }
 
-// One social link in the card footer. Rendered only when `href` resolves.
-function SocialLink({ href, label, children }: { href: string; label: string; children: React.ReactNode }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={label}
-      className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-brand/10 hover:text-brand"
-    >
-      {children}
-    </a>
-  );
-}
-
-function TeamMemberCard({ member, active }: { member: TeamMember; active: boolean }) {
+function MemberCard({ member }: { member: TeamMember }) {
   const links = [
     member.email ? { key: 'email', href: `mailto:${member.email}`, label: `Email ${member.full_name}`, icon: <Mail size={16} /> } : null,
-    member.instagram_url ? { key: 'instagram', href: member.instagram_url, label: `${member.full_name} on Instagram`, icon: <BrandIcon path={INSTAGRAM_PATH} /> } : null,
-    member.linkedin_url ? { key: 'linkedin', href: member.linkedin_url, label: `${member.full_name} on LinkedIn`, icon: <BrandIcon path={LINKEDIN_PATH} /> } : null,
     member.github_url ? { key: 'github', href: member.github_url, label: `${member.full_name} on GitHub`, icon: <BrandIcon path={GITHUB_PATH} /> } : null,
+    member.linkedin_url ? { key: 'linkedin', href: member.linkedin_url, label: `${member.full_name} on LinkedIn`, icon: <BrandIcon path={LINKEDIN_PATH} /> } : null,
+    member.instagram_url ? { key: 'instagram', href: member.instagram_url, label: `${member.full_name} on Instagram`, icon: <BrandIcon path={INSTAGRAM_PATH} /> } : null,
   ].filter(Boolean) as { key: string; href: string; label: string; icon: React.ReactNode }[];
 
   return (
-    <div
-      className={`shrink-0 w-[260px] rounded-2xl bg-white border p-6 text-center transition-all duration-300 ease-out ${
-        active
-          ? 'scale-100 opacity-100 border-brand/30 shadow-soft'
-          : 'scale-90 opacity-60 border-slate-200/70 shadow-subtle'
-      }`}
-    >
-      {/* Avatar */}
-      <div className="mx-auto mb-4 h-24 w-24 overflow-hidden rounded-full bg-slate-100">
+    <li className="flex flex-col items-center rounded-2xl border border-slate-200/70 bg-white p-5 text-center shadow-subtle">
+      <div className="h-16 w-16 overflow-hidden rounded-full bg-brand-subtle">
         {member.avatar_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={member.avatar_url} alt={member.full_name} className="h-full w-full object-cover" />
+          <img src={member.avatar_url} alt="" className="h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-2xl font-bold text-slate-300">
-            {initialsOf(member.full_name)}
-          </div>
+          <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-brand-hover">{initialsOf(member.full_name)}</div>
         )}
       </div>
-
-      <p className="font-bold text-slate-900">{member.full_name}</p>
-      <p className="mt-0.5 text-xs font-medium text-brand">{member.role}</p>
-      {member.bio ? (
-        <p className="mt-3 text-sm leading-relaxed text-slate-600 line-clamp-4">{member.bio}</p>
-      ) : null}
-
+      <p className="mt-3 text-sm font-semibold text-ink-1">{member.full_name}</p>
+      <p className="text-xs font-medium text-brand-hover">{member.role}</p>
+      {member.bio ? <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-ink-2">{member.bio}</p> : null}
       {links.length > 0 ? (
-        <div className="mt-4 flex items-center justify-center gap-2">
+        <div className="mt-auto flex gap-1 pt-3">
           {links.map((link) => (
-            <SocialLink key={link.key} href={link.href} label={link.label}>
+            <a
+              key={link.key}
+              href={link.href}
+              target={link.key === 'email' ? undefined : '_blank'}
+              rel="noopener noreferrer"
+              aria-label={link.label}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-brand-subtle hover:text-brand-hover"
+            >
               {link.icon}
-            </SocialLink>
+            </a>
           ))}
         </div>
       ) : null}
-    </div>
+    </li>
   );
 }
 
-function CardSkeleton() {
-  return (
-    <div className="shrink-0 w-[260px] rounded-2xl border border-slate-200/70 bg-white p-6 shadow-subtle">
-      <div className="mx-auto mb-4 h-24 w-24 animate-pulse rounded-full bg-slate-100" />
-      <div className="mx-auto h-4 w-28 animate-pulse rounded bg-slate-100" />
-      <div className="mx-auto mt-2 h-3 w-20 animate-pulse rounded bg-slate-100" />
-      <div className="mx-auto mt-4 h-3 w-full animate-pulse rounded bg-slate-100" />
-      <div className="mx-auto mt-2 h-3 w-5/6 animate-pulse rounded bg-slate-100" />
-    </div>
-  );
-}
-
-// Card geometry — the track is translated so the active card sits dead-centre.
-const CARD_WIDTH = 260;
-const CARD_GAP = 24; // matches gap-6
-const STRIDE = CARD_WIDTH + CARD_GAP;
-
-export default function AboutUsPage() {
+export default function AboutPage() {
   const { data: members = [], isLoading } = useTeamMembers();
-
-  const observerRef = useRef<ResizeObserver | null>(null);
-  const [viewportWidth, setViewportWidth] = useState(0);
-  const [current, setCurrent] = useState(0);
-  const currentRef = useRef(0);
-  const pointerStartX = useRef<number | null>(null);
-  const [paused, setPaused] = useState(false);
-
-  const count = members.length;
-  // Derived (never stored) so a shrinking dataset can't leave `current` out of
-  // bounds — avoids clamping via setState inside an effect.
-  const activeIndex = count > 0 ? Math.min(current, count - 1) : 0;
-
-  useEffect(() => {
-    currentRef.current = activeIndex;
-  }, [activeIndex]);
-
-  // Measure the viewport so we can centre the active card. A callback ref (not a
-  // plain effect) is used because the viewport only mounts in the loaded,
-  // non-empty branch — an effect with [] deps runs during the initial loading
-  // render when the node is still null and would never re-attach afterwards,
-  // leaving viewportWidth at 0 and the active card mis-centred.
-  const setViewportRef = useCallback((node: HTMLDivElement | null) => {
-    observerRef.current?.disconnect();
-    if (!node) {
-      observerRef.current = null;
-      return;
-    }
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) setViewportWidth(entry.contentRect.width);
-    });
-    observer.observe(node);
-    observerRef.current = observer;
-  }, []);
-
-  // Offset that places the centre of the active card at the viewport centre.
-  const trackOffset = viewportWidth / 2 - CARD_WIDTH / 2 - activeIndex * STRIDE;
-
-  const goTo = useCallback(
-    (index: number) => {
-      if (count === 0) return;
-      const wrapped = ((index % count) + count) % count;
-      setCurrent(wrapped);
-    },
-    [count],
-  );
-
-  const goNext = useCallback(() => goTo(currentRef.current + 1), [goTo]);
-  const goPrev = useCallback(() => goTo(currentRef.current - 1), [goTo]);
-
-  // Auto-advance every 3s; pause on interaction. Only when there's more than one.
-  useEffect(() => {
-    if (paused || count <= 1) return;
-    const id = window.setInterval(goNext, 3000);
-    return () => window.clearInterval(id);
-  }, [goNext, paused, count]);
-
-  // Keyboard navigation while the page is active.
-  useEffect(() => {
-    if (count <= 1) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowLeft') goPrev();
-      else if (event.key === 'ArrowRight') goNext();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [goNext, goPrev, count]);
-
-  // Swipe support via pointer events.
-  const handlePointerDown = (event: React.PointerEvent) => {
-    pointerStartX.current = event.clientX;
-  };
-  const handlePointerUp = (event: React.PointerEvent) => {
-    if (pointerStartX.current === null) return;
-    const delta = event.clientX - pointerStartX.current;
-    pointerStartX.current = null;
-    if (Math.abs(delta) > 50) {
-      if (delta < 0) goNext();
-      else goPrev();
-    }
-  };
+  const contact = members.find((member) => member.email)?.email;
 
   return (
-    <PageTransition className="space-y-6">
-      {/* Header */}
-      <section className="py-6 text-center">
-        <h1 className="font-serif text-4xl font-semibold tracking-tight text-slate-900">About Us</h1>
-        <p className="mt-2 text-sm text-slate-500">Meet the team behind MedPi Portal</p>
-      </section>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center gap-5 py-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <CardSkeleton key={i} />
-          ))}
-        </div>
-      ) : count === 0 ? (
-        <Card>
-          <div className="flex flex-col items-center px-6 py-16 text-center">
-            <Users className="h-12 w-12 text-brand/35" />
-            <h3 className="mt-4 text-lg font-semibold text-slate-900">No team members yet</h3>
-            <p className="mt-1 text-sm text-slate-500">
-              Team members added in the admin panel will appear here.
+    <PageTransition className="space-y-8">
+      <div className="grid gap-4 lg:grid-cols-[1.8fr_1fr]">
+        <section className="rounded-2xl border border-slate-200/70 bg-white p-6 shadow-subtle sm:p-8">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-hover">About MedPi</p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink-1 sm:text-3xl">Every lecture you missed, in one calm place</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-2 sm:text-base">
+            MedPi is built by students for students. We collect the lecture recordings, slides and schedules your faculty shares and
+            organise them by year, subject and section, so you spend your time studying, not searching.
+          </p>
+        </section>
+        <section className="flex flex-col justify-between gap-4 rounded-2xl bg-brand-hover p-6 text-white shadow-subtle">
+          <div>
+            <h2 className="text-base font-semibold">Found a problem?</h2>
+            <p className="mt-2 text-sm leading-relaxed text-white/90">
+              A broken link, a missing lecture or a bug: tell us and we usually fix it within a day.
             </p>
           </div>
-        </Card>
-      ) : (
-        <>
-          {/* Team Member Slider — active card centred, neighbours peek, ends clipped */}
-          <div
-            className="relative"
-            onMouseEnter={() => setPaused(true)}
-            onMouseLeave={() => setPaused(false)}
-            onFocusCapture={() => setPaused(true)}
-            onBlurCapture={() => setPaused(false)}
-          >
-            {/* Viewport clips the track horizontally; generous vertical padding
-                gives card shadows room so they're never cut at the edge. */}
-            <div
-              ref={setViewportRef}
-              onPointerDown={handlePointerDown}
-              onPointerUp={handlePointerUp}
-              className="overflow-hidden px-1 py-8"
+          {contact ? (
+            <a
+              href={`mailto:${contact}?subject=${encodeURIComponent('MedPi: problem report')}`}
+              className="inline-flex h-9 w-fit items-center gap-2 rounded-lg bg-white px-3 text-sm font-semibold text-brand-hover transition-colors hover:bg-white/90"
             >
-              <div
-                className={`flex items-center gap-6 will-change-transform ${
-                  viewportWidth > 0 ? 'transition-transform duration-500 ease-out' : ''
-                }`}
-                style={{ transform: `translate3d(${trackOffset}px, 0, 0)` }}
-              >
-                {members.map((member, index) => (
-                  <TeamMemberCard key={member.id} member={member} active={index === activeIndex} />
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={goPrev}
-              className="absolute left-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-md transition hover:bg-slate-50 hover:text-brand"
-              aria-label="Previous"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              onClick={goNext}
-              className="absolute right-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-md transition hover:bg-slate-50 hover:text-brand"
-              aria-label="Next"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
-
-          {/* Dot indicators */}
-          {count > 1 ? (
-            <div className="flex items-center justify-center gap-2" role="tablist" aria-label="Team members">
-              {members.map((member, index) => (
-                <button
-                  key={member.id}
-                  type="button"
-                  role="tab"
-                  onClick={() => goTo(index)}
-                  aria-label={`Go to ${member.full_name}`}
-                  aria-selected={index === activeIndex}
-                  className={`h-2 rounded-full transition-all duration-300 ease-out ${
-                    index === activeIndex ? 'w-6 bg-brand' : 'w-2 bg-slate-300 hover:bg-slate-400'
-                  }`}
-                />
-              ))}
-            </div>
+              <Mail className="h-4 w-4" aria-hidden />
+              Report an issue
+            </a>
           ) : null}
-        </>
-      )}
+        </section>
+      </div>
 
-      {/* Additional Info Section */}
-      <Card className="mt-8">
-        <div className="space-y-3 p-5">
-          <h3 className="mb-2 font-serif text-xl font-semibold tracking-tight text-slate-900">Our Mission</h3>
-          <p className="text-sm leading-relaxed text-slate-600">
-            เว็บไซต์วิชาการแห่งนี้ถูกพัฒนาขึ้นโดยทีมงานนักศึกษาแพทย์
-            เพื่อเป็นศูนย์กลางการเรียนรู้ที่รวบรวมเนื้อหาวิชาการและเครื่องมือสนับสนุนการศึกษาไว้ในที่เดียว
-            โดยมุ่งเน้นให้ผู้ใช้งานสามารถเข้าถึงความรู้ได้อย่างสะดวก รวดเร็ว และมีประสิทธิภาพ
-          </p>
-          <p className="text-sm leading-relaxed text-slate-600">
-            ภายในเว็บไซต์ประกอบด้วยฟีเจอร์หลากหลาย เช่น ระบบคลังข้อสอบและแบบฝึกหัด ระบบสรุปเนื้อหาวิชา
-            การค้นหาข้อมูลทางการแพทย์ ระบบติดตามความก้าวหน้าการเรียนรู้ พื้นที่แลกเปลี่ยนความรู้ระหว่างผู้ใช้งาน
-            รวมถึง Learning Hub ที่เปิดโอกาสให้ผู้เชี่ยวชาญและนักศึกษาร่วมแบ่งปันความรู้และทักษะในหัวข้อต่าง ๆ
-          </p>
-          <p className="text-sm leading-relaxed text-slate-600">
-            เราหวังว่าเว็บไซต์นี้จะเป็นเครื่องมือที่ช่วยส่งเสริมการเรียนรู้ตลอดชีวิต
-            และเป็นพื้นที่ที่ทุกคนสามารถเข้าถึงองค์ความรู้คุณภาพได้อย่างเท่าเทียม
-          </p>
-        </div>
-      </Card>
-
-      {/* Thank-you Section */}
-      <Card>
-        <div className="p-5">
-          <h3 className="mb-2 font-serif text-xl font-semibold tracking-tight text-slate-900">
-            Thank you to Academic team
-          </h3>
-          <p className="text-sm leading-relaxed text-slate-600">
-            ขอบคุณพวกเราทุกคนที่ช่วยกันพัฒนาความรู้และความสามารถของนักศึกษาในคณะโดยไม่หวังสิ่งตอบแทน
-          </p>
-        </div>
-      </Card>
+      <section className="space-y-4" aria-labelledby="team">
+        <h2 id="team" className="text-lg font-semibold tracking-tight text-ink-1">
+          The team
+        </h2>
+        {isLoading ? (
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-48 rounded-2xl" />
+            ))}
+          </div>
+        ) : members.length === 0 ? (
+          <EmptyState compact icon={Users} title="Team coming soon" description="The people behind MedPi will be listed here." />
+        ) : (
+          <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {members.map((member) => (
+              <MemberCard key={member.id} member={member} />
+            ))}
+          </ul>
+        )}
+      </section>
     </PageTransition>
   );
 }

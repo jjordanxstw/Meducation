@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Lato, IBM_Plex_Sans_Thai_Looped } from 'next/font/google';
+import { Onest, IBM_Plex_Sans_Thai_Looped } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { NetworkStatus } from '@/components/NetworkStatus';
 import { Providers } from './providers';
@@ -7,15 +7,14 @@ import './globals.css';
 
 /**
  * Two-font system:
- * - Lato → all Latin UI + headings.
+ * - Onest → all Latin UI + headings (variable font, one file for every weight).
  * - IBM Plex Sans Thai Looped → all Thai content (back-end data is authored in
- *   Thai; Lato has no Thai glyphs, so the browser falls through to this face
+ *   Thai; Onest has no Thai glyphs, so the browser falls through to this face
  *   automatically wherever a Thai character appears).
  */
-const lato = Lato({
-  weight: ['300', '400', '700', '900'],
+const onest = Onest({
   subsets: ['latin', 'latin-ext'],
-  variable: '--font-lato',
+  variable: '--font-onest',
   display: 'swap',
 });
 
@@ -31,10 +30,11 @@ export const metadata: Metadata = {
   description: 'Learning system for medical students',
 };
 
+// No maximumScale: students must be able to pinch-zoom slides and small text.
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  themeColor: '#f4f8ff',
 };
 
 export default function RootLayout({
@@ -45,7 +45,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth">
       <body
-        className={`${lato.variable} ${ibmThai.variable} font-sans antialiased`}
+        className={`${onest.variable} ${ibmThai.variable} font-sans antialiased`}
       >
         <NetworkStatus />
         <Providers>{children}</Providers>

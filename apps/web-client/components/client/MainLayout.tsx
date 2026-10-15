@@ -1,86 +1,147 @@
 'use client';
 
 /**
- * MainLayout — protected app shell.
- * Editorial-premium sidebar workspace. English-only, single light theme.
- * Desktop: fixed left sidebar + slim top bar. Mobile: top bar + slide-over
- * drawer + bottom nav. Tailwind + Radix primitives only.
+ * MainLayout — protected app shell (Brilliant: Student Desktop / Mobile).
+ *
+ * Desktop (≥ lg): left sidebar (logo, "Studying Year N" picker, nav with the
+ * exam countdown badge, Recently opened, user block) + slim top bar (search,
+ * today's date). Lecture pages switch to a narrow icon rail for focus.
+ * Mobile (< lg): top bar (logo, year chip, avatar) + bottom nav
+ * (Today, Subjects, Calendar, Search, Me).
  */
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useCallback } from 'react';
+import { useCallback, useState, useSyncExternalStore } from 'react';
 import { signOut, useSession } from 'next-auth/react';
 import {
-  Home,
-  Layers,
   BookOpen,
   CalendarDays,
-  User,
-  Users,
+  Check,
+  ChevronsUpDown,
+  CircleUser,
+  Info,
+  Layers,
   LogOut,
-  Menu,
+  MoreHorizontal,
+  Newspaper,
+  PlayCircle,
+  Plus,
+  Search,
+  Sunrise,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
+import { YEAR_LEVELS } from '@medical-portal/shared';
 import { api } from '@/lib/api';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
+import { forgetRecentlyOpened, useRecentlyOpened } from '@/lib/recently-opened';
+import { setStudyYear, useStudyYear } from '@/lib/study-year';
+import { daysUntil, useUpcomingEvents } from '@/hooks/use-upcoming';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { CommandPalette, useCommandPaletteShortcut } from '@/components/search/CommandPalette';
 
 type NavItem = { name: string; href: string; icon: LucideIcon };
 
 const NAV_ITEMS: NavItem[] = [
-  { name: 'Home', href: '/', icon: Home },
+  { name: 'Today', href: '/', icon: Sunrise },
   { name: 'Subjects', href: '/subjects', icon: Layers },
   { name: 'Calendar', href: '/calendar', icon: CalendarDays },
   { name: 'Learning Hub', href: '/learning-hub', icon: BookOpen },
-  { name: 'About Us', href: '/about-us', icon: Users },
+  { name: 'News', href: '/news', icon: Newspaper },
 ];
 
-// Bottom navigation (mobile/tablet) — quick access to primary destinations.
 const BOTTOM_NAV: NavItem[] = [
-  { name: 'Home', href: '/', icon: Home },
+  { name: 'Today', href: '/', icon: Sunrise },
   { name: 'Subjects', href: '/subjects', icon: Layers },
-  { name: 'Learning Hub', href: '/learning-hub', icon: BookOpen },
-  { name: 'Profile', href: '/about-me', icon: User },
+  { name: 'Calendar', href: '/calendar', icon: CalendarDays },
+  { name: 'Search', href: '/search', icon: Search },
+  { name: 'Me', href: '/about-me', icon: CircleUser },
 ];
+
+const noopSubscribe = () => () => undefined;
 
 function isRouteActive(pathname: string, href: string): boolean {
-  if (href.includes('#')) return false; // anchor jump, not a page
   if (href === '/') return pathname === '/';
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function getInitials(name: string | undefined | null): string {
   if (!name) return 'U';
-  const parts = name.trim().split(' ');
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   return name.slice(0, 2).toUpperCase();
 }
 
-// Brand wordmark — text-only lockup, single accent (no badge/icon).
-function BrandMark({ compact = false }: { compact?: boolean }) {
+function LogoMark({ className }: { className?: string }) {
   return (
-    <Link href="/" className="flex items-center" aria-label="MedPi Portal home">
-      <span className="font-serif text-lg font-semibold tracking-tight text-slate-900">
-        MedPi <span className="text-brand">{compact ? '' : 'Portal'}</span>
+    <span className={cn('flex items-center justify-center rounded-lg bg-brand text-white', className)}>
+      <Plus className="h-[60%] w-[60%]" strokeWidth={3} aria-hidden />
+    </span>
+  );
+}
+
+function Brand() {
+  return (
+    <Link href="/" className="flex items-center gap-2.5 rounded-lg" aria-label="MedPi home">
+      <LogoMark className="h-9 w-9" />
+      <span className="leading-tight">
+        <span className="block text-base font-semibold tracking-tight text-ink-1">MedPi</span>
+        <span className="block text-[11px] text-ink-3">Lecture library</span>
       </span>
     </Link>
   );
 }
 
-// Shared sidebar nav (desktop rail + mobile drawer).
-function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+/** "Studying: Year N" — which year Today and Subjects open on. */
+function StudyYearPicker() {
+  const { year, profileYear } = useStudyYear();
   return (
-    <nav className="flex-1 space-y-1 px-3 py-4" aria-label="Primary">
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left transition-colors hover:border-slate-300"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block text-[11px] text-ink-3">Studying</span>
+            <span className="block truncate text-sm font-semibold text-ink-1">{year ? `Year ${year}` : 'All years'}</span>
+          </span>
+          <ChevronsUpDown className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-52">
+        {YEAR_LEVELS.map((option) => (
+          <DropdownMenuItem key={option} onSelect={() => setStudyYear(option === profileYear ? null : option)}>
+            <Check className={cn('h-4 w-4', option === year ? 'opacity-100' : 'opacity-0')} aria-hidden />
+            Year {option}
+            {option === profileYear ? <span className="ml-auto text-xs text-ink-3">your year</span> : null}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** Days to the next exam, for the Calendar badge (only within two weeks). */
+function useExamCountdown(): number | null {
+  const { data: events = [] } = useUpcomingEvents(20);
+  const exam = events.find((event) => event.type === 'exam');
+  if (!exam) return null;
+  const days = daysUntil(exam.start_date);
+  return days >= 0 && days <= 14 ? days : null;
+}
+
+function SidebarNav({ pathname, examIn }: { pathname: string; examIn: number | null }) {
+  return (
+    <nav className="space-y-0.5" aria-label="Primary">
       {NAV_ITEMS.map((item) => {
         const active = isRouteActive(pathname, item.href);
         const Icon = item.icon;
@@ -88,16 +149,19 @@ function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: (
           <Link
             key={item.href}
             href={item.href}
-            onClick={onNavigate}
             aria-current={active ? 'page' : undefined}
-            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-              active
-                ? 'bg-brand-subtle font-semibold text-brand'
-                : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-            }`}
+            className={cn(
+              'flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors',
+              active ? 'bg-brand-subtle font-semibold text-brand-hover' : 'font-medium text-ink-2 hover:bg-slate-100 hover:text-ink-1',
+            )}
           >
-            <Icon className={`h-[18px] w-[18px] ${active ? 'text-brand' : 'text-slate-400'}`} />
+            <Icon className={cn('h-[18px] w-[18px]', active ? 'text-brand' : 'text-ink-3')} aria-hidden />
             {item.name}
+            {item.href === '/calendar' && examIn !== null ? (
+              <span className="ml-auto rounded-md bg-red-50 px-1.5 py-0.5 text-[11px] font-semibold text-red-700">
+                {examIn === 0 ? 'Exam today' : `Exam in ${examIn}d`}
+              </span>
+            ) : null}
           </Link>
         );
       })}
@@ -105,55 +169,168 @@ function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: (
   );
 }
 
-// Bottom user block in the sidebar/drawer: profile link + logout.
-function UserBlock({
-  name,
-  email,
-  image,
-  onNavigate,
-  onLogout,
-}: {
-  name: string;
-  email: string;
-  image?: string;
-  onNavigate?: () => void;
-  onLogout: () => void;
-}) {
+/** Browser-local shortcuts to the last lectures opened — not progress tracking. */
+function RecentlyOpened() {
+  const items = useRecentlyOpened().slice(0, 4);
+  if (items.length === 0) return null;
   return (
-    <div className="border-t border-slate-200/70 p-3">
-      <div className="flex items-center gap-2 rounded-xl p-1.5 transition-colors hover:bg-slate-50">
-        <Link
-          href="/about-me"
-          onClick={onNavigate}
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        >
-          <Avatar size="sm">
-            {image ? <AvatarImage src={image} alt={name} /> : null}
-            <AvatarFallback className="text-xs">{getInitials(name)}</AvatarFallback>
-          </Avatar>
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold text-slate-900">{name}</span>
-            <span className="block truncate text-xs text-slate-400">{email}</span>
-          </span>
-        </Link>
-        <button
-          type="button"
-          onClick={onLogout}
-          aria-label="Log out"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        >
-          <LogOut className="h-4 w-4" />
+    <div className="mt-6">
+      <div className="flex items-center justify-between px-3 pb-1.5">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-3">Recently opened</p>
+        <button type="button" onClick={forgetRecentlyOpened} className="rounded text-[11px] text-ink-3 hover:text-ink-1">
+          Clear
         </button>
       </div>
+      <ul className="space-y-0.5">
+        {items.map((item) => (
+          <li key={item.lectureId}>
+            <Link
+              href={`/subjects/${item.subjectId}/lectures/${item.lectureId}`}
+              className="flex gap-2.5 rounded-lg px-3 py-1.5 transition-colors hover:bg-slate-100"
+            >
+              <PlayCircle className="mt-0.5 h-4 w-4 shrink-0 text-ink-3" aria-hidden />
+              <span className="min-w-0">
+                <span className="block truncate text-[13px] font-medium text-ink-1">{item.title}</span>
+                <span className="block truncate text-[11px] text-ink-3">
+                  {item.subjectCode}
+                  {item.lectureNumber ? ` · Lecture ${item.lectureNumber}` : ''}
+                </span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
+  );
+}
+
+function UserMenu({
+  name,
+  detail,
+  onLogout,
+  isLoggingOut,
+}: {
+  name: string;
+  detail: string;
+  onLogout: () => void;
+  isLoggingOut: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2.5 border-t border-slate-200/70 p-3">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-hover">
+        {getInitials(name)}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold text-ink-1">{name}</span>
+        <span className="block truncate text-xs text-ink-3">{detail}</span>
+      </span>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label="Account menu"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-slate-100 hover:text-ink-1"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" side="top" className="min-w-52">
+          <DropdownMenuItem asChild>
+            <Link href="/about-me">
+              <CircleUser className="h-4 w-4" />
+              My account
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/about-us">
+              <Info className="h-4 w-4" />
+              About MedPi
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="danger"
+            onSelect={(event) => {
+              event.preventDefault();
+              onLogout();
+            }}
+          >
+            <LogOut className="h-4 w-4" />
+            {isLoggingOut ? 'Signing out…' : 'Sign out'}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
+const RAIL_LINK = 'flex h-10 w-10 items-center justify-center rounded-xl transition-colors';
+
+/** Focus rail used on lecture pages: icons only, same destinations. */
+function Rail({ pathname, onSearch }: { pathname: string; onSearch: () => void }) {
+  return (
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center gap-1 border-r border-slate-200/70 bg-white py-3 lg:flex">
+      <Link href="/" aria-label="MedPi home" className="mb-3">
+        <LogoMark className="h-9 w-9" />
+      </Link>
+      {NAV_ITEMS.slice(0, 3).map((item) => {
+        const active = isRouteActive(pathname, item.href);
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            aria-label={item.name}
+            title={item.name}
+            className={cn(RAIL_LINK, active ? 'bg-brand-subtle text-brand' : 'text-ink-3 hover:bg-slate-100 hover:text-ink-1')}
+          >
+            <Icon className="h-5 w-5" aria-hidden />
+          </Link>
+        );
+      })}
+      <button
+        type="button"
+        onClick={onSearch}
+        aria-label="Search"
+        title="Search"
+        className={cn(RAIL_LINK, 'text-ink-3 hover:bg-slate-100 hover:text-ink-1')}
+      >
+        <Search className="h-5 w-5" aria-hidden />
+      </button>
+      <Link
+        href="/learning-hub"
+        aria-label="Learning Hub"
+        title="Learning Hub"
+        className={cn(RAIL_LINK, 'text-ink-3 hover:bg-slate-100 hover:text-ink-1')}
+      >
+        <BookOpen className="h-5 w-5" aria-hidden />
+      </Link>
+    </aside>
   );
 }
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
   const { data: session } = useSession();
+  const profile = useAuthStore((state) => state.profile);
+  const { year: studyYear } = useStudyYear();
+  const examIn = useExamCountdown();
+  const focusMode = /^\/subjects\/[^/]+\/lectures\//.test(pathname);
+
+  const shortcutLabel = useSyncExternalStore(
+    noopSubscribe,
+    () => (/Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘K' : 'Ctrl K'),
+    () => 'Ctrl K',
+  );
+  const today = useSyncExternalStore(
+    noopSubscribe,
+    () => new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }),
+    () => '',
+  );
+
+  useCommandPaletteShortcut(setSearchOpen);
 
   const handleLogout = useCallback(async () => {
     if (isLoggingOut) return;
@@ -166,110 +343,110 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     }
   }, [isLoggingOut]);
 
-  const userName = session?.user?.name || 'Learner';
-  const userEmail = session?.user?.email || '';
-  const userImage = session?.user?.image ?? undefined;
+  const userName = profile?.full_name || session?.user?.name || 'Student';
+  const userDetail = [profile?.student_id, profile?.year_level ? `Year ${profile.year_level}` : null].filter(Boolean).join(' · ');
 
   return (
     <div className="relative min-h-screen">
-      {/* Skip link for keyboard users */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:font-semibold focus:text-white focus:shadow-lg focus:outline-none"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:font-semibold focus:text-white focus:shadow-lg"
       >
         Skip to main content
       </a>
 
-      {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-slate-200/70 bg-white/80 backdrop-blur-xl lg:flex">
-        <div className="flex h-16 items-center px-5">
-          <BrandMark />
-        </div>
-        <SidebarNav pathname={pathname} />
-        <UserBlock name={userName} email={userEmail} image={userImage} onLogout={() => void handleLogout()} />
-      </aside>
-
-      {/* Content column */}
-      <div className="flex min-h-screen flex-col lg:pl-64">
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/70 backdrop-blur-xl">
-          <div className="flex h-16 items-center gap-2 px-4 sm:px-6">
-            {/* Mobile: menu + brand */}
-            <button
-              type="button"
-              onClick={() => setDrawerOpen(true)}
-              aria-label="Open menu"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand lg:hidden"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <div className="lg:hidden">
-              <BrandMark compact />
+      {focusMode ? (
+        <Rail pathname={pathname} onSearch={() => setSearchOpen(true)} />
+      ) : (
+        <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-slate-200/70 bg-white lg:flex">
+          <div className="space-y-4 px-4 pb-4 pt-5">
+            <Brand />
+            <StudyYearPicker />
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
+            <SidebarNav pathname={pathname} examIn={examIn} />
+            <RecentlyOpened />
+            <div className="mt-4 border-t border-slate-200/70 pt-3">
+              <Link
+                href="/about-us"
+                aria-current={isRouteActive(pathname, '/about-us') ? 'page' : undefined}
+                className={cn(
+                  'flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors',
+                  isRouteActive(pathname, '/about-us')
+                    ? 'bg-brand-subtle font-semibold text-brand-hover'
+                    : 'font-medium text-ink-2 hover:bg-slate-100 hover:text-ink-1',
+                )}
+              >
+                <Users className={cn('h-[18px] w-[18px]', isRouteActive(pathname, '/about-us') ? 'text-brand' : 'text-ink-3')} aria-hidden />
+                About us
+              </Link>
             </div>
+          </div>
+          <UserMenu name={userName} detail={userDetail} onLogout={() => void handleLogout()} isLoggingOut={isLoggingOut} />
+        </aside>
+      )}
 
-            {/* Right: avatar menu (flush to the far end) */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Open user menu"
-                  className="ml-auto rounded-full outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
-                >
-                  <Avatar size="sm">
-                    {userImage ? <AvatarImage src={userImage} alt={userName} /> : null}
-                    <AvatarFallback className="text-xs">{getInitials(userName)}</AvatarFallback>
-                  </Avatar>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" aria-label="User actions" className="min-w-56">
-                <div className="px-2.5 py-2">
-                  <p className="text-sm font-semibold text-slate-900">{userName}</p>
-                  <p className="truncate text-xs text-slate-500">{userEmail || '-'}</p>
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/about-me">
-                    <User className="h-4 w-4" />
-                    About Me
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="danger"
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    void handleLogout();
-                  }}
-                >
-                  <LogOut className="h-4 w-4" />
-                  {isLoggingOut ? 'Signing out…' : 'Log out'}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+      <div className={cn('flex min-h-screen flex-col', focusMode ? 'lg:pl-16' : 'lg:pl-64')}>
+        {/* Mobile top bar (lecture pages bring their own back header) */}
+        <header className={cn('sticky top-0 z-30 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl lg:hidden', focusMode && 'hidden')}>
+          <div className="flex h-14 items-center gap-2 px-4">
+            <Link href="/" className="flex items-center gap-2" aria-label="MedPi home">
+              <LogoMark className="h-8 w-8" />
+              <span className="text-base font-semibold tracking-tight text-ink-1">MedPi</span>
+            </Link>
+            {studyYear ? (
+              <span className="rounded-full bg-brand-subtle px-2 py-0.5 text-xs font-semibold text-brand-hover">Year {studyYear}</span>
+            ) : null}
+            <Link
+              href="/about-me"
+              aria-label="My account"
+              className="ml-auto flex h-9 w-9 items-center justify-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-hover"
+            >
+              {getInitials(userName)}
+            </Link>
           </div>
         </header>
 
-        {/* Main content */}
+        {/* Desktop top bar */}
+        {focusMode ? null : (
+          <header className="sticky top-0 z-30 hidden border-b border-slate-200/70 bg-white/85 backdrop-blur-xl lg:block">
+            <div className="flex h-16 items-center gap-4 px-8">
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                className="flex h-10 w-full max-w-md items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 text-sm text-ink-3 transition-colors hover:border-slate-300 hover:bg-white"
+              >
+                <Search className="h-4 w-4" aria-hidden />
+                <span className="flex-1 text-left">Search lectures, subjects, lecturers</span>
+                <kbd className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 font-sans text-[11px] font-medium text-ink-3">
+                  {shortcutLabel}
+                </kbd>
+              </button>
+              <p className="ml-auto text-sm text-ink-3 tabular">{today}</p>
+            </div>
+          </header>
+        )}
+
         <main
           id="main-content"
           tabIndex={-1}
-          className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-8 sm:px-6 lg:pb-14"
+          className={cn(
+            'mx-auto w-full flex-1 px-4 pt-6 outline-none sm:px-6 lg:pb-14',
+            focusMode ? 'pb-10 pt-0 lg:pt-6' : 'pb-28',
+            focusMode ? 'max-w-7xl lg:px-8' : 'max-w-6xl lg:px-8 lg:pt-8',
+          )}
         >
           {children}
         </main>
-
-        {/* Footer */}
-        <footer className="mx-auto mb-24 w-full max-w-6xl px-4 sm:px-6 lg:mb-6">
-          <p className="border-t border-slate-200/70 py-5 text-center text-xs text-slate-400">
-            © 2026 MedPi Portal · Built for medical students
-          </p>
-        </footer>
       </div>
 
-      {/* Mobile bottom navigation */}
+      {/* Mobile bottom navigation (hidden while watching a lecture) */}
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-slate-200/70 bg-white/90 backdrop-blur-xl lg:hidden"
+        className={cn(
+          'fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-slate-200/70 bg-white/95 backdrop-blur-xl lg:hidden',
+          focusMode && 'hidden',
+        )}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {BOTTOM_NAV.map((item) => {
@@ -280,34 +457,20 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               key={item.href}
               href={item.href}
               aria-current={active ? 'page' : undefined}
-              className={`flex h-16 flex-1 flex-col items-center justify-center gap-1 text-[11px] transition-colors ${
-                active ? 'text-brand' : 'text-slate-400'
-              }`}
+              className={cn(
+                'flex h-16 flex-1 flex-col items-center justify-center gap-1 text-[11px] transition-colors',
+                active ? 'font-semibold text-brand-hover' : 'text-ink-3',
+              )}
             >
-              <Icon className="h-5 w-5" />
-              <span className={active ? 'font-semibold leading-none' : 'leading-none'}>{item.name}</span>
+              <Icon className={cn('h-5 w-5', active ? 'text-brand' : 'text-ink-3')} aria-hidden />
+              <span className="leading-none">{item.name}</span>
             </Link>
           );
         })}
       </nav>
 
-      {/* Mobile slide-over drawer */}
-      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="left" className="p-0">
-          <SheetTitle>Navigation</SheetTitle>
-          <div className="flex h-16 items-center px-5">
-            <BrandMark />
-          </div>
-          <SidebarNav pathname={pathname} onNavigate={() => setDrawerOpen(false)} />
-          <UserBlock
-            name={userName}
-            email={userEmail}
-            image={userImage}
-            onNavigate={() => setDrawerOpen(false)}
-            onLogout={() => void handleLogout()}
-          />
-        </SheetContent>
-      </Sheet>
+      {/* Mounted only while open, so every open starts with an empty query. */}
+      {searchOpen ? <CommandPalette open onOpenChange={setSearchOpen} /> : null}
     </div>
   );
 }

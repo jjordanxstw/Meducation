@@ -1,15 +1,14 @@
 'use client';
 
 /**
- * Error Boundary for Dashboard
- * Catches runtime errors and provides a recovery UI
+ * Error boundary for every signed-in page: a designed recovery state instead
+ * of a blank screen.
  */
 
 import { useEffect } from 'react';
-import { Card, CardBody } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import Link from 'next/link';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function DashboardError({
   error,
@@ -19,41 +18,26 @@ export default function DashboardError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log error to monitoring service
     console.error('Dashboard error:', error);
   }, [error]);
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardBody className="flex flex-col gap-4 p-6 pt-6 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
-            <AlertTriangle className="h-7 w-7 text-red-500" />
-          </div>
-
-          <div className="space-y-2">
-            <h2 className="font-serif text-xl font-semibold tracking-tight text-slate-900">Something went wrong</h2>
-            <p className="text-sm text-slate-500">
-              An unexpected error occurred. Please try again or return to the home page.
-            </p>
-          </div>
-
-          {error.digest && <p className="font-mono text-xs text-slate-400">Error ID: {error.digest}</p>}
-
-          <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-            <Button className="flex-1" onClick={reset}>
-              <RefreshCw className="h-4 w-4" />
-              Try Again
-            </Button>
-            <Button asChild variant="secondary" className="flex-1">
-              <Link href="/">
-                <Home className="h-4 w-4" />
-                Go Home
-              </Link>
-            </Button>
-          </div>
-        </CardBody>
-      </Card>
+    <div role="alert" className="flex min-h-[60vh] flex-col items-center justify-center gap-3 px-4 text-center">
+      <AlertTriangle className="h-12 w-12 text-red-500/40" aria-hidden />
+      <h1 className="text-xl font-semibold tracking-tight text-ink-1">Something went wrong</h1>
+      <p className="max-w-sm text-sm text-ink-3">
+        This page hit an unexpected error. Trying again usually fixes it; if it keeps happening, let the MedPi team know.
+      </p>
+      {error.digest ? <p className="font-mono text-xs text-ink-3">Error ID: {error.digest}</p> : null}
+      <div className="mt-2 flex gap-2">
+        <Button onClick={reset}>
+          <RefreshCw className="h-4 w-4" aria-hidden />
+          Try again
+        </Button>
+        <Button asChild variant="secondary">
+          <Link href="/">Go to Today</Link>
+        </Button>
+      </div>
     </div>
   );
 }
