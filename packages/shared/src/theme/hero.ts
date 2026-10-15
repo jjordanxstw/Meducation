@@ -13,6 +13,7 @@ export type HeroThemeTokens = {
     primary: string;
     secondary: string;
     muted: string;
+    faint: string;
     inverse: string;
     link: string;
     linkHover: string;
@@ -78,6 +79,17 @@ export const HERO_BRAND = {
   },
 } as const;
 
+/**
+ * Typography (2026-10 redesign). Onest for every Latin glyph; Thai has no Onest
+ * coverage, so it falls through to IBM Plex Sans Thai Looped in every context.
+ * Latin and Thai share one 1.6 line height (Foundations v2).
+ */
+export const MEDPI_TYPE = {
+  latin: 'Onest',
+  thai: 'IBM Plex Sans Thai Looped',
+  lineHeight: { body: 1.6, thai: 1.6, heading: 1.2 },
+} as const;
+
 export const HERO_EVENT_TYPES = {
   exam: '#ef4444',
   lecture: '#3b82f6',
@@ -102,13 +114,16 @@ export const HERO_TOKENS: Record<HeroThemeMode, HeroThemeTokens> = {
       muted: '#eef3fb',
       inverse: '#0f172a',
     },
+    // Contrast-safe ramp (v2): primary 17.9:1, secondary 9.4:1, muted 4.8:1 on
+    // white. `faint` (2.6:1) is for decorative icons and dividers only, never text.
     text: {
       primary: '#0f172a',
       secondary: '#334155',
       muted: '#64748b',
+      faint: '#94a3b8',
       inverse: '#f8fafc',
-      link: '#2f80ed',
-      linkHover: '#1b66cc',
+      link: '#1b66cc',
+      linkHover: '#1857ad',
     },
     border: {
       subtle: 'rgba(15, 23, 42, 0.08)',
@@ -164,6 +179,7 @@ export const HERO_TOKENS: Record<HeroThemeMode, HeroThemeTokens> = {
       primary: '#f1f5f9',
       secondary: '#94a3b8',
       muted: '#64748b',
+      faint: '#475569',
       inverse: '#0f172a',
       link: '#63b3ff',
       linkHover: '#93c5fd',

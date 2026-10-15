@@ -20,6 +20,8 @@ import { ResourcesService } from '../services/resources.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService } from '../../../../common';
+import { bulkCreateResourcesSchema, createResourceSchema, fullCreateResourceSchema, reorderSchema, updateResourceSchema } from '@medical-portal/shared';
+import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe';
 
 const INVALIDATE_RESOURCE_PREFIXES = [
   'v1:resources:',
@@ -55,6 +57,7 @@ export class ResourcesAdminController {
     @Query('sortOrder') sortOrder?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
+    @Query('duplicates') duplicates?: string,
   ) {
     const result = await this.resourcesService.findAll(
       subjectId,
@@ -67,6 +70,7 @@ export class ResourcesAdminController {
       sortOrder,
       page ? parseInt(page, 10) : 1,
       pageSize ? parseInt(pageSize, 10) : 15,
+      { flagDuplicates: true, duplicatesOnly: duplicates === 'true' },
     );
 
     const data = Array.isArray(result) ? result : result.data;
@@ -91,7 +95,7 @@ export class ResourcesAdminController {
 
   @Post()
   @SkipEnvelope()
-  async create(@Body() createDto: any, @Req() req: any) {
+  async create(@Body(new ZodValidationPipe(createResourceSchema)) createDto: any, @Req() req: any) {
     const data = await this.resourcesService.create(createDto);
     await this.audit.logAdminCreate('resources', data?.id, data, req.admin, req);
     this.invalidateResourceGraphCache();
@@ -100,7 +104,7 @@ export class ResourcesAdminController {
 
   @Post('full-create')
   @SkipEnvelope()
-  async fullCreate(@Body() payload: any) {
+  async fullCreate(@Body(new ZodValidationPipe(fullCreateResourceSchema)) payload: any) {
     const data = await this.resourcesService.fullCreate(payload);
     this.invalidateResourceGraphCache();
     return { success: true, data };
@@ -108,7 +112,7 @@ export class ResourcesAdminController {
 
   @Post('bulk')
   @SkipEnvelope()
-  async bulkCreate(@Body() body: { resources: any[] }) {
+  async bulkCreate(@Body(new ZodValidationPipe(bulkCreateResourcesSchema)) body: { resources: any[] }) {
     const data = await this.resourcesService.bulkCreate(body.resources);
     this.invalidateResourceGraphCache();
     return { success: true, data };
@@ -116,7 +120,7 @@ export class ResourcesAdminController {
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
+  async update(@Param('id') id: string, @Body(new ZodValidationPipe(updateResourceSchema)) updateDto: any, @Req() req: any) {
     const data = await this.resourcesService.update(id, updateDto);
     await this.audit.logAdminUpdate('resources', id, data.oldData, data.newData, req.admin, req);
     this.invalidateResourceGraphCache();
@@ -134,7 +138,7 @@ export class ResourcesAdminController {
 
   @Patch('reorder')
   @SkipEnvelope()
-  async reorder(@Body() body: { items: Array<{ id: string; order_index: number }> }) {
+  async reorder(@Body(new ZodValidationPipe(reorderSchema)) body: { items: Array<{ id: string; order_index: number }> }) {
     const result = await this.resourcesService.reorder(body.items);
     this.invalidateResourceGraphCache();
     return { success: true, ...result };

@@ -7,13 +7,13 @@ export interface Admin {
   id: string;
   username: string;
   full_name: string;
-  email?: string;
+  email: string | null;
   is_active: boolean;
   is_super_admin: boolean;
-  last_login_at?: Date;
-  password_changed_at: Date;
-  created_at: Date;
-  updated_at: Date;
+  last_login_at: string | null;
+  password_changed_at: string;
+  created_at: string;
+  updated_at: string;
 }
 
 /**
@@ -44,14 +44,10 @@ export function sanitizeAdmin(admin: Admin): AdminResponse {
     id: admin.id,
     username: admin.username,
     full_name: admin.full_name,
-    email: admin.email,
+    email: admin.email ?? undefined,
     is_active: admin.is_active,
     is_super_admin: admin.is_super_admin,
-    last_login_at: admin.last_login_at
-      ? typeof admin.last_login_at === 'string'
-        ? admin.last_login_at
-        : admin.last_login_at.toISOString()
-      : undefined,
+    last_login_at: admin.last_login_at ?? undefined,
   };
 }
 

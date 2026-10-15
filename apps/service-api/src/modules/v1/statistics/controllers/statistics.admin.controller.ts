@@ -44,6 +44,41 @@ export class StatisticsAdminController {
     return payload;
   }
 
+  /** Content problems worth fixing, for the dashboard's "Needs attention" list. */
+  @Get('attention')
+  @SkipEnvelope()
+  async getAttention() {
+    const cacheKey = 'v1:admin:statistics:attention';
+    const cached = this.responseCache.get<{ success: true; data: unknown }>(cacheKey);
+    if (cached) return cached;
+
+    const payload = { success: true, data: await this.statisticsService.getNeedsAttention() };
+    this.responseCache.set(cacheKey, payload, STATISTICS_OVERVIEW_CACHE_TTL_SECONDS);
+    return payload;
+  }
+
+  @Get('subjects-health')
+  @SkipEnvelope()
+  async getSubjectsHealth() {
+    const cacheKey = 'v1:admin:statistics:subjects-health';
+    const cached = this.responseCache.get<{ success: true; data: unknown }>(cacheKey);
+    if (cached) return cached;
+    const payload = { success: true, data: await this.statisticsService.getSubjectsHealth() };
+    this.responseCache.set(cacheKey, payload, STATISTICS_OVERVIEW_CACHE_TTL_SECONDS);
+    return payload;
+  }
+
+  @Get('summary')
+  @SkipEnvelope()
+  async getSummary() {
+    const cacheKey = 'v1:admin:statistics:summary';
+    const cached = this.responseCache.get<{ success: true; data: unknown }>(cacheKey);
+    if (cached) return cached;
+    const payload = { success: true, data: await this.statisticsService.getDashboardSummary() };
+    this.responseCache.set(cacheKey, payload, STATISTICS_OVERVIEW_CACHE_TTL_SECONDS);
+    return payload;
+  }
+
   @Get('activity')
   @SkipEnvelope()
   async getActivity(

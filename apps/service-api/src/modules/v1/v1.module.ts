@@ -13,6 +13,7 @@ import { LearningResourcesModule } from './learning-resources/learning-resources
 import { ProfilesModule } from './profiles/profiles.module';
 import { AuditModule } from './audit/audit.module';
 import { StatisticsModule } from './statistics/statistics.module';
+import { YoutubeModule } from './youtube/youtube.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { StatisticsModule } from './statistics/statistics.module';
     ProfilesModule,
     AuditModule,
     StatisticsModule,
+    YoutubeModule,
   ],
 })
 export class V1Module {}

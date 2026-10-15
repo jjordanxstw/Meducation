@@ -15,7 +15,13 @@ import {
 import type { Request, Response } from 'express';
 import { SectionsService } from '../services/sections.service';
 import { GoogleAuthGuard } from '../../auth/guards';
-import { SkipEnvelope, ResponseCacheService, buildRequestCacheKey, applyCacheHeaders } from '../../../../common';
+import {
+  SkipEnvelope,
+  ResponseCacheService,
+  buildRequestCacheKey,
+  applyCacheHeaders,
+  CONTENT_SERVER_CACHE_TTL_SECONDS,
+} from '../../../../common';
 
 const SECTION_LIST_CACHE_TTL_SECONDS = 20;
 const SECTION_DETAIL_CACHE_TTL_SECONDS = 30;
@@ -32,11 +38,10 @@ export class SectionsPublicController {
   @SkipEnvelope()
   async findAll(
     @Query('subject_id') subjectId?: string,
-    @Query('is_active') isActive?: string,
     @Req() req?: Request,
     @Res({ passthrough: true }) res?: Response,
   ) {
-    const cacheKey = buildRequestCacheKey('v1:sections:list', (req?.query ?? {}) as Record<string, unknown>);
+    const cacheKey = buildRequestCacheKey('v1:sections:list', (req?.query ?? {}) as Record<string, unknown>, ['subject_id']);
     const cached = this.responseCache.get<{ success: true; data: unknown }>(cacheKey);
     if (cached) {
       if (res) {
@@ -45,13 +50,10 @@ export class SectionsPublicController {
       return cached;
     }
 
-    const data = await this.sectionsService.findAll(
-      subjectId,
-      isActive === 'false' ? false : true,
-    );
+    const data = await this.sectionsService.findAllForStudent(subjectId);
 
     const payload = { success: true, data };
-    this.responseCache.set(cacheKey, payload, SECTION_LIST_CACHE_TTL_SECONDS);
+    this.responseCache.set(cacheKey, payload, CONTENT_SERVER_CACHE_TTL_SECONDS);
     if (res) {
       applyCacheHeaders(res, { ttlSeconds: SECTION_LIST_CACHE_TTL_SECONDS });
     }
@@ -75,10 +77,10 @@ export class SectionsPublicController {
       return cached;
     }
 
-    const data = await this.sectionsService.findOne(id);
+    const data = await this.sectionsService.findOneForStudent(id);
     const payload = { success: true, data };
 
-    this.responseCache.set(cacheKey, payload, SECTION_DETAIL_CACHE_TTL_SECONDS);
+    this.responseCache.set(cacheKey, payload, CONTENT_SERVER_CACHE_TTL_SECONDS);
     if (res) {
       applyCacheHeaders(res, { ttlSeconds: SECTION_DETAIL_CACHE_TTL_SECONDS });
     }

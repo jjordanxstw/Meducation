@@ -20,6 +20,8 @@ import { AnnouncementsService } from '../services/announcements.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService, IdempotencyInterceptor } from '../../../../common';
+import { createAnnouncementSchema, updateAnnouncementSchema } from '@medical-portal/shared';
+import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe';
 
 const INVALIDATE_ANNOUNCEMENT_PREFIXES = ['v1:announcements:'];
 
@@ -70,7 +72,7 @@ export class AnnouncementsAdminController {
   @Post()
   @UseInterceptors(IdempotencyInterceptor)
   @SkipEnvelope()
-  async create(@Body() createDto: any, @Req() req: any) {
+  async create(@Body(new ZodValidationPipe(createAnnouncementSchema)) createDto: any, @Req() req: any) {
     const data = await this.announcementsService.create(createDto, req.admin?.id);
     await this.audit.logAdminCreate('announcements', data?.id, data, req.admin, req);
     this.invalidateAnnouncementCache();
@@ -79,7 +81,7 @@ export class AnnouncementsAdminController {
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
+  async update(@Param('id') id: string, @Body(new ZodValidationPipe(updateAnnouncementSchema)) updateDto: any, @Req() req: any) {
     const data = await this.announcementsService.update(id, updateDto);
     await this.audit.logAdminUpdate('announcements', id, data.oldData, data.newData, req.admin, req);
     this.invalidateAnnouncementCache();

@@ -10,12 +10,17 @@ function normalizeValue(value: unknown): string {
   return String(value);
 }
 
+/**
+ * Builds a stable cache key from the request query. Pass `allowedKeys` so that
+ * unknown parameters (e.g. `?x=random`) cannot mint new cache entries.
+ */
 export function buildRequestCacheKey(
   scope: string,
   query: Record<string, unknown> | undefined,
+  allowedKeys?: readonly string[],
 ): string {
   const normalized = Object.entries(query ?? {})
-    .filter(([, value]) => value !== undefined)
+    .filter(([key, value]) => value !== undefined && (!allowedKeys || allowedKeys.includes(key)))
     .map(([key, value]) => [key, normalizeValue(value)] as const)
     .sort((left, right) => left[0].localeCompare(right[0]));
 

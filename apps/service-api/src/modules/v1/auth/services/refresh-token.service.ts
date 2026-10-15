@@ -5,7 +5,9 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@medical-portal/shared';
+import { getSupabaseAdmin } from '../../../../common/supabase/supabase-admin';
 import { randomBytes, createHash } from 'crypto';
 import { AppException } from '../../../../common/errors';
 import { ErrorCode } from '@medical-portal/shared';
@@ -38,22 +40,12 @@ export interface SessionInfo {
 @Injectable()
 export class RefreshTokenService {
   private readonly logger = new Logger(RefreshTokenService.name);
-  private readonly supabaseAdmin: SupabaseClient;
+  private readonly supabaseAdmin: SupabaseClient<Database>;
   private readonly refreshExpiresIn: number; // in seconds
   private readonly maxActiveSessions: number;
 
   constructor(private configService: ConfigService) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
-    }
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    this.supabaseAdmin = getSupabaseAdmin(this.configService);
 
     // Default to 7 days for refresh tokens
     this.refreshExpiresIn = 7 * 24 * 60 * 60;
@@ -62,7 +54,7 @@ export class RefreshTokenService {
       Number(
         this.configService.get<string>('STUDENT_MAX_ACTIVE_SESSIONS') ??
         this.configService.get<string>('REFRESH_MAX_ACTIVE_SESSIONS') ??
-        '3'
+        '5'
       )
     );
   }
@@ -239,6 +231,28 @@ export class RefreshTokenService {
     }
 
     return true;
+  }
+
+  /**
+   * Revoke one of the caller's own sessions. Scoped by `user_id`, so a token ID
+   * belonging to another student matches nothing and reports `false`.
+   */
+  async revokeOwnSession(tokenId: string, userId: string): Promise<boolean> {
+    const { data, error } = await this.supabaseAdmin
+      .from('refresh_tokens')
+      .update({ revoked_at: new Date().toISOString() })
+      .eq('id', tokenId)
+      .eq('user_id', userId)
+      .eq('user_type', 'student')
+      .is('revoked_at', null)
+      .select('id');
+
+    if (error) {
+      this.logger.warn(`Failed to revoke session (code=${error.code ?? 'unknown'})`);
+      return false;
+    }
+
+    return (data?.length ?? 0) > 0;
   }
 
   /**

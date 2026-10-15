@@ -40,7 +40,7 @@ export class CalendarPublicController {
     @Req() req?: Request,
     @Res({ passthrough: true }) res?: Response,
   ) {
-    const cacheKey = buildRequestCacheKey('v1:calendar:list', (req?.query ?? {}) as Record<string, unknown>);
+    const cacheKey = buildRequestCacheKey('v1:calendar:list', (req?.query ?? {}) as Record<string, unknown>, ['start_date', 'end_date', 'type', 'subject_id']);
     const cached = this.responseCache.get<{ success: true; data: unknown }>(cacheKey);
     if (cached) {
       if (res) {
@@ -96,7 +96,7 @@ export class CalendarPublicController {
     @Req() req?: Request,
     @Res({ passthrough: true }) res?: Response,
   ) {
-    const cacheKey = buildRequestCacheKey('v1:calendar:upcoming', (req?.query ?? {}) as Record<string, unknown>);
+    const cacheKey = buildRequestCacheKey('v1:calendar:upcoming', (req?.query ?? {}) as Record<string, unknown>, ['limit']);
     const cached = this.responseCache.get<{ success: true; data: unknown }>(cacheKey);
     if (cached) {
       if (res) {

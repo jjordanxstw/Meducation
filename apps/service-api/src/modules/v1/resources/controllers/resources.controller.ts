@@ -15,7 +15,13 @@ import {
 import type { Request, Response } from 'express';
 import { ResourcesService } from '../services/resources.service';
 import { GoogleAuthGuard } from '../../auth/guards';
-import { SkipEnvelope, ResponseCacheService, buildRequestCacheKey, applyCacheHeaders } from '../../../../common';
+import {
+  SkipEnvelope,
+  ResponseCacheService,
+  buildRequestCacheKey,
+  applyCacheHeaders,
+  CONTENT_SERVER_CACHE_TTL_SECONDS,
+} from '../../../../common';
 
 const RESOURCE_LIST_CACHE_TTL_SECONDS = 20;
 const RESOURCE_DETAIL_CACHE_TTL_SECONDS = 30;
@@ -35,11 +41,10 @@ export class ResourcesPublicController {
     @Query('section_id') sectionId?: string,
     @Query('lecture_id') lectureId?: string,
     @Query('type') type?: string,
-    @Query('is_active') isActive?: string,
     @Req() req?: Request,
     @Res({ passthrough: true }) res?: Response,
   ) {
-    const cacheKey = buildRequestCacheKey('v1:resources:list', (req?.query ?? {}) as Record<string, unknown>);
+    const cacheKey = buildRequestCacheKey('v1:resources:list', (req?.query ?? {}) as Record<string, unknown>, ['subject_id', 'section_id', 'lecture_id', 'type']);
     const cached = this.responseCache.get<{ success: true; data: unknown }>(cacheKey);
     if (cached) {
       if (res) {
@@ -48,16 +53,10 @@ export class ResourcesPublicController {
       return cached;
     }
 
-    const data = await this.resourcesService.findAll(
-      subjectId,
-      sectionId,
-      lectureId,
-      type,
-      isActive === 'false' ? false : true,
-    );
+    const data = await this.resourcesService.findAllForStudent(subjectId, sectionId, lectureId, type);
 
     const payload = { success: true, data };
-    this.responseCache.set(cacheKey, payload, RESOURCE_LIST_CACHE_TTL_SECONDS);
+    this.responseCache.set(cacheKey, payload, CONTENT_SERVER_CACHE_TTL_SECONDS);
     if (res) {
       applyCacheHeaders(res, { ttlSeconds: RESOURCE_LIST_CACHE_TTL_SECONDS });
     }
@@ -81,10 +80,10 @@ export class ResourcesPublicController {
       return cached;
     }
 
-    const data = await this.resourcesService.findOne(id);
+    const data = await this.resourcesService.findOneForStudent(id);
     const payload = { success: true, data };
 
-    this.responseCache.set(cacheKey, payload, RESOURCE_DETAIL_CACHE_TTL_SECONDS);
+    this.responseCache.set(cacheKey, payload, CONTENT_SERVER_CACHE_TTL_SECONDS);
     if (res) {
       applyCacheHeaders(res, { ttlSeconds: RESOURCE_DETAIL_CACHE_TTL_SECONDS });
     }

@@ -24,6 +24,8 @@ import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService, IdempotencyInterceptor } from '../../../../common';
 import { AppException } from '../../../../common/errors';
 import { ErrorCode } from '@medical-portal/shared';
+import { createLearningResourceSchema, updateLearningResourceSchema } from '@medical-portal/shared';
+import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe';
 
 const INVALIDATE_PREFIXES = ['v1:learning-hub:'];
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB
@@ -91,7 +93,7 @@ export class LearningResourcesAdminController {
   @Post()
   @UseInterceptors(IdempotencyInterceptor)
   @SkipEnvelope()
-  async create(@Body() createDto: any, @Req() req: any) {
+  async create(@Body(new ZodValidationPipe(createLearningResourceSchema)) createDto: any, @Req() req: any) {
     const data = await this.learningResourcesService.create(createDto);
     await this.audit.logAdminCreate('learning_resources', data?.id, data, req.admin, req);
     this.invalidateCache();
@@ -100,7 +102,7 @@ export class LearningResourcesAdminController {
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
+  async update(@Param('id') id: string, @Body(new ZodValidationPipe(updateLearningResourceSchema)) updateDto: any, @Req() req: any) {
     const data = await this.learningResourcesService.update(id, updateDto);
     await this.audit.logAdminUpdate('learning_resources', id, data.oldData, data.newData, req.admin, req);
     this.invalidateCache();

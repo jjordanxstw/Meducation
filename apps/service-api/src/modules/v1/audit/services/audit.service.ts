@@ -6,7 +6,10 @@
 import { isIP } from 'net';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@medical-portal/shared';
+import type { Json } from '@medical-portal/shared';
+import { getSupabaseAdmin } from '../../../../common/supabase/supabase-admin';
 import { AuditAction } from '@medical-portal/shared';
 import { ErrorCode } from '@medical-portal/shared';
 import { CursorPaginationMeta, encodeCursor, decodeCursor } from '@medical-portal/shared';
@@ -35,17 +38,10 @@ export interface GetLogsParams {
 @Injectable()
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);
-  private readonly supabaseAdmin: SupabaseClient;
+  private readonly supabaseAdmin: SupabaseClient<Database>;
 
   constructor(private configService: ConfigService) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
-    }
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    this.supabaseAdmin = getSupabaseAdmin(this.configService);
   }
 
   private resolveSort(
@@ -280,7 +276,7 @@ export class AuditService {
       table_name: tableName,
       record_id: recordId,
       action: AuditAction.DELETE,
-      old_data: oldData ?? null,
+      old_data: (oldData ?? null) as Json,
       user_id: null,
       user_email: admin?.username ?? 'admin',
       ip_address: req.ip ?? null,
@@ -307,7 +303,7 @@ export class AuditService {
       table_name: tableName,
       record_id: recordId,
       action: AuditAction.INSERT,
-      new_data: newData ?? null,
+      new_data: (newData ?? null) as Json,
       user_id: null,
       user_email: admin?.username ?? 'admin',
       ip_address: req.ip ?? null,
@@ -334,8 +330,8 @@ export class AuditService {
       table_name: tableName,
       record_id: recordId,
       action: AuditAction.UPDATE,
-      old_data: oldData ?? null,
-      new_data: newData ?? null,
+      old_data: (oldData ?? null) as Json,
+      new_data: (newData ?? null) as Json,
       user_id: null,
       user_email: admin?.username ?? 'admin',
       ip_address: req.ip ?? null,

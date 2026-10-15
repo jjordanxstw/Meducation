@@ -24,6 +24,8 @@ import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService, IdempotencyInterceptor } from '../../../../common';
 import { AppException } from '../../../../common/errors';
 import { ErrorCode } from '@medical-portal/shared';
+import { createTeamMemberSchema, updateTeamMemberSchema } from '@medical-portal/shared';
+import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe';
 
 const INVALIDATE_TEAM_MEMBER_PREFIXES = ['v1:team-members:'];
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 MB
@@ -91,7 +93,7 @@ export class TeamMembersAdminController {
   @Post()
   @UseInterceptors(IdempotencyInterceptor)
   @SkipEnvelope()
-  async create(@Body() createDto: any, @Req() req: any) {
+  async create(@Body(new ZodValidationPipe(createTeamMemberSchema)) createDto: any, @Req() req: any) {
     const data = await this.teamMembersService.create(createDto);
     await this.audit.logAdminCreate('team_members', data?.id, data, req.admin, req);
     this.invalidateTeamMemberCache();
@@ -100,7 +102,7 @@ export class TeamMembersAdminController {
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
+  async update(@Param('id') id: string, @Body(new ZodValidationPipe(updateTeamMemberSchema)) updateDto: any, @Req() req: any) {
     const data = await this.teamMembersService.update(id, updateDto);
     await this.audit.logAdminUpdate('team_members', id, data.oldData, data.newData, req.admin, req);
     this.invalidateTeamMemberCache();

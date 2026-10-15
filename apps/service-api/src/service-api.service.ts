@@ -1,12 +1,14 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@medical-portal/shared';
+import { tryGetSupabaseAdmin } from './common/supabase/supabase-admin';
 
 @Injectable()
 export class ServiceApiService implements OnModuleInit {
   private readonly logger = new Logger(ServiceApiService.name);
-  private readonly supabaseAdmin: SupabaseClient | null;
+  private readonly supabaseAdmin: SupabaseClient<Database> | null;
   private readonly cleanupEnabled: boolean;
   // Min gap before a /health hit may trigger cleanup again (the in-process @Cron
   // is the primary trigger; this is a belt-and-suspenders for hosts where the
@@ -16,8 +18,6 @@ export class ServiceApiService implements OnModuleInit {
   private cleanupInFlight = false;
 
   constructor(private readonly configService: ConfigService) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
     // Back-compat with the previous env name (HEALTH_SECURITY_CLEANUP_ENABLED).
     this.cleanupEnabled =
       this.configService.get<string>('SECURITY_CLEANUP_ENABLED') !== 'false' &&
@@ -28,13 +28,7 @@ export class ServiceApiService implements OnModuleInit {
         12 * 60 * 60 * 1000,
     );
 
-    if (supabaseUrl && supabaseServiceKey) {
-      this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-        auth: { autoRefreshToken: false, persistSession: false },
-      });
-    } else {
-      this.supabaseAdmin = null;
-    }
+    this.supabaseAdmin = tryGetSupabaseAdmin(this.configService);
   }
 
   getHealthStatus(): { status: string; timestamp: string } {

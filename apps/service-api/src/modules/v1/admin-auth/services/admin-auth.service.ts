@@ -8,7 +8,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@medical-portal/shared';
+import type { Json } from '@medical-portal/shared';
+import { getSupabaseAdmin } from '../../../../common/supabase/supabase-admin';
 import type { StringValue } from 'ms';
 import {
   AdminResponse,
@@ -21,7 +24,7 @@ import { ErrorCode } from '@medical-portal/shared';
 @Injectable()
 export class AdminAuthService {
   private readonly logger = new Logger(AdminAuthService.name);
-  private readonly supabaseAdmin: SupabaseClient;
+  private readonly supabaseAdmin: SupabaseClient<Database>;
   private readonly jwtSecret: string;
   private readonly jwtExpiresIn: StringValue;
 
@@ -29,17 +32,7 @@ export class AdminAuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
   ) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
-    }
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    this.supabaseAdmin = getSupabaseAdmin(this.configService);
 
     const jwtSecret = this.configService.get<string>('JWT_SECRET');
     if (!jwtSecret) {
@@ -228,7 +221,9 @@ export class AdminAuthService {
     }
 
     // Reject reuse of any of the last 3 passwords (newest-first array of hashes).
-    const history: string[] = Array.isArray(admin.password_history) ? admin.password_history : [];
+    const history: string[] = Array.isArray(admin.password_history)
+      ? admin.password_history.filter((hash): hash is string => typeof hash === 'string')
+      : [];
     for (const previousHash of history.slice(0, 3)) {
       if (previousHash && (await bcrypt.compare(newPassword, previousHash))) {
         throw new AppException(
@@ -317,7 +312,7 @@ export class AdminAuthService {
       ip_address: event.ip ?? null,
       user_agent: event.userAgent ?? null,
       success: event.success,
-      metadata: event.metadata ?? {},
+      metadata: (event.metadata ?? {}) as Json,
     });
     if (error) {
       this.logger.warn(`Failed to write auth audit event ${event.eventType} (code=${error.code ?? 'unknown'})`);
