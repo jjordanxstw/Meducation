@@ -1,140 +1,138 @@
-# Medical Learning Portal
+# MedPi
 
-Production-minded full-stack system for medical students to share and review study resources (YouTube + document links) before exams, with separate student and admin experiences.
+MedPi is the lecture and resource library for medical students: every recorded
+lecture, slide deck and important date for Years 1–6, organised by subject and
+section, plus faculty news, a calendar and a curated Learning Hub. Admins manage
+everything from a separate panel. It runs entirely on free tiers.
 
-## Engineer Pitch
-
-This repository demonstrates practical software engineering beyond feature delivery:
-
-- Multi-app monorepo with shared contracts (`@medical-portal/shared`) to reduce cross-app drift.
-- Security-first dual auth architecture (student OAuth flow + admin JWT/refresh flow).
-- Migration-first database operations with deterministic SQL history.
-- Performance and reliability hardening for zero-budget infrastructure (Supabase Free + Render Free + Vercel Hobby).
-
-## Architecture Diagram
+## Architecture
 
 ```mermaid
 flowchart LR
-  studentClient[Student Web\nNext.js + NextAuth + React Query]
-  adminClient[Admin Web\nVite + Refine + Antd]
-  vercel[Vercel Edge/Hosting]
-  render[Render Service\nNestJS API]
-  supabase[(Supabase Postgres)]
-  sharedPkg[@medical-portal/shared\nTypes + Error Contracts]
+  student[Student web\nNext.js 16 · NextAuth · React Query]
+  admin[Admin web\nVite · Refine core · Tailwind + Radix]
+  api[API\nNestJS 11 on Render]
+  db[(Supabase\nPostgres + Storage)]
+  shared[@medical-portal/shared\ntypes · tokens · error codes]
 
-  studentClient --> vercel
-  adminClient --> vercel
-  vercel -->|"/api/v1/*"| render
-  render --> supabase
-
-  sharedPkg -.shared contracts.-> studentClient
-  sharedPkg -.shared contracts.-> adminClient
-  sharedPkg -.shared contracts.-> render
+  student -->|/api/v1 rewrite| api
+  admin -->|/api/v1| api
+  api -->|service role| db
+  shared -.-> student
+  shared -.-> admin
+  shared -.-> api
 ```
 
-## System Design Highlights
-
-### 1) Monorepo and Contract Governance
-
-- `apps/service-api`: NestJS API
-- `apps/web-client`: Next.js student portal
-- `apps/web-admin`: Refine-based admin panel
-- `packages/shared`: unified types, DTO-aligned interfaces, error catalog
-- `database/migrations`: ordered SQL migrations with `_schema_migrations` tracking
-
-This structure lets frontend and backend evolve without breaking integration contracts silently.
-
-### 2) Authentication and Session Security
-
-- Student side: OAuth/NextAuth session flow + API refresh path.
-- Admin side: username/password + JWT access token + rotating refresh token.
-- Strict admin session policy now supports **single active session** (`ADMIN_MAX_ACTIVE_SESSIONS=1`) with DB-backed validation in guard path.
-- Session cleanup + retention managed by SQL functions invoked safely from health-driven maintenance.
-
-### 3) API Engineering
-
-- Versioned REST (`/api/v1`) with modular domain boundaries.
-- Global validation, interceptors, and standardized response envelope.
-- Request tracing and centralized exception mapping to shared error codes.
-- Compression + route-level auth rate-limiting on sensitive endpoints.
-
-### 4) Database Lifecycle
-
-- SQL-first schema evolution (indexes, constraints, RLS, utility functions).
-- Scripted migration apply/status/reset/seed/admin bootstrap flows.
-- Retention cleanup for security artifacts:
-  - `refresh_tokens` (expired/revoked)
-  - `auth_audit_logs` (old events)
-
-## Stack Overview
-
-| Layer | Technologies |
+| Path | What it is |
 |---|---|
-| Monorepo | pnpm workspaces, TypeScript 5, Makefile |
-| API | NestJS 11, Express, Supabase JS, class-validator, cookie-parser |
-| Student Web | Next.js 16 (App Router), NextAuth, React Query v5, Zustand, Tailwind, NextUI |
-| Admin Web | Vite 5, React 18, Refine, React Router v6, React Query v4, Ant Design |
-| Data | Supabase PostgreSQL 15, migration SQL scripts, `pg` tooling |
-| Shared Contracts | `@medical-portal/shared` (types/errors/utilities) |
+| `apps/web-client` | Student portal (Vercel). Today, Subjects, lecture player, ⌘K search, Calendar, News, Learning Hub. |
+| `apps/web-admin` | Admin panel (Vercel). Subject tree editor, YouTube importer, news, calendar, students, audit log. |
+| `apps/service-api` | NestJS API (Render Free). All database access goes through it with the service-role key. |
+| `apps/web-client-e2e` | Playwright: API authorization tests and UI flows against the local stack. |
+| `packages/shared` | Types, design tokens (`HERO_TOKENS`, `MEDPI_TYPE`), error catalog, utilities. |
+| `database/migrations` | Ordered SQL migrations, tracked in `_schema_migrations`. |
+| `supabase/` | Supabase CLI config for the **local** test stack only. |
 
-## Performance and Reliability Posture
+### Environments
 
-- Designed for low-average traffic with bursty exam-period concurrency.
-- Reduced unnecessary client request churn (session-check/cache tuning).
-- Added retention cleanup to prevent unbounded token/audit table growth.
-- Admin single-session enforcement prevents concurrent privileged sessions.
-- Production-safe defaults while staying compatible with free-tier limits.
+| | Front-ends | API | Database |
+|---|---|---|---|
+| Local | `pnpm dev` | `pnpm dev:api` | Local Supabase stack with mock data (recommended) |
+| Staging | Vercel previews from `dev` | Render | **Shared with production** |
+| Production | Vercel from `main` | Render | Supabase project |
 
-## Local Development
+Staging and production share one database on purpose (free tier). That is why
+destructive scripts refuse remote hosts and test data stays on your machine.
 
-### Install
+## Local development
 
 ```bash
 pnpm install
 ```
 
-### Run
+### Test with mock data (recommended)
+
+Needs Docker Desktop. Nothing here touches the shared database.
 
 ```bash
-pnpm dev
-pnpm dev:api
-pnpm dev:web
-pnpm dev:admin
+pnpm db:local:start        # first run pulls the images (~2 GB), then ~20 s
+pnpm db:local:migrate      # applies database/migrations/*.sql
+pnpm db:local:seed         # wipes and refills mock data (Years 1–6, news, calendar…)
+cp apps/service-api/.env.local.example apps/service-api/.env.local
+pnpm dev                   # API on :3000, student app on :3001, admin on :3002
 ```
 
-### Validate
+- Admin login (local only): `admin` / `MedPi-local-1234!`
+- Student sign-in uses your real Google account; the profile is created in the local database.
+- Studio (browse tables): http://127.0.0.1:54323
+- Start over: `pnpm db:local:reset` · stop the containers: `pnpm db:local:stop`
+- Back to the shared database: delete `apps/service-api/.env.local`.
+
+The mock data deliberately includes an inactive subject (`MDZZ999`), an inactive
+section, lecture and files, and unpublished news/announcements, so you can check
+that hidden content stays hidden from students.
+
+### Tests
 
 ```bash
-pnpm build
-pnpm verify:apps
-pnpm lint
+pnpm --filter service-api test          # unit tests
+pnpm --filter web-client-e2e test       # API authz + UI flows (needs the local stack and all three apps running)
 ```
 
-### Database
+For the e2e suite, run the API with `JWT_SECRET=local-only-jwt-secret-change-me-at-least-32-chars`
+(the value in `.env.local.example`) and the student app with
+`NEXTAUTH_SECRET=local-only-nextauth-secret`, or point `E2E_JWT_SECRET` /
+`E2E_NEXTAUTH_SECRET` at your own values. CI does all of this automatically in
+the `integration` job.
+
+### Database scripts
 
 ```bash
-pnpm db:status
-pnpm db:migrate
-pnpm db:seed
-pnpm db:reset
-pnpm admin:create
+pnpm db:status              # applied vs pending migrations
+pnpm db:migrate             # apply pending migrations (uses SUPABASE_DB_URL)
+pnpm db:generate NAME=...   # new migration file
+pnpm admin:create           # create an admin account
+pnpm db:seed / db:reset     # local databases only — both refuse any remote host
 ```
 
-## Environment Notes
+## Release flow
 
-Minimum runtime configuration:
+1. Branch from `dev`, test on localhost with mock data.
+2. Merge to `dev` → staging deploys; check it against real data.
+3. Merge `dev` → `main` → production.
 
-- API (`apps/service-api/.env`): Supabase URL/keys, `JWT_SECRET`, cookie/CORS settings.
-- Student web: `NEXT_PUBLIC_API_URL` and NextAuth settings.
-- Admin web: API base URL and deployment mode values.
+CI runs on every push and PR to `dev`/`main`: typecheck, lint, unit tests, builds,
+the `integration` job (local Supabase + Playwright), a dependency audit and a
+secret scan.
 
-Session policy controls:
+## Operations
 
-```env
-STUDENT_MAX_ACTIVE_SESSIONS=3
-ADMIN_MAX_ACTIVE_SESSIONS=1
-```
+- **Backups:** `.github/workflows/db-backup.yml` dumps the database nightly
+  (02:00 Bangkok), encrypts it and keeps it 30 days as a workflow artifact. Needs the
+  `SUPABASE_BACKUP_DB_URL` (session pooler, port 5432) and `BACKUP_PASSPHRASE` secrets.
+- **Uptime:** point a free pinger at `GET /health/live` every 10 minutes; it also
+  keeps the Render instance warm and triggers token/audit cleanup.
+- **Dependencies:** Renovate (`renovate.json`) opens one grouped PR a week.
 
-## Portfolio Value
+## Configuration
 
-This project showcases end-to-end software engineering capability across architecture, secure auth design, schema governance, operational scripts, and free-tier performance hardening, not just UI implementation.
+API (`apps/service-api/.env`, see `.env.example`):
+
+| Variable | Notes |
+|---|---|
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Required |
+| `JWT_SECRET` | Required; signs student and admin access tokens |
+| `GOOGLE_CLIENT_ID` | Verifies student Google sign-in |
+| `STUDENT_MAX_ACTIVE_SESSIONS` / `ADMIN_MAX_ACTIVE_SESSIONS` | Defaults 5 / 1 |
+| `YOUTUBE_API_KEY` | Optional; enables whole-playlist import in the subject editor |
+| `CORS_ORIGINS` | Comma-separated front-end origins |
+
+Student web: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+`NEXTAUTH_SECRET`, `NEXTAUTH_URL`. Admin web: `VITE_API_URL`, `VITE_STUDENT_SITE_URL`.
+
+## Design
+
+Both apps share one light theme (Tailwind + Radix, shadcn-style components):
+Onest for Latin text with IBM Plex Sans Thai Looped as the Thai fallback, one
+brand blue (`#2f80ed`), and a contrast-safe text ramp. `CLAUDE.md` has the full
+design rules.

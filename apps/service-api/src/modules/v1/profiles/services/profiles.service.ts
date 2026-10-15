@@ -5,7 +5,10 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@medical-portal/shared';
+import type { Enums } from '@medical-portal/shared';
+import { getSupabaseAdmin } from '../../../../common/supabase/supabase-admin';
 import { AppException } from '../../../../common/errors';
 import { ErrorCode } from '@medical-portal/shared';
 import { CursorPaginationMeta, encodeCursor, decodeCursor } from '@medical-portal/shared';
@@ -13,17 +16,10 @@ import { CursorPaginationMeta, encodeCursor, decodeCursor } from '@medical-porta
 @Injectable()
 export class ProfilesService {
   private readonly logger = new Logger(ProfilesService.name);
-  private readonly supabaseAdmin: SupabaseClient;
+  private readonly supabaseAdmin: SupabaseClient<Database>;
 
   constructor(private configService: ConfigService) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
-    }
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    this.supabaseAdmin = getSupabaseAdmin(this.configService);
   }
 
   private mapProfileWriteError(error: { code?: string; message?: string; details?: string | null; hint?: string | null }): never {
@@ -68,7 +64,7 @@ export class ProfilesService {
       .select('*', { count: 'exact' });
 
     if (role) {
-      query = query.eq('role', role);
+      query = query.eq('role', role as Enums<'user_role'>);
     }
     if (yearLevel !== undefined) {
       query = query.eq('year_level', yearLevel);
@@ -118,7 +114,7 @@ export class ProfilesService {
 
     let query = this.supabaseAdmin.from('profiles').select('*', { count: 'exact' });
 
-    if (params.role) query = query.eq('role', params.role);
+    if (params.role) query = query.eq('role', params.role as Enums<'user_role'>);
     if (params.yearLevel !== undefined) query = query.eq('year_level', params.yearLevel);
     if (params.search?.trim()) {
       const term = `%${params.search.trim()}%`;

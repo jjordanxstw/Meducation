@@ -72,13 +72,13 @@ Both apps share a single, owned, headless UI foundation: **Tailwind CSS + Radix 
 
 #### Typography Scale
 - **Two fonts only — no serif display face.** Both apps render a single sans family for everything. Page titles `text-3xl/4xl font-semibold tracking-tight`, slate-900; section headings `text-lg/2xl font-semibold tracking-tight`, slate-900. Weight and size carry the hierarchy, not a contrasting typeface. (`font-serif`/`font-display` classes still exist but are mapped to the same sans stack, so they're harmless no-ops.)
-- Body text: `text-sm text-slate-600` (`var(--ink-2)`)
-- Labels/captions: `text-xs text-slate-400` (`var(--ink-3)`)
-- Fonts: **Lato** for all Latin text, **IBM Plex Sans Thai Looped** for Thai. Lato has no Thai glyphs, so Thai text falls through to IBM Plex Sans Thai Looped automatically in every context — no per-string tagging. web-client loads both via `next/font/google` (`--font-lato`, `--font-ibm-thai`); web-admin loads them via `@fontsource/lato` + `@fontsource/ibm-plex-sans-thai-looped`. `sans`/`serif`/`display`/`heading` in both Tailwind configs all resolve to the same Lato → IBM Plex Sans Thai Looped stack.
+- Body text: `text-sm text-ink-2` (`var(--ink-2)`)
+- Labels/captions: `text-xs text-ink-3` (`#64748b`, 4.8:1 — the lightest colour allowed for text). `ink-4`/`slate-400` is for icons and dividers only, never text.
+- Fonts: **Onest** for all Latin text (since the 2026-10 redesign), **IBM Plex Sans Thai Looped** for Thai. Onest has no Thai glyphs, so Thai text falls through to IBM Plex Sans Thai Looped automatically in every context — no per-string tagging. web-client loads both via `next/font/google` (`--font-onest`, `--font-ibm-thai`); web-admin loads them via `@fontsource-variable/onest` + `@fontsource/ibm-plex-sans-thai-looped`. `sans`/`serif`/`display`/`heading` in both Tailwind configs all resolve to the same Onest → IBM Plex Sans Thai Looped stack. Body text (Latin and Thai) uses a 1.6 line height. Focus: 2px brand ring + 3px soft halo on every interactive element.
 
 #### Color Usage
 - Primary blue (`#2f80ed`): Active states, CTAs, links, emphasis
-- Slate text ramp: `slate-900` → `slate-600` → `slate-400` for primary/secondary/muted
+- Text ramp: `ink-1` → `ink-2` → `ink-3` for primary/secondary/muted (contrast-safe; see `HERO_TOKENS.light.text`). Text links use `brand-hover` (`#1b66cc`) because `#2f80ed` on white is below 4.5:1
 - **Single brand accent** (`brand` / `brand-subtle`) — no multi-color/rainbow card bars
 - Status colors: Red (danger/errors), Amber (warnings/coming-soon), Green (success); calendar event types (exam=red, lecture=blue, holiday=green, event=purple) are kept only where the color carries meaning
 

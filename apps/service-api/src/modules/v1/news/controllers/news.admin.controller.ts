@@ -24,6 +24,8 @@ import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService, IdempotencyInterceptor } from '../../../../common';
 import { AppException } from '../../../../common/errors';
 import { ErrorCode } from '@medical-portal/shared';
+import { createNewsSchema, updateNewsSchema } from '@medical-portal/shared';
+import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe';
 
 const INVALIDATE_NEWS_PREFIXES = ['v1:news:'];
 const MAX_COVER_BYTES = 4 * 1024 * 1024; // 4 MB
@@ -87,7 +89,7 @@ export class NewsAdminController {
   @Post()
   @UseInterceptors(IdempotencyInterceptor)
   @SkipEnvelope()
-  async create(@Body() createDto: any, @Req() req: any) {
+  async create(@Body(new ZodValidationPipe(createNewsSchema)) createDto: any, @Req() req: any) {
     const data = await this.newsService.create(createDto);
     await this.audit.logAdminCreate('news', data?.id, data, req.admin, req);
     this.invalidateNewsCache();
@@ -96,7 +98,7 @@ export class NewsAdminController {
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
+  async update(@Param('id') id: string, @Body(new ZodValidationPipe(updateNewsSchema)) updateDto: any, @Req() req: any) {
     const data = await this.newsService.update(id, updateDto);
     await this.audit.logAdminUpdate('news', id, data.oldData, data.newData, req.admin, req);
     this.invalidateNewsCache();

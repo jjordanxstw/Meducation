@@ -45,7 +45,7 @@ export default function SubjectDetailError({
             </p>
           </div>
 
-          {error.digest && <p className="font-mono text-xs text-slate-400">Error ID: {error.digest}</p>}
+          {error.digest && <p className="font-mono text-xs text-ink-3">Error ID: {error.digest}</p>}
 
           <div className="flex flex-col gap-3 pt-2 sm:flex-row">
             {!isNotFound && (

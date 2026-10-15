@@ -15,15 +15,18 @@
   --brand-ring: rgba(47, 128, 237, 0.35);
 
   /* Surfaces */
-  --bg-canvas: #f5f8fe;
+  --bg-canvas: #f4f8ff;
   --bg-surface: #ffffff;
   --bg-surface-elevated: #ffffff;
   --bg-muted: #f1f5fb;
 
-  /* Ink ramp (slate) */
+  /* Ink ramp (slate) — v2 is contrast-safe: ink-3 is the lightest colour
+     allowed for text (4.8:1); ink-4 is for icons and dividers only. */
   --ink-1: #0f172a;
   --ink-2: #475569;
-  --ink-3: #94a3b8;
+  --ink-3: #64748b;
+  --ink-4: #94a3b8;
+  --link: #1b66cc;
 
   /* Hairline borders */
   --border-subtle: rgba(15, 23, 42, 0.07);
@@ -35,12 +38,19 @@
   --shadow-md: 0 10px 24px rgba(15, 23, 42, 0.08), 0 3px 8px rgba(15, 23, 42, 0.05);
   --shadow-lg: 0 22px 48px rgba(15, 23, 42, 0.12), 0 8px 16px rgba(15, 23, 42, 0.07);
 
+  /* Focus ring (Foundations v2): 2px brand ring plus a 3px soft halo. */
+  --focus-halo: 0 0 0 5px rgba(47, 128, 237, 0.22);
+
   /* Two-font system — Thai falls through to IBM Plex Sans Thai Looped.
      serif stack mirrors sans so headings share the same face. */
-  --font-sans-stack: var(--font-lato), var(--font-ibm-thai), 'Lato',
+  --font-sans-stack: var(--font-onest), var(--font-ibm-thai), 'Onest',
     -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-serif-stack: var(--font-lato), var(--font-ibm-thai), 'Lato',
+  --font-serif-stack: var(--font-onest), var(--font-ibm-thai), 'Onest',
     -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* One line height for Latin and Thai (Foundations v2: 1.6 via font fallback). */
+  --leading-body: 1.6;
+  --leading-thai: 1.6;
 }
 
 html {
@@ -52,15 +62,28 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   min-height: 100vh;
-  /* Calm, faint blue-tinted editorial canvas. */
+  line-height: var(--leading-body);
+  /* Calm, faint blue-tinted canvas. */
   background-color: var(--bg-canvas);
-  background-image: radial-gradient(
-    44rem 44rem at 12% -12%,
-    rgba(47, 128, 237, 0.05),
-    transparent 60%
-  );
-  background-attachment: fixed;
   color: var(--ink-1);
+}
+
+/* Content authored in Thai (lecture titles, news bodies) gets the taller line
+   box. Applied by `lang="th"` or the utility class on mixed-language blocks. */
+:lang(th),
+.leading-thai {
+  line-height: var(--leading-thai);
+}
+
+/* Search fields carry their own clear button; hide the browser's duplicate. */
+input[type='search']::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Tabular figures for dates, counts and countdowns so columns don't jitter. */
+.tabular {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Serif display face for headings. Apply via `font-serif`/`.font-display`. */
@@ -78,8 +101,8 @@ body {
 /* Consistent, calm focus ring for keyboard users (buttons, links, etc.). */
 :focus-visible {
   outline: 2px solid var(--brand);
-  outline-offset: 2px;
-  border-radius: 4px;
+  outline-offset: 0;
+  box-shadow: var(--focus-halo);
 }
 
 /* Text/search fields and select-like triggers show focus via their border,
@@ -170,12 +193,18 @@ textarea:focus-visible,
 .prose-news li {
   margin: 0.35rem 0;
 }
+/* Blockquotes render as the design's info callout. */
 .prose-news blockquote {
   margin: 1.25rem 0;
-  padding: 0.25rem 0 0.25rem 1rem;
-  border-left: 3px solid var(--brand);
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(47, 128, 237, 0.18);
+  border-radius: 0.75rem;
+  background: #f1f6fe;
   color: var(--ink-2);
-  font-style: italic;
+  font-size: 0.9375rem;
+}
+.prose-news blockquote > :last-child {
+  margin-bottom: 0;
 }
 .prose-news img {
   margin: 1.5rem 0;

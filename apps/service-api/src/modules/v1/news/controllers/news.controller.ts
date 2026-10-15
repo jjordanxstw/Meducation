@@ -30,7 +30,7 @@ export class NewsPublicController {
     @Req() req?: Request,
     @Res({ passthrough: true }) res?: Response,
   ) {
-    const cacheKey = buildRequestCacheKey('v1:news:list', (req?.query ?? {}) as Record<string, unknown>);
+    const cacheKey = buildRequestCacheKey('v1:news:list', (req?.query ?? {}) as Record<string, unknown>, ['page', 'pageSize', 'category']);
     const cached = this.responseCache.get<{ success: true; data: unknown; pagination: unknown }>(cacheKey);
     if (cached) {
       if (res) applyCacheHeaders(res, { ttlSeconds: NEWS_LIST_CACHE_TTL_SECONDS });

@@ -12,6 +12,7 @@ import { existsSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createInterface } from 'readline';
+import { assertLocalDatabase, databaseHost, isLocalDatabase, localUrlFromArgs } from './lib/db-target';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -22,10 +23,11 @@ function loadEnv(): { dbUrl: string; projectId: string } {
     join(__dirname, '../../.env'),
   ];
 
-  let dbUrl = process.env.SUPABASE_DB_URL || '';
+  let dbUrl = localUrlFromArgs() || process.env.SUPABASE_DB_URL || '';
   let supabaseUrl = process.env.SUPABASE_URL || '';
 
-  for (const envPath of envPaths) {
+  // `--local` or an explicit SUPABASE_DB_URL wins over any .env file.
+  for (const envPath of dbUrl ? [] : envPaths) {
     if (existsSync(envPath)) {
       const envContent = readFileSync(envPath, 'utf-8');
       for (const line of envContent.split('\n')) {
@@ -71,7 +73,8 @@ async function getTables(client: Client): Promise<string[]> {
 async function main(): Promise<void> {
   console.log('WARNING: This will DELETE ALL DATA!');
   const { dbUrl, projectId } = loadEnv();
-  console.log(`Target: ${projectId}`);
+  assertLocalDatabase(dbUrl, 'db:reset');
+  console.log(`Target: ${projectId} (${databaseHost(dbUrl)})`);
 
   const confirmed = process.argv.includes('--confirm') || await confirm();
   if (!confirmed) {
@@ -79,7 +82,7 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+  const client = new Client({ connectionString: dbUrl, ssl: isLocalDatabase(dbUrl) ? false : { rejectUnauthorized: false } });
 
   try {
     await client.connect();

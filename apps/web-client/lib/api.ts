@@ -308,6 +308,9 @@ export const api = {
     verify: (idToken: string) => apiClient.post('/auth/verify', { idToken }),
     me: () => apiClient.get('/auth/me'),
     watermark: () => apiClient.get('/auth/watermark'),
+    sessions: () => apiClient.get('/auth/sessions'),
+    revokeSession: (tokenId: string) => apiClient.post(`/auth/sessions/${tokenId}/revoke`),
+    revokeOtherSessions: () => apiClient.post('/auth/sessions/revoke-others'),
     refresh: () =>
       apiClient.post('/auth/refresh', undefined, {
         _skipSessionCheck: true,

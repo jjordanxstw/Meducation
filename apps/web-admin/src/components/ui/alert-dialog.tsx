@@ -1,3 +1,4 @@
+import type * as React from 'react';
 import { forwardRef } from 'react';
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog';
 import { cn } from '@/lib/utils';
@@ -54,7 +55,7 @@ const AlertDialogTitle = forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Title
     ref={ref}
-    className={cn('font-serif text-lg font-semibold tracking-tight text-slate-900', className)}
+    className={cn('text-lg font-semibold tracking-tight text-slate-900', className)}
     {...props}
   />
 ));

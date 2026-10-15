@@ -17,6 +17,9 @@ interface DatePickerProps {
   max?: string;
   className?: string;
   'aria-invalid'?: boolean;
+  'aria-label'?: string;
+  /** Borderless text trigger ("1 Sep 2026") for dense rows like the tree editor. */
+  variant?: 'field' | 'inline';
 }
 
 /**
@@ -33,6 +36,8 @@ export function DatePicker({
   max,
   className,
   'aria-invalid': ariaInvalid,
+  'aria-label': ariaLabel,
+  variant = 'field',
 }: DatePickerProps) {
   const selected = value ? dayjs(value) : null;
   const [open, setOpen] = useState(false);
@@ -64,14 +69,23 @@ export function DatePicker({
           type="button"
           disabled={disabled}
           aria-invalid={ariaInvalid}
+          aria-label={ariaLabel}
           className={cn(
-            'flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm shadow-subtle transition-colors focus:outline-none focus:border-slate-300 disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-red-400',
-            !selected && 'text-slate-400',
+            variant === 'inline'
+              ? 'flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] text-ink-2 transition-colors hover:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60'
+              : 'flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm shadow-subtle transition-colors focus:outline-none focus:border-slate-300 disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-red-400',
+            !selected && 'text-ink-3',
             className,
           )}
         >
-          <span>{selected ? selected.format('DD/MM/YYYY') : placeholder}</span>
-          <CalendarIcon className="size-4 shrink-0 text-slate-400" />
+          {variant === 'inline' ? (
+            <span className="whitespace-nowrap tabular-nums">{selected ? selected.format('D MMM YYYY') : placeholder}</span>
+          ) : (
+            <>
+              <span>{selected ? selected.format('DD/MM/YYYY') : placeholder}</span>
+              <CalendarIcon className="size-4 shrink-0 text-ink-3" />
+            </>
+          )}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-[260px] p-3" align="start">
@@ -97,7 +111,7 @@ export function DatePicker({
 
         <div className="grid grid-cols-7 gap-0.5">
           {WEEKDAYS.map((d) => (
-            <div key={d} className="py-1 text-center text-[11px] font-medium text-slate-400">
+            <div key={d} className="py-1 text-center text-[11px] font-medium text-ink-3">
               {d}
             </div>
           ))}

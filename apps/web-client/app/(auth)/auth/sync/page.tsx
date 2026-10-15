@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Book, AlertCircle } from 'lucide-react';
+import { RefreshCw, AlertCircle, Loader2 } from 'lucide-react';
 import axios from 'axios';
 import { api } from '@/lib/api';
 
@@ -69,11 +69,7 @@ function AuthSyncContent() {
   const [syncError, setSyncError] = useState<'network_unreachable' | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
 
-  const syncSteps = [
-    'Verifying identity...',
-    'Syncing your profile...',
-    'Almost there...',
-  ];
+  const syncSteps = ['Verifying your account', 'Syncing your profile', 'Opening MedPi'];
 
   // Cycle the reassuring progress copy while the backend session is established.
   useEffect(() => {
@@ -81,7 +77,7 @@ function AuthSyncContent() {
       return;
     }
     const interval = setInterval(() => {
-      setStepIndex((prev) => (prev + 1) % syncSteps.length);
+      setStepIndex((prev) => Math.min(prev + 1, syncSteps.length - 1));
     }, 1500);
     return () => clearInterval(interval);
     // syncSteps is a stable literal; only re-run when the error state changes.
@@ -184,14 +180,14 @@ function AuthSyncContent() {
 
   if (syncError) {
     return (
-      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f4f8ff] p-3 sm:p-4">
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-canvas p-3 sm:p-4">
         <div className="w-full max-w-md space-y-5 rounded-3xl border border-red-200 bg-white p-6 text-center shadow-xl shadow-red-500/5">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50">
             <AlertCircle className="h-7 w-7 text-red-500" />
           </div>
           <div className="space-y-1.5">
-            <h2 className="text-lg font-semibold text-slate-900">Connection failed</h2>
-            <p className="text-sm text-slate-500">
+            <h2 className="text-lg font-semibold text-ink-1">Connection failed</h2>
+            <p className="text-sm text-ink-3">
               We couldn&apos;t reach the server. Check your internet connection and try again.
             </p>
           </div>
@@ -210,16 +206,19 @@ function AuthSyncContent() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f4f8ff]">
-      <div className="rounded-3xl border border-slate-200/70 bg-white px-10 py-8 text-center shadow-lift">
-        {/* Animated logo with pulse ring */}
-        <div className="relative mx-auto mb-5 flex h-12 w-12 items-center justify-center">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-20" />
-          <Book className="relative h-12 w-12 text-brand" />
-        </div>
-        <p className="text-sm font-medium text-slate-500 transition-opacity duration-300">
-          {syncSteps[stepIndex]}
+    <div className="flex min-h-screen items-center justify-center bg-canvas p-4">
+      <div className="w-full max-w-sm text-center" role="status" aria-live="polite">
+        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-subtle">
+          <Loader2 className="h-6 w-6 animate-spin text-brand" aria-hidden />
+        </span>
+        <h1 className="mt-4 text-xl font-semibold tracking-tight text-ink-1">Signing you in…</h1>
+        <p className="mt-1 text-sm text-ink-2 tabular">
+          {syncSteps[stepIndex]} · step {stepIndex + 1} of {syncSteps.length}
         </p>
+        <div className="mx-auto mt-3 h-1.5 w-40 overflow-hidden rounded-full bg-slate-200">
+          <div className="h-full rounded-full bg-brand transition-all duration-500" style={{ width: `${((stepIndex + 1) / syncSteps.length) * 100}%` }} />
+        </div>
+        <p className="mt-4 text-xs text-ink-3">The first sign-in of the day can take up to 30 s while the server wakes up.</p>
       </div>
     </div>
   );
@@ -229,9 +228,9 @@ export default function AuthSyncPage() {
   return (
     <Suspense
       fallback={
-        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f4f8ff]">
+        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-canvas">
           <div className="rounded-3xl border border-slate-200/70 bg-white px-8 py-6 text-center shadow-lift">
-            <p className="text-sm font-medium text-slate-500">Checking your session...</p>
+            <p className="text-sm font-medium text-ink-3">Checking your session...</p>
           </div>
         </div>
       }

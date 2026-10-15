@@ -68,6 +68,9 @@ jobs:
       - name: Lint web-admin
         run: pnpm --filter web-admin lint
 
+      - name: Lint web-client
+        run: pnpm --filter web-client lint
+
       - name: Typecheck all
         run: pnpm -r typecheck
 
@@ -95,9 +98,99 @@ jobs:
           fetch-depth: 0
 
       - name: Scan diff for leaked secrets
-        uses: trufflesecurity/trufflehog@main
+        # Pinned: @main runs whatever was pushed upstream minutes ago.
+        uses: trufflesecurity/trufflehog@v3.88.0
         with:
           # Scan only the PR/push diff for speed (not full history).
           base: ${{ github.event.pull_request.base.sha || github.event.before }}
           head: ${{ github.sha }}
           extra_args: --only-verified
+  # API authorization rules + student/admin UI flows against a throwaway local
+  # Supabase stack with mock data (never the shared staging/prod database).
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SUPABASE_URL: http://127.0.0.1:54321
+      # Supabase CLI demo keys: public, local-only, useless against hosted projects.
+      SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+      SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+      JWT_SECRET: local-only-jwt-secret-change-me-at-least-32-chars
+      NEXTAUTH_SECRET: local-only-nextauth-secret
+      NEXTAUTH_URL: http://localhost:3001
+      NEXT_PUBLIC_API_URL: http://localhost:3000
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ci-build-placeholder.apps.googleusercontent.com
+      GOOGLE_CLIENT_ID: ci-build-placeholder.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: ci-build-placeholder-secret
+      VITE_API_URL: http://localhost:3000/api/v1
+      CORS_ORIGINS: http://localhost:3001,http://localhost:3002
+      ADMIN_MAX_ACTIVE_SESSIONS: '5'
+      NODE_ENV: development
+      OTEL_SDK_DISABLED: 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start local Supabase stack
+        run: pnpm db:local:start
+
+      - name: Migrate and seed mock data
+        run: pnpm db:local:migrate && pnpm db:local:seed
+
+      - name: Check generated database types are current
+        run: |
+          pnpm db:local:types
+          git diff --exit-code packages/shared/src/types/database.generated.ts || {
+            echo "::error::Database types are stale. Run 'pnpm db:local:types' after adding a migration and commit the result."
+            exit 1
+          }
+
+      - name: Build apps
+        # The job runs with NODE_ENV=development (local cookies for the API);
+        # a Next.js production build fails under it while prerendering
+        # /_global-error, so builds get production explicitly.
+        env:
+          NODE_ENV: production
+        run: |
+          pnpm --filter @medical-portal/shared build
+          pnpm --filter service-api build
+          pnpm --filter web-client build
+          pnpm --filter web-admin build
+
+      - name: Start API, student app and admin
+        run: |
+          (cd apps/service-api && PORT=3000 node dist/main > /tmp/api.log 2>&1 &)
+          (cd apps/web-client && npx next start -p 3001 > /tmp/web.log 2>&1 &)
+          (cd apps/web-admin && npx vite preview --port 3002 --strictPort > /tmp/admin.log 2>&1 &)
+          for url in http://localhost:3000/health/live http://localhost:3001/login http://localhost:3002/login; do
+            timeout 120 bash -c "until curl -sf -o /dev/null $url; do sleep 2; done"
+          done
+
+      - name: Install Playwright browser
+        run: pnpm --filter web-client-e2e exec playwright install --with-deps chromium
+
+      - name: Run integration tests
+        run: pnpm --filter web-client-e2e test
+
+      - name: Upload logs and report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-debug
+          path: |
+            /tmp/*.log
+            apps/web-client-e2e/test-results/
+          retention-days: 7

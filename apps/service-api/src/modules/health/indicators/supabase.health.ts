@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HealthIndicatorResult, HealthIndicatorService } from '@nestjs/terminus';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@medical-portal/shared';
+import { tryGetSupabaseAdmin } from '../../../common/supabase/supabase-admin';
 
 /**
  * Health indicator that verifies Supabase/Postgres connectivity with a cheap
@@ -9,20 +11,13 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
  */
 @Injectable()
 export class SupabaseHealthIndicator {
-  private readonly client: SupabaseClient | null;
+  private readonly client: SupabaseClient<Database> | null;
 
   constructor(
     config: ConfigService,
     private readonly healthIndicatorService: HealthIndicatorService,
   ) {
-    const url = config.get<string>('SUPABASE_URL');
-    const key = config.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-    this.client =
-      url && key
-        ? createClient(url, key, {
-            auth: { autoRefreshToken: false, persistSession: false },
-          })
-        : null;
+    this.client = tryGetSupabaseAdmin(config);
   }
 
   async pingCheck(key = 'database'): Promise<HealthIndicatorResult> {

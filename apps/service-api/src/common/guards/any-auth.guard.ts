@@ -57,24 +57,6 @@ export class AnyAuthGuard {
       }
     }
 
-    // Fallback to session cookie (for students)
-    const cookieName = process.env.SESSION_COOKIE_NAME || 'session';
-    const cookieHeader = request.headers.cookie;
-    if (cookieHeader) {
-      const match = cookieHeader
-        .split(';')
-        .map((s: string) => s.trim())
-        .find((s: string) => s.startsWith(`${cookieName}=`));
-      if (match) {
-        const sessionToken = match.substring(cookieName.length + 1);
-        const user = await this.authService.getSessionFromCookie(sessionToken);
-        if (user) {
-          request.user = user;
-          request.admin = null; // Clear admin to avoid confusion
-          return true;
-        }
-      }
-    }
 
     throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, undefined, 'Missing or invalid authentication');
   }

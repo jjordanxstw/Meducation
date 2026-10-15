@@ -19,6 +19,8 @@ import { NewsCategoriesService } from '../services/news-categories.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService, IdempotencyInterceptor } from '../../../../common';
+import { createNewsCategorySchema, updateNewsCategorySchema } from '@medical-portal/shared';
+import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe';
 
 // Recoloring/renaming a category changes how articles render, so flush news caches.
 const INVALIDATE_NEWS_CATEGORY_PREFIXES = ['v1:news:'];
@@ -57,7 +59,7 @@ export class NewsCategoriesAdminController {
   @Post()
   @UseInterceptors(IdempotencyInterceptor)
   @SkipEnvelope()
-  async create(@Body() createDto: any, @Req() req: any) {
+  async create(@Body(new ZodValidationPipe(createNewsCategorySchema)) createDto: any, @Req() req: any) {
     const data = await this.newsCategoriesService.create(createDto);
     await this.audit.logAdminCreate('news_categories', data?.id, data, req.admin, req);
     this.invalidateCaches();
@@ -66,7 +68,7 @@ export class NewsCategoriesAdminController {
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
+  async update(@Param('id') id: string, @Body(new ZodValidationPipe(updateNewsCategorySchema)) updateDto: any, @Req() req: any) {
     const data = await this.newsCategoriesService.update(id, updateDto);
     await this.audit.logAdminUpdate('news_categories', id, data.oldData, data.newData, req.admin, req);
     this.invalidateCaches();

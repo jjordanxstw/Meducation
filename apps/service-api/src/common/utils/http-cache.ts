@@ -1,5 +1,12 @@
 import { Response } from 'express';
 
+/**
+ * Server-side TTL for the curriculum read path (subjects → resources). Every
+ * admin write drops these entries immediately, so the TTL only bounds how long
+ * a cold entry lives; the browser keeps its own short `max-age` (P3).
+ */
+export const CONTENT_SERVER_CACHE_TTL_SECONDS = 300;
+
 interface CacheHeaderOptions {
   ttlSeconds: number;
   isPrivate?: boolean;

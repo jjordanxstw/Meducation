@@ -111,14 +111,14 @@ export function TimePicker({
               commitDraft();
             }
           }}
-          className="h-full w-full min-w-0 bg-transparent placeholder:text-slate-400 focus:outline-none disabled:cursor-not-allowed"
+          className="h-full w-full min-w-0 bg-transparent placeholder:text-ink-3 focus:outline-none disabled:cursor-not-allowed"
         />
         <PopoverTrigger asChild>
           <button
             type="button"
             disabled={disabled}
             aria-label="Pick a time"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ink-3 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed"
           >
             <Clock className="size-4" />
           </button>

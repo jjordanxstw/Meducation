@@ -5,8 +5,16 @@ interface CacheEntry<T> {
   expiresAt: number;
 }
 
+/**
+ * Upper bound on cached responses. Render Free has 512 MB; without a cap,
+ * requests with ever-changing query strings could grow the map forever (S6).
+ */
+export const RESPONSE_CACHE_MAX_ENTRIES = 500;
+
 @Injectable()
 export class ResponseCacheService {
+  // Map iteration order is insertion order, so the first key is always the
+  // least recently used one (get() re-inserts on hit).
   private readonly store = new Map<string, CacheEntry<unknown>>();
 
   get<T>(key: string): T | null {
@@ -20,6 +28,8 @@ export class ResponseCacheService {
       return null;
     }
 
+    this.store.delete(key);
+    this.store.set(key, entry);
     return this.clone(entry.value) as T;
   }
 
@@ -28,10 +38,21 @@ export class ResponseCacheService {
       return;
     }
 
+    this.store.delete(key);
     this.store.set(key, {
       value: this.clone(value),
       expiresAt: Date.now() + ttlSeconds * 1000,
     });
+
+    while (this.store.size > RESPONSE_CACHE_MAX_ENTRIES) {
+      const oldestKey = this.store.keys().next().value;
+      if (oldestKey === undefined) break;
+      this.store.delete(oldestKey);
+    }
+  }
+
+  get size(): number {
+    return this.store.size;
   }
 
   delete(key: string): void {

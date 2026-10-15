@@ -1,5 +1,6 @@
 'use client';
 
+import type * as React from 'react';
 import { forwardRef } from 'react';
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { cn } from '@/lib/utils';
@@ -54,7 +55,7 @@ const DropdownMenuLabel = forwardRef<
 >(({ className, ...props }, ref) => (
   <DropdownMenuPrimitive.Label
     ref={ref}
-    className={cn('px-2.5 py-1.5 text-xs font-medium text-slate-400', className)}
+    className={cn('px-2.5 py-1.5 text-xs font-medium text-ink-3', className)}
     {...props}
   />
 ));

@@ -1,3 +1,4 @@
+import type * as React from 'react';
 import { forwardRef } from 'react';
 import * as SwitchPrimitive from '@radix-ui/react-switch';
 import { cn } from '@/lib/utils';

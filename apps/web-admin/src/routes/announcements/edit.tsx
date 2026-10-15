@@ -1,12 +1,9 @@
-/**
- * Announcements Edit Page
- */
-import { useParams } from 'react-router-dom';
-import { AnnouncementForm } from './announcement-form';
+import { Navigate, useParams } from 'react-router-dom';
 
+/** Old URL — announcements open in the side panel. */
 const AnnouncementsEdit = () => {
   const { id } = useParams<{ id: string }>();
-  return <AnnouncementForm id={id} />;
+  return <Navigate to={id ? `/announcements?edit=${id}` : '/announcements'} replace />;
 };
 
 export default AnnouncementsEdit;

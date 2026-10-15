@@ -1,3 +1,4 @@
+import type * as React from 'react';
 import { forwardRef } from 'react';
 import * as SelectPrimitive from '@radix-ui/react-select';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
@@ -14,14 +15,14 @@ const SelectTrigger = forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      'flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-subtle transition-colors placeholder:text-slate-400 focus:outline-none focus:border-slate-300 disabled:cursor-not-allowed disabled:opacity-60 data-[placeholder]:text-slate-400 aria-[invalid=true]:border-red-400 [&>span]:line-clamp-1',
+      'flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-subtle transition-colors placeholder:text-ink-3 focus:outline-none focus:border-slate-300 disabled:cursor-not-allowed disabled:opacity-60 data-[placeholder]:text-ink-3 aria-[invalid=true]:border-red-400 [&>span]:line-clamp-1',
       className,
     )}
     {...props}
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <ChevronDown className="size-4 shrink-0 text-slate-400" />
+      <ChevronDown className="size-4 shrink-0 text-ink-3" />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ));
@@ -42,7 +43,7 @@ const SelectContent = forwardRef<
       )}
       {...props}
     >
-      <SelectPrimitive.ScrollUpButton className="flex items-center justify-center py-1 text-slate-400">
+      <SelectPrimitive.ScrollUpButton className="flex items-center justify-center py-1 text-ink-3">
         <ChevronUp className="size-4" />
       </SelectPrimitive.ScrollUpButton>
       <SelectPrimitive.Viewport
@@ -53,7 +54,7 @@ const SelectContent = forwardRef<
       >
         {children}
       </SelectPrimitive.Viewport>
-      <SelectPrimitive.ScrollDownButton className="flex items-center justify-center py-1 text-slate-400">
+      <SelectPrimitive.ScrollDownButton className="flex items-center justify-center py-1 text-ink-3">
         <ChevronDown className="size-4" />
       </SelectPrimitive.ScrollDownButton>
     </SelectPrimitive.Content>

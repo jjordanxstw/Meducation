@@ -19,6 +19,8 @@ import { EventTypesService } from '../services/event-types.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService, IdempotencyInterceptor } from '../../../../common';
+import { createCalendarEventTypeSchema, updateCalendarEventTypeSchema } from '@medical-portal/shared';
+import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe';
 
 // Renaming/recoloring a type changes how events render, so flush calendar caches.
 const INVALIDATE_EVENT_TYPE_PREFIXES = ['v1:calendar:', 'v1:admin:statistics:'];
@@ -57,7 +59,7 @@ export class EventTypesAdminController {
   @Post()
   @UseInterceptors(IdempotencyInterceptor)
   @SkipEnvelope()
-  async create(@Body() createDto: any, @Req() req: any) {
+  async create(@Body(new ZodValidationPipe(createCalendarEventTypeSchema)) createDto: any, @Req() req: any) {
     const data = await this.eventTypesService.create(createDto);
     await this.audit.logAdminCreate('event_types', data?.id, data, req.admin, req);
     this.invalidateCaches();
@@ -66,7 +68,7 @@ export class EventTypesAdminController {
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
+  async update(@Param('id') id: string, @Body(new ZodValidationPipe(updateCalendarEventTypeSchema)) updateDto: any, @Req() req: any) {
     const data = await this.eventTypesService.update(id, updateDto);
     await this.audit.logAdminUpdate('event_types', id, data.oldData, data.newData, req.admin, req);
     this.invalidateCaches();

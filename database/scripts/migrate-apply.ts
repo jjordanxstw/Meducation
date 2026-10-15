@@ -14,6 +14,7 @@ import { Client } from 'pg';
 import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { databaseHost, isLocalDatabase, localUrlFromArgs } from './lib/db-target';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = join(__dirname, '../migrations');
@@ -31,10 +32,11 @@ function loadEnv(): { dbUrl: string; projectId: string } {
     join(__dirname, '../../.env'),
   ];
 
-  let dbUrl = process.env.SUPABASE_DB_URL || '';
+  let dbUrl = localUrlFromArgs() || process.env.SUPABASE_DB_URL || '';
   let supabaseUrl = process.env.SUPABASE_URL || '';
 
-  for (const envPath of envPaths) {
+  // `--local` or an explicit SUPABASE_DB_URL wins over any .env file.
+  for (const envPath of dbUrl ? [] : envPaths) {
     if (existsSync(envPath)) {
       const envContent = readFileSync(envPath, 'utf-8');
       const lines = envContent.split('\n');
@@ -131,11 +133,11 @@ async function applyMigration(client: Client, migration: Migration): Promise<voi
 
 async function main(): Promise<void> {
   const { dbUrl, projectId } = loadEnv();
-  console.log(`> Connecting to ${projectId}...`);
+  console.log(`> Connecting to ${projectId} (${databaseHost(dbUrl)})...`);
 
   const client = new Client({
     connectionString: dbUrl,
-    ssl: { rejectUnauthorized: false },
+    ssl: isLocalDatabase(dbUrl) ? false : { rejectUnauthorized: false },
     connectionTimeoutMillis: 10000,
   });
 
