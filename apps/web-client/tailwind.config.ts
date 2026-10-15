@@ -21,6 +21,8 @@ const config: Config = {
         'ink-1': light.text.primary,
         'ink-2': light.text.secondary,
         'ink-3': light.text.muted,
+        'ink-4': light.text.faint,
+        canvas: light.bg.canvas,
         'border-subtle': light.border.subtle,
         'border-default': light.border.default,
         brand: BRAND[500],
@@ -37,14 +39,14 @@ const config: Config = {
         info: light.state.info.fg,
       },
       fontFamily: {
-        // Two-font system: Lato (Latin) with IBM Plex Sans Thai Looped for Thai.
+        // Two-font system: Onest (Latin) with IBM Plex Sans Thai Looped for Thai.
         // serif/display/heading share the same stack so no element renders a
         // different face.
-        sans: ['var(--font-lato)', 'var(--font-ibm-thai)', 'Lato', 'sans-serif'],
-        body: ['var(--font-lato)', 'var(--font-ibm-thai)', 'Lato', 'sans-serif'],
-        serif: ['var(--font-lato)', 'var(--font-ibm-thai)', 'Lato', 'sans-serif'],
-        display: ['var(--font-lato)', 'var(--font-ibm-thai)', 'Lato', 'sans-serif'],
-        heading: ['var(--font-lato)', 'var(--font-ibm-thai)', 'Lato', 'sans-serif'],
+        sans: ['var(--font-onest)', 'var(--font-ibm-thai)', 'Onest', 'system-ui', 'sans-serif'],
+        body: ['var(--font-onest)', 'var(--font-ibm-thai)', 'Onest', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-onest)', 'var(--font-ibm-thai)', 'Onest', 'system-ui', 'sans-serif'],
+        display: ['var(--font-onest)', 'var(--font-ibm-thai)', 'Onest', 'system-ui', 'sans-serif'],
+        heading: ['var(--font-onest)', 'var(--font-ibm-thai)', 'Onest', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         subtle: 'var(--shadow-subtle)',

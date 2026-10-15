@@ -12,9 +12,7 @@ function handleGlobalError(error: unknown) {
   // 401 redirects are primarily handled by the axios interceptor; 403 has no
   // other handler, so route it to the forbidden page here.
   if (status === 403 && !window.location.pathname.endsWith('/forbidden')) {
-    const seg = window.location.pathname.split('/').filter(Boolean)[0];
-    const localePrefix = seg === 'en' || seg === 'th' ? `/${seg}` : '';
-    window.location.href = `${localePrefix}/forbidden`;
+    window.location.href = '/forbidden';
   }
 }
 

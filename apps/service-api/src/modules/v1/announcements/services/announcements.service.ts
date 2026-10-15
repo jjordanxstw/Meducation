@@ -5,24 +5,20 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@medical-portal/shared';
+import type { TablesInsert } from '@medical-portal/shared';
+import { getSupabaseAdmin } from '../../../../common/supabase/supabase-admin';
 import { AppException } from '../../../../common/errors';
 import { ErrorCode } from '@medical-portal/shared';
 
 @Injectable()
 export class AnnouncementsService {
   private readonly logger = new Logger(AnnouncementsService.name);
-  private readonly supabaseAdmin: SupabaseClient;
+  private readonly supabaseAdmin: SupabaseClient<Database>;
 
   constructor(private configService: ConfigService) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
-    }
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    this.supabaseAdmin = getSupabaseAdmin(this.configService);
   }
 
   private resolveSort(
@@ -182,7 +178,7 @@ export class AnnouncementsService {
    * Admin: create announcement
    */
   async create(data: any, createdByAdminId: string) {
-    const announcementData: Record<string, unknown> = {
+    const announcementData: TablesInsert<'announcements'> = {
       title: data.title,
       content: data.content,
       is_pinned: data.is_pinned ?? false,

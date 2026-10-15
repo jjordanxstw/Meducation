@@ -15,7 +15,13 @@ import {
 import type { Request, Response } from 'express';
 import { SubjectsService } from '../services/subjects.service';
 import { GoogleAuthGuard } from '../../auth/guards';
-import { SkipEnvelope, ResponseCacheService, buildRequestCacheKey, applyCacheHeaders } from '../../../../common';
+import {
+  SkipEnvelope,
+  ResponseCacheService,
+  buildRequestCacheKey,
+  applyCacheHeaders,
+  CONTENT_SERVER_CACHE_TTL_SECONDS,
+} from '../../../../common';
 
 const SUBJECT_LIST_CACHE_TTL_SECONDS = 20;
 const SUBJECT_DETAIL_CACHE_TTL_SECONDS = 30;
@@ -36,11 +42,10 @@ export class SubjectsPublicController {
   @SkipEnvelope()
   async findAll(
     @Query('year_level') yearLevel?: string,
-    @Query('is_active') isActive?: string,
     @Req() req?: Request,
     @Res({ passthrough: true }) res?: Response,
   ) {
-    const cacheKey = buildRequestCacheKey('v1:subjects:list', (req?.query ?? {}) as Record<string, unknown>);
+    const cacheKey = buildRequestCacheKey('v1:subjects:list', (req?.query ?? {}) as Record<string, unknown>, ['year_level']);
     const cached = this.responseCache.get<{ success: true; data: unknown }>(cacheKey);
     if (cached) {
       if (res) {
@@ -49,9 +54,10 @@ export class SubjectsPublicController {
       return cached;
     }
 
-    const data = await this.subjectsService.findAll(
+    // Students only ever see active content; `is_active` is not a client-tunable
+    // filter on the public read path.
+    const data = await this.subjectsService.findAllForStudentWithStats(
       yearLevel ? parseInt(yearLevel, 10) : undefined,
-      isActive === 'false' ? false : true,
     );
 
     const payload = {
@@ -59,7 +65,7 @@ export class SubjectsPublicController {
       data,
     };
 
-    this.responseCache.set(cacheKey, payload, SUBJECT_LIST_CACHE_TTL_SECONDS);
+    this.responseCache.set(cacheKey, payload, CONTENT_SERVER_CACHE_TTL_SECONDS);
     if (res) {
       applyCacheHeaders(res, { ttlSeconds: SUBJECT_LIST_CACHE_TTL_SECONDS });
     }
@@ -87,14 +93,14 @@ export class SubjectsPublicController {
       return cached;
     }
 
-    const data = await this.subjectsService.findOne(id);
+    const data = await this.subjectsService.findOne(id, { activeOnly: true });
 
     const payload = {
       success: true,
       data,
     };
 
-    this.responseCache.set(cacheKey, payload, SUBJECT_DETAIL_CACHE_TTL_SECONDS);
+    this.responseCache.set(cacheKey, payload, CONTENT_SERVER_CACHE_TTL_SECONDS);
     if (res) {
       applyCacheHeaders(res, { ttlSeconds: SUBJECT_DETAIL_CACHE_TTL_SECONDS });
     }

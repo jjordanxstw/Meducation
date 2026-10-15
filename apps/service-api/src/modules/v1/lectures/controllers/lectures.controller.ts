@@ -15,7 +15,13 @@ import {
 import type { Request, Response } from 'express';
 import { LecturesService } from '../services/lectures.service';
 import { GoogleAuthGuard } from '../../auth/guards';
-import { SkipEnvelope, ResponseCacheService, buildRequestCacheKey, applyCacheHeaders } from '../../../../common';
+import {
+  SkipEnvelope,
+  ResponseCacheService,
+  buildRequestCacheKey,
+  applyCacheHeaders,
+  CONTENT_SERVER_CACHE_TTL_SECONDS,
+} from '../../../../common';
 
 const LECTURE_LIST_CACHE_TTL_SECONDS = 20;
 const LECTURE_DETAIL_CACHE_TTL_SECONDS = 30;
@@ -33,11 +39,10 @@ export class LecturesPublicController {
   async findAll(
     @Query('subject_id') subjectId?: string,
     @Query('section_id') sectionId?: string,
-    @Query('is_active') isActive?: string,
     @Req() req?: Request,
     @Res({ passthrough: true }) res?: Response,
   ) {
-    const cacheKey = buildRequestCacheKey('v1:lectures:list', (req?.query ?? {}) as Record<string, unknown>);
+    const cacheKey = buildRequestCacheKey('v1:lectures:list', (req?.query ?? {}) as Record<string, unknown>, ['subject_id', 'section_id']);
     const cached = this.responseCache.get<{ success: true; data: unknown }>(cacheKey);
     if (cached) {
       if (res) {
@@ -46,14 +51,10 @@ export class LecturesPublicController {
       return cached;
     }
 
-    const data = await this.lecturesService.findAll(
-      subjectId,
-      sectionId,
-      isActive === 'false' ? false : true,
-    );
+    const data = await this.lecturesService.findAllForStudent(subjectId, sectionId);
 
     const payload = { success: true, data };
-    this.responseCache.set(cacheKey, payload, LECTURE_LIST_CACHE_TTL_SECONDS);
+    this.responseCache.set(cacheKey, payload, CONTENT_SERVER_CACHE_TTL_SECONDS);
     if (res) {
       applyCacheHeaders(res, { ttlSeconds: LECTURE_LIST_CACHE_TTL_SECONDS });
     }
@@ -77,10 +78,10 @@ export class LecturesPublicController {
       return cached;
     }
 
-    const data = await this.lecturesService.findOne(id);
+    const data = await this.lecturesService.findOneForStudent(id);
     const payload = { success: true, data };
 
-    this.responseCache.set(cacheKey, payload, LECTURE_DETAIL_CACHE_TTL_SECONDS);
+    this.responseCache.set(cacheKey, payload, CONTENT_SERVER_CACHE_TTL_SECONDS);
     if (res) {
       applyCacheHeaders(res, { ttlSeconds: LECTURE_DETAIL_CACHE_TTL_SECONDS });
     }

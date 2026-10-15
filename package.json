@@ -28,6 +28,13 @@
     "db:reset": "tsx database/scripts/reset.ts",
     "db:seed": "tsx database/scripts/seed.ts",
     "db:generate": "tsx database/scripts/generate-migration.ts",
+    "db:local:start": "npx -y supabase@2.121.0 start",
+    "db:local:stop": "npx -y supabase@2.121.0 stop",
+    "db:local:status": "npx -y supabase@2.121.0 status",
+    "db:local:migrate": "tsx database/scripts/migrate-apply.ts --local",
+    "db:local:seed": "tsx database/scripts/seed-mock.ts",
+    "db:local:types": "npx -y supabase@2.121.0 gen types typescript --local --schema public > packages/shared/src/types/database.generated.ts.tmp && node database/scripts/write-db-types.mjs",
+    "db:local:reset": "tsx database/scripts/reset.ts --local --confirm && pnpm db:local:migrate && pnpm db:local:seed",
     "admin:create": "tsx database/scripts/create-admin.ts"
   },
   "devDependencies": {
@@ -44,36 +51,44 @@
     "overrides": {
       "zod": "4.4.3",
       "caniuse-lite": "^1.0.30001793",
-      "axios": "^1.18.0",
+      "axios": "^1.20.0",
       "minimatch": "^9.0.7",
       "rollup": "^4.59.0",
       "lodash": "^4.17.23",
       "lodash-es": "^4.17.23",
-      "multer": "^2.2.0",
+      "multer": "^2.3.0",
       "qs": "^6.14.2",
       "file-type": "^21.3.1",
       "esbuild": "^0.25.0",
       "ws": "^8.21.0",
       "form-data": "^4.0.6",
       "flatted": "^3.4.2",
-      "fast-uri": "^3.1.4",
+      "fast-uri": "^3.1.7",
       "postcss": "^8.5.12",
-      "sharp": "^0.35.0",
+      "sharp": "^0.35.5",
       "@opentelemetry/propagator-jaeger": "^2.9.0",
-      "brace-expansion@>=2.0.0 <2.1.3": "2.1.3",
-      "js-yaml@>=4.0.0 <4.3.0": "^4.3.0",
-      "js-yaml@>=3.0.0 <3.15.0": "^3.15.0",
       "path-to-regexp@<0.1.13": "0.1.13",
       "path-to-regexp@>=8.0.0 <8.4.0": "^8.4.0",
       "picomatch@<2.3.2": "2.3.2",
-      "picomatch@>=4.0.0 <4.0.4": "^4.0.4"
+      "picomatch@>=4.0.0 <4.0.4": "^4.0.4",
+      "brace-expansion@>=2.0.0 <2.1.6": "^2.1.6",
+      "js-yaml@>=4.0.0 <4.3.2": "^4.3.2",
+      "js-yaml@>=3.0.0 <3.15.2": "^3.15.2",
+      "nanoid": "^3.3.18",
+      "source-map-js": "^1.2.2",
+      "browserslist": "^4.28.7",
+      "ip-address": "^10.3.1",
+      "handlebars": "^4.7.10",
+      "proxy-addr": "^2.0.8",
+      "@grpc/grpc-js": "^1.14.5"
     },
     "auditConfig": {
       "ignoreGhsas": [
         "GHSA-r5fr-rjxr-66jc",
         "GHSA-gv7w-rqvm-qjhr",
         "GHSA-fx2h-pf6j-xcff",
-        "GHSA-mh99-v99m-4gvg"
+        "GHSA-mh99-v99m-4gvg",
+        "GHSA-vfj7-8cjw-p6xm"
       ]
     }
   },

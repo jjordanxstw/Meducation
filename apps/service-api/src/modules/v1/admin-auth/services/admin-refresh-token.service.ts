@@ -5,7 +5,9 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@medical-portal/shared';
+import { getSupabaseAdmin } from '../../../../common/supabase/supabase-admin';
 import { randomBytes, createHash } from 'crypto';
 import { AppException } from '../../../../common/errors';
 import { ErrorCode } from '@medical-portal/shared';
@@ -41,22 +43,12 @@ export interface AdminSessionInfo {
 @Injectable()
 export class AdminRefreshTokenService {
   private readonly logger = new Logger(AdminRefreshTokenService.name);
-  private readonly supabaseAdmin: SupabaseClient;
+  private readonly supabaseAdmin: SupabaseClient<Database>;
   private readonly refreshExpiresIn: number; // in seconds
   private readonly maxActiveSessions: number;
 
   constructor(private configService: ConfigService) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
-    }
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    this.supabaseAdmin = getSupabaseAdmin(this.configService);
 
     // Default to 7 days for refresh tokens (can be configured)
     this.refreshExpiresIn = 7 * 24 * 60 * 60;
@@ -219,7 +211,7 @@ export class AdminRefreshTokenService {
     id: string;
     user_id: string;
     family_id: string;
-    ip_address?: string | null;
+    ip_address?: unknown;
     user_agent?: string | null;
   }): Promise<void> {
     const { error: rpcError } = await this.supabaseAdmin.rpc('revoke_token_family', {
@@ -233,7 +225,7 @@ export class AdminRefreshTokenService {
       user_id: existingToken.user_id,
       user_type: 'admin',
       event_type: 'REFRESH_REUSE_DETECTED',
-      ip_address: existingToken.ip_address ?? null,
+      ip_address: typeof existingToken.ip_address === 'string' ? existingToken.ip_address : null,
       user_agent: existingToken.user_agent ?? null,
       success: false,
       failure_reason: 'refresh_token_reuse',

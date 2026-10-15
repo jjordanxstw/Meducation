@@ -5,24 +5,20 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@medical-portal/shared';
+import { getSupabaseAdmin } from '../../../../common/supabase/supabase-admin';
 import { AppException } from '../../../../common/errors';
+import { omitKey } from '../../../../common/utils/omit-key';
 import { ErrorCode } from '@medical-portal/shared';
 
 @Injectable()
 export class SectionsService {
   private readonly logger = new Logger(SectionsService.name);
-  private readonly supabaseAdmin: SupabaseClient;
+  private readonly supabaseAdmin: SupabaseClient<Database>;
 
   constructor(private configService: ConfigService) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
-    }
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    this.supabaseAdmin = getSupabaseAdmin(this.configService);
   }
 
   private requireStringField(payload: any, field: string): string {
@@ -162,6 +158,61 @@ export class SectionsService {
     }
 
     return data;
+  }
+
+  /**
+   * Student read path: active sections whose parent subject is also active.
+   * The `!inner` embed lets PostgREST filter on the parent's flag.
+   */
+  async findAllForStudent(subjectId?: string) {
+    let query = this.supabaseAdmin
+      .from('sections')
+      .select('*, parent_subject:subjects!sections_subject_id_fkey!inner(is_active)')
+      .eq('is_active', true)
+      .eq('parent_subject.is_active', true);
+
+    if (subjectId) {
+      query = query.eq('subject_id', subjectId);
+    }
+
+    const { data, error } = await query.order('order_index', { ascending: true });
+
+    if (error) {
+      this.logger.warn(`Failed to fetch sections (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'section' }, 'Failed to fetch sections');
+    }
+
+    return (data ?? []).map((row) => omitKey(row, 'parent_subject'));
+  }
+
+  /**
+   * Student read path: an inactive section, or one under an inactive subject,
+   * is reported as not found. Inactive lectures/resources are dropped.
+   */
+  async findOneForStudent(id: string) {
+    const { data, error } = await this.supabaseAdmin
+      .from('sections')
+      .select(`*, parent_subject:subjects!sections_subject_id_fkey(is_active), lectures:lectures(*, resources:resources(*))`)
+      .eq('id', id)
+      .single();
+
+    if (error || !data.is_active || !data.parent_subject?.is_active) {
+      throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'section', id }, 'Section not found');
+    }
+
+    const { lectures, ...section } = omitKey(data, 'parent_subject');
+    const byOrder = (a: { order_index: number }, b: { order_index: number }) => a.order_index - b.order_index;
+
+    return {
+      ...section,
+      lectures: (lectures ?? [])
+        .filter((lecture: { is_active: boolean }) => lecture.is_active)
+        .sort(byOrder)
+        .map((lecture: { resources?: Array<{ is_active: boolean; order_index: number }> }) => ({
+          ...lecture,
+          resources: (lecture.resources ?? []).filter((resource) => resource.is_active).sort(byOrder),
+        })),
+    };
   }
 
   async create(data: any) {

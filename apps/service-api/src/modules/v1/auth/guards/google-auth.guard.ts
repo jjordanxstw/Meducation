@@ -34,21 +34,6 @@ export class GoogleAuthGuard {
       }
     }
 
-    // Fallback to old session cookie for backward compatibility
-    const cookieName = process.env.SESSION_COOKIE_NAME || 'session';
-    const cookieHeader = request.headers.cookie;
-    if (cookieHeader) {
-      const match = cookieHeader.split(';').map((s: string) => s.trim()).find((s: string) => s.startsWith(`${cookieName}=`));
-      if (match) {
-        const sessionToken = match.substring(cookieName.length + 1);
-        const user = await this.authService.getSessionFromCookie(sessionToken);
-        if (user) {
-          request.user = user;
-          return true;
-        }
-      }
-    }
-
     throw new AppException(ErrorCode.AUTH_TOKEN_INVALID, undefined, 'Missing or invalid authentication');
   }
 }

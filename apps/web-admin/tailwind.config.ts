@@ -17,6 +17,7 @@ const config: Config = {
         'ink-1': light.text.primary,
         'ink-2': light.text.secondary,
         'ink-3': light.text.muted,
+        'ink-4': light.text.faint,
         'border-subtle': light.border.subtle,
         'border-default': light.border.default,
         // Single brand accent — unified with web-client via shared tokens.
@@ -34,14 +35,14 @@ const config: Config = {
         info: light.state.info.fg,
       },
       fontFamily: {
-        // Two-font system: Lato (Latin) with IBM Plex Sans Thai Looped for Thai.
+        // Two-font system: Onest (Latin) with IBM Plex Sans Thai Looped for Thai.
         // serif/display/heading intentionally resolve to the same stack so no
         // element renders a different face.
-        sans: ['Lato', 'IBM Plex Sans Thai Looped', 'system-ui', 'sans-serif'],
-        body: ['Lato', 'IBM Plex Sans Thai Looped', 'system-ui', 'sans-serif'],
-        serif: ['Lato', 'IBM Plex Sans Thai Looped', 'system-ui', 'sans-serif'],
-        display: ['Lato', 'IBM Plex Sans Thai Looped', 'system-ui', 'sans-serif'],
-        heading: ['Lato', 'IBM Plex Sans Thai Looped', 'system-ui', 'sans-serif'],
+        sans: ['Onest Variable', 'Onest', 'IBM Plex Sans Thai Looped', 'system-ui', 'sans-serif'],
+        body: ['Onest Variable', 'Onest', 'IBM Plex Sans Thai Looped', 'system-ui', 'sans-serif'],
+        serif: ['Onest Variable', 'Onest', 'IBM Plex Sans Thai Looped', 'system-ui', 'sans-serif'],
+        display: ['Onest Variable', 'Onest', 'IBM Plex Sans Thai Looped', 'system-ui', 'sans-serif'],
+        heading: ['Onest Variable', 'Onest', 'IBM Plex Sans Thai Looped', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         subtle: light.shadow.sm,

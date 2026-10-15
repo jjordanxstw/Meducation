@@ -5,24 +5,20 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@medical-portal/shared';
+import type { TablesInsert } from '@medical-portal/shared';
+import { getSupabaseAdmin } from '../../../../common/supabase/supabase-admin';
 import { AppException } from '../../../../common/errors';
 import { ErrorCode } from '@medical-portal/shared';
 
 @Injectable()
 export class CalendarService {
   private readonly logger = new Logger(CalendarService.name);
-  private readonly supabaseAdmin: SupabaseClient;
+  private readonly supabaseAdmin: SupabaseClient<Database>;
 
   constructor(private configService: ConfigService) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
-    }
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    this.supabaseAdmin = getSupabaseAdmin(this.configService);
   }
 
   private parseDateOnly(value: unknown, field: string): string {
@@ -198,7 +194,7 @@ export class CalendarService {
 
     let query = this.supabaseAdmin
       .from('calendar_events')
-      .select('*, subjects:subject_id(name, code)', shouldPaginate ? { count: 'exact' } : undefined);
+      .select('*, subjects:subject_id(name, code, year_level)', shouldPaginate ? { count: 'exact' } : undefined);
 
     if (startDate) {
       query = query.gte('start_date', startDate);
@@ -285,6 +281,27 @@ export class CalendarService {
     return this.withResolvedColors(data);
   }
 
+  /** Events that started before today, newest first (capped at 20). */
+  async getRecent(limit: number = 4) {
+    const today = new Date().toISOString().split('T')[0];
+    const safeLimit = Math.min(20, Math.max(1, Number(limit) || 4));
+
+    const { data, error } = await this.supabaseAdmin
+      .from('calendar_events')
+      .select('*, subjects:subject_id(name, code)')
+      .lt('start_date', today)
+      .order('start_date', { ascending: false })
+      .order('start_time', { ascending: false, nullsFirst: false })
+      .limit(safeLimit);
+
+    if (error) {
+      this.logger.warn(`Failed to fetch recent events (code=${error.code ?? 'unknown'})`);
+      throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'calendar_event' }, 'Failed to fetch recent events');
+    }
+
+    return this.withResolvedColors(data);
+  }
+
   async findOne(id: string) {
     const { data, error } = await this.supabaseAdmin
       .from('calendar_events')
@@ -301,7 +318,7 @@ export class CalendarService {
   }
 
   async create(data: any, createdBy: string) {
-    const eventData: Record<string, unknown> = { ...(data || {}) };
+    const eventData = { ...(data || {}) };
     delete eventData.created_by;
 
     if (createdBy) {
@@ -312,7 +329,7 @@ export class CalendarService {
 
     const { data: result, error } = await this.supabaseAdmin
       .from('calendar_events')
-      .insert(eventData)
+      .insert(eventData as TablesInsert<'calendar_events'>)
       .select()
       .single();
 

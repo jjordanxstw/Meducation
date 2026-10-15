@@ -5,24 +5,20 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@medical-portal/shared';
+import { getSupabaseAdmin } from '../../../../common/supabase/supabase-admin';
 import { AppException } from '../../../../common/errors';
+import { omitKey } from '../../../../common/utils/omit-key';
 import { ErrorCode } from '@medical-portal/shared';
 
 @Injectable()
 export class LecturesService {
   private readonly logger = new Logger(LecturesService.name);
-  private readonly supabaseAdmin: SupabaseClient;
+  private readonly supabaseAdmin: SupabaseClient<Database>;
 
   constructor(private configService: ConfigService) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
-    }
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    this.supabaseAdmin = getSupabaseAdmin(this.configService);
   }
 
   private requireStringField(payload: any, field: string): string {
@@ -228,6 +224,87 @@ export class LecturesService {
     }
 
     return data;
+  }
+
+  /** Filtering happens in PostgREST through the `!inner` parent embeds. */
+  private studentLectureQuery(subjectId?: string, sectionId?: string) {
+    let query = this.supabaseAdmin
+      .from('lectures')
+      .select(`
+        *,
+        parent_section:sections!lectures_section_id_fkey!inner(
+          is_active,
+          subject_id,
+          parent_subject:subjects!sections_subject_id_fkey!inner(is_active)
+        )
+      `)
+      .eq('is_active', true)
+      .eq('parent_section.is_active', true)
+      .eq('parent_section.parent_subject.is_active', true);
+
+    if (sectionId) {
+      query = query.eq('section_id', sectionId);
+    }
+    if (subjectId) {
+      query = query.eq('parent_section.subject_id', subjectId);
+    }
+    return query;
+  }
+
+  /**
+   * Student read path: active lectures whose section and subject are both
+   * active, paged past PostgREST's 1,000-row cap (the search index loads all).
+   */
+  async findAllForStudent(subjectId?: string, sectionId?: string) {
+    const rows: Array<Record<string, unknown>> = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await this.studentLectureQuery(subjectId, sectionId)
+        .order('order_index', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, from + 999);
+
+      if (error) {
+        this.logger.warn(`Failed to fetch lectures (code=${error.code ?? 'unknown'})`);
+        throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'lecture' }, 'Failed to fetch lectures');
+      }
+      rows.push(...(data ?? []));
+      if ((data?.length ?? 0) < 1000) break;
+    }
+
+    return rows.map((row) => omitKey(row, 'parent_section'));
+  }
+
+  /**
+   * Student read path: an inactive lecture, or one under an inactive
+   * section/subject, is reported as not found. Inactive resources are dropped.
+   */
+  async findOneForStudent(id: string) {
+    const { data, error } = await this.supabaseAdmin
+      .from('lectures')
+      .select(`
+        *,
+        resources:resources(*),
+        parent_section:sections!lectures_section_id_fkey(
+          is_active,
+          parent_subject:subjects!sections_subject_id_fkey(is_active)
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    const ancestorsActive = data?.parent_section?.is_active && data.parent_section.parent_subject?.is_active;
+    if (error || !data.is_active || !ancestorsActive) {
+      throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'lecture', id }, 'Lecture not found');
+    }
+
+    const { resources, ...lecture } = omitKey(data, 'parent_section');
+
+    return {
+      ...lecture,
+      resources: (resources ?? [])
+        .filter((resource: { is_active: boolean }) => resource.is_active)
+        .sort((a: { order_index: number }, b: { order_index: number }) => a.order_index - b.order_index),
+    };
   }
 
   async create(data: any) {

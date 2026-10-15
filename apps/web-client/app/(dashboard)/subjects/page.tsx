@@ -1,65 +1,37 @@
 'use client';
 
 /**
- * Subjects Page — list all subjects, filter by year, search.
- * Tailwind + Radix primitives only.
+ * Subjects — every subject as a near-square card. Opens on the student's own
+ * year ("your year first"); "All" groups every year with theirs on top.
  */
 
-import { useState, Suspense, useMemo, useCallback, useEffect } from 'react';
-import { useSearchParams, usePathname, useRouter } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { BookOpen, Search, X } from 'lucide-react';
+import { YEAR_LEVELS } from '@medical-portal/shared';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Book, X } from 'lucide-react';
 import { SubjectCard } from '@/components/ui/SubjectCard';
 import { PageTransition } from '@/components/PageTransition';
 import { DataFreshnessDot } from '@/components/ui/DataFreshnessDot';
+import { EmptyState } from '@/components/states/EmptyState';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useSubjects } from '@/hooks/use-subjects';
+import { useStudyYear } from '@/lib/study-year';
+import { cn } from '@/lib/utils';
 
-const YEAR_OPTIONS = [
-  { key: 'all', label: 'All' },
-  { key: '1', label: 'Year 1' },
-  { key: '2', label: 'Year 2' },
-  { key: '3', label: 'Year 3' },
-];
+const GRID = 'grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3';
 
-function YearFilterTab({
-  isActive,
-  onClick,
-  children,
-}: {
-  isActive: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
+function SubjectGridSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`min-h-[40px] shrink-0 rounded-full px-4 py-2 text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
-        isActive
-          ? 'bg-brand font-semibold text-white shadow-subtle'
-          : 'font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function SubjectSkeletonGrid() {
-  return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
-      {[...Array(8)].map((_, i) => (
-        <div key={i} className="flex min-h-[14rem] flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white">
-          <Skeleton className="h-28 w-full rounded-none sm:h-32 lg:h-36" />
-          <div className="flex flex-1 flex-col gap-2 p-4">
-            <Skeleton className="h-3 w-16 rounded" />
+    <div className={GRID} aria-busy="true" aria-label="Loading subjects">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white">
+          <Skeleton className="aspect-[16/9] rounded-none" />
+          <div className="space-y-2 p-4">
             <Skeleton className="h-4 w-3/4 rounded" />
-            <div className="mt-auto flex gap-2 pt-2">
-              <Skeleton className="h-5 w-16 rounded-full" />
-              <Skeleton className="h-5 w-20 rounded-full" />
-            </div>
+            <Skeleton className="h-3 w-full rounded" />
+            <Skeleton className="h-3 w-1/2 rounded" />
           </div>
         </div>
       ))}
@@ -67,14 +39,44 @@ function SubjectSkeletonGrid() {
   );
 }
 
-function SubjectsLoading() {
+function YearSegments({
+  years,
+  selected,
+  ownYear,
+  onSelect,
+}: {
+  years: readonly number[];
+  selected: string;
+  ownYear: number | null;
+  onSelect: (year: string) => void;
+}) {
+  const options = [{ key: 'all', label: 'All' }, ...years.map((year) => ({ key: String(year), label: `Year ${year}` }))];
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <div className="h-9 w-48 animate-pulse rounded-lg bg-slate-200" />
-        <div className="h-4 w-64 animate-pulse rounded-lg bg-slate-200" />
+    <div className="-mx-4 overflow-x-auto px-4 scrollbar-hide sm:mx-0 sm:px-0">
+      <div className="inline-flex gap-0.5 rounded-xl bg-slate-200/60 p-1" role="group" aria-label="Filter by year">
+        {options.map((option) => {
+          const active = option.key === selected;
+          return (
+            <button
+              key={option.key}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onSelect(option.key)}
+              className={cn(
+                'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3.5 text-sm transition-colors',
+                active ? 'bg-white font-semibold text-ink-1 shadow-subtle' : 'font-medium text-ink-2 hover:text-ink-1',
+              )}
+            >
+              {option.label}
+              {ownYear !== null && option.key === String(ownYear) ? (
+                <span className="rounded bg-brand-subtle px-1 text-[10px] font-bold uppercase tracking-wide text-brand-hover">
+                  You
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
       </div>
-      <SubjectSkeletonGrid />
     </div>
   );
 }
@@ -83,76 +85,99 @@ function SubjectsContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { year: studyYear } = useStudyYear();
   const yearParam = searchParams.get('year');
   const queryParam = searchParams.get('q') ?? '';
 
+  // ?year= wins; otherwise open on the student's own year.
   const selectedYear = useMemo(() => {
-    if (yearParam && ['1', '2', '3', '4', '5', '6'].includes(yearParam)) return yearParam;
-    return 'all';
-  }, [yearParam]);
+    if (yearParam === 'all') return 'all';
+    if (yearParam && YEAR_LEVELS.map(String).includes(yearParam)) return yearParam;
+    return studyYear ? String(studyYear) : 'all';
+  }, [yearParam, studyYear]);
 
   const [searchQuery, setSearchQuery] = useState(queryParam);
-  const debouncedQuery = useDebounce(searchQuery, 300);
+  const debouncedQuery = useDebounce(searchQuery, 250);
 
-  // Seed the field when arriving via the top-bar search (?q=...). This only
-  // fires when the URL's `q` changes, so typing in this field never fights it.
   useEffect(() => {
     setSearchQuery(queryParam);
   }, [queryParam]);
 
-  const handleYearSelect = useCallback(
-    (nextYear: string) => {
+  const selectYear = useCallback(
+    (year: string) => {
       const params = new URLSearchParams(searchParams.toString());
-      params.set('year', nextYear);
-      const query = params.toString();
-      router.replace(query ? `${pathname}?${query}` : pathname);
+      params.set('year', year);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     },
     [pathname, router, searchParams],
   );
 
-  const { data: subjects = [], isLoading, isFetching } = useSubjects({ yearLevel: selectedYear });
+  const { data: subjects = [], isLoading, isFetching, isError, refetch } = useSubjects({ yearLevel: 'all' });
 
   const query = debouncedQuery.trim().toLowerCase();
-  const filteredSubjects = subjects.filter((subject) => {
-    if (!query) return true;
-    return subject.name.toLowerCase().includes(query) || subject.code.toLowerCase().includes(query);
-  });
+  const matchesQuery = (subject: (typeof subjects)[number]) =>
+    !query || subject.name.toLowerCase().includes(query) || subject.code.toLowerCase().includes(query);
+  // A search looks across every year so nothing hides behind the year filter.
+  const filtered = subjects.filter(
+    (subject) => matchesQuery(subject) && (query || selectedYear === 'all' || String(subject.year_level) === selectedYear),
+  );
 
-  // In the "All" view, present subjects under per-year headings so the list
-  // stays scannable; a specific year renders as a single flat grid.
-  const groupedByYear = useMemo(() => {
-    if (selectedYear !== 'all') return null;
-    const groups = new Map<number, typeof filteredSubjects>();
-    for (const subject of filteredSubjects) {
-      const year = subject.year_level;
-      if (!groups.has(year)) groups.set(year, []);
-      groups.get(year)!.push(subject);
+  const years = useMemo(() => {
+    const present = new Set(subjects.map((subject) => subject.year_level));
+    return present.size ? YEAR_LEVELS.filter((year) => present.has(year)) : YEAR_LEVELS;
+  }, [subjects]);
+
+  const grouped = useMemo(() => {
+    if (selectedYear !== 'all' && !query) return null;
+    const groups = new Map<number, typeof filtered>();
+    for (const subject of filtered) {
+      groups.set(subject.year_level, [...(groups.get(subject.year_level) ?? []), subject]);
     }
-    return [...groups.entries()].sort(([a], [b]) => a - b);
-  }, [selectedYear, filteredSubjects]);
+    return [...groups.entries()].sort(([a], [b]) => {
+      if (a === studyYear) return -1;
+      if (b === studyYear) return 1;
+      return a - b;
+    });
+  }, [selectedYear, query, filtered, studyYear]);
+
+  const renderCard = (subject: (typeof subjects)[number]) => (
+    <SubjectCard
+      key={subject.id}
+      id={subject.id}
+      code={subject.code}
+      name={subject.name}
+      description={subject.description}
+      thumbnailUrl={subject.thumbnail_url}
+      sectionsCount={subject.sections_count}
+      lecturesCount={subject.lectures_count}
+      filesCount={subject.files_count}
+      newLecturesCount={subject.new_lectures_count}
+      searchQuery={debouncedQuery}
+    />
+  );
 
   return (
     <PageTransition className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <h1 className="font-serif text-3xl font-semibold tracking-tight text-slate-900">Subjects</h1>
-          <p className="text-base text-slate-500">Browse and open the subjects you want to study.</p>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-semibold tracking-tight text-ink-1">Subjects</h1>
+          <p className="text-sm text-ink-3 sm:text-base">
+            {subjects.length > 0 ? `${subjects.length} subjects across Years 1–6 · your year first` : 'Every subject and its recorded lectures'}
+          </p>
         </div>
-
         <Input
-          aria-label="Search subjects"
-          placeholder="Search subjects…"
+          aria-label="Filter subjects"
+          placeholder="Filter by name or code"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(event) => setSearchQuery(event.target.value)}
           startContent={<Search className="h-4 w-4" />}
           endContent={
             searchQuery ? (
               <button
                 type="button"
-                aria-label="Clear search"
+                aria-label="Clear filter"
                 onClick={() => setSearchQuery('')}
-                className="flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-ink-3 hover:bg-slate-100 hover:text-ink-1"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -160,86 +185,44 @@ function SubjectsContent() {
           }
           wrapperClassName="w-full sm:w-72"
         />
-      </div>
+      </header>
 
-      {/* Year filter tabs */}
-      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide sm:flex-wrap sm:overflow-visible">
-        {YEAR_OPTIONS.map((option) => (
-          <YearFilterTab
-            key={option.key}
-            isActive={selectedYear === option.key}
-            onClick={() => handleYearSelect(option.key)}
-          >
-            {option.label}
-          </YearFilterTab>
-        ))}
-      </div>
+      <YearSegments years={years} selected={query ? 'all' : selectedYear} ownYear={studyYear} onSelect={selectYear} />
 
-      {/* Grid / states */}
       {isLoading ? (
-        <SubjectSkeletonGrid />
-      ) : filteredSubjects.length > 0 ? (
-        groupedByYear ? (
-          <div className="relative space-y-8">
-            <DataFreshnessDot isFetching={isFetching && !isLoading} />
-            {groupedByYear.map(([year, yearSubjects]) => (
-              <section key={year} className="space-y-3">
-                <h2 className="text-lg font-semibold tracking-tight text-slate-900">Year {year}</h2>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
-                  {yearSubjects.map((subject) => (
-                    <SubjectCard
-                      key={subject.id}
-                      id={subject.id}
-                      code={subject.code}
-                      name={subject.name}
-                      description={subject.description}
-                      yearLevel={subject.year_level}
-                      thumbnailUrl={subject.thumbnail_url}
-                      searchQuery={debouncedQuery}
-                    />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        ) : (
-          <div className="relative grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
-            <DataFreshnessDot isFetching={isFetching && !isLoading} />
-            {filteredSubjects.map((subject) => (
-              <SubjectCard
-                key={subject.id}
-                id={subject.id}
-                code={subject.code}
-                name={subject.name}
-                description={subject.description}
-                yearLevel={subject.year_level}
-                thumbnailUrl={subject.thumbnail_url}
-                searchQuery={debouncedQuery}
-              />
-            ))}
-          </div>
-        )
+        <SubjectGridSkeleton />
+      ) : isError ? (
+        <EmptyState
+          tone="error"
+          title="Couldn’t load subjects"
+          description="Check your connection and try again."
+          action={{ label: 'Try again', onClick: () => void refetch() }}
+        />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={BookOpen}
+          title={query ? `Nothing matches “${debouncedQuery.trim()}”` : 'No subjects for this year yet'}
+          description={query ? 'Try a subject code like “MDCV” or clear the filter.' : 'New subjects appear here as soon as they are published.'}
+          action={query ? { label: 'Clear filter', onClick: () => setSearchQuery('') } : undefined}
+        />
+      ) : grouped ? (
+        <div className="relative space-y-10">
+          <DataFreshnessDot isFetching={isFetching && !isLoading} />
+          {grouped.map(([year, yearSubjects]) => (
+            <section key={year} className="space-y-4" aria-labelledby={`year-${year}`}>
+              <h2 id={`year-${year}`} className="flex items-baseline gap-2 text-lg font-semibold tracking-tight text-ink-1">
+                Year {year}
+                {year === studyYear ? <span className="text-sm font-medium text-brand-hover">your year</span> : null}
+                <span className="text-sm font-normal text-ink-3">{yearSubjects.length} subjects</span>
+              </h2>
+              <div className={GRID}>{yearSubjects.map(renderCard)}</div>
+            </section>
+          ))}
+        </div>
       ) : (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200/70 bg-white px-6 py-16 text-center shadow-subtle">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-subtle">
-            <Book className="h-6 w-6 text-brand" />
-          </div>
-          <h3 className="font-serif text-xl font-semibold text-slate-900">No subjects found</h3>
-          <p className="text-sm text-slate-500">
-            {debouncedQuery
-              ? `Nothing matches “${debouncedQuery}”.`
-              : 'No subjects available for this year yet.'}
-          </p>
-          {debouncedQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
-            >
-              <X className="h-3.5 w-3.5" />
-              Clear search
-            </button>
-          )}
+        <div className={cn(GRID, 'relative')}>
+          <DataFreshnessDot isFetching={isFetching && !isLoading} />
+          {filtered.map(renderCard)}
         </div>
       )}
     </PageTransition>
@@ -248,7 +231,7 @@ function SubjectsContent() {
 
 export default function SubjectsPage() {
   return (
-    <Suspense fallback={<SubjectsLoading />}>
+    <Suspense fallback={<SubjectGridSkeleton />}>
       <SubjectsContent />
     </Suspense>
   );

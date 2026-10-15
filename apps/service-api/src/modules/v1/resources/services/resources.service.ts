@@ -5,24 +5,25 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@medical-portal/shared';
+import type { Enums } from '@medical-portal/shared';
+import { getSupabaseAdmin } from '../../../../common/supabase/supabase-admin';
 import { AppException } from '../../../../common/errors';
+import { omitKey } from '../../../../common/utils/omit-key';
+import { normalizeLink } from '../../../../common/utils/normalize-link';
 import { ErrorCode } from '@medical-portal/shared';
+
+/** PostgREST's per-request row cap; full reads page through in steps of this size. */
+const FULL_FETCH_PAGE_SIZE = 1000;
 
 @Injectable()
 export class ResourcesService {
   private readonly logger = new Logger(ResourcesService.name);
-  private readonly supabaseAdmin: SupabaseClient;
+  private readonly supabaseAdmin: SupabaseClient<Database>;
 
   constructor(private configService: ConfigService) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
-    }
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    this.supabaseAdmin = getSupabaseAdmin(this.configService);
   }
 
   private requireStringField(payload: any, field: string): string {
@@ -201,8 +202,15 @@ export class ResourcesService {
     sortOrder?: string,
     page?: number,
     pageSize?: number,
+    options: { activeAncestors?: boolean; duplicatesOnly?: boolean; flagDuplicates?: boolean } = {},
   ) {
     const shouldPaginate = page !== undefined && pageSize !== undefined;
+    const duplicateIds = options.duplicatesOnly || options.flagDuplicates ? await this.duplicateResourceIds() : null;
+    if (options.duplicatesOnly && duplicateIds && duplicateIds.size === 0) {
+      return shouldPaginate
+        ? { data: [], pagination: { page: Math.max(1, Number(page) || 1), pageSize: Number(pageSize) || 15, total: 0, totalPages: 0 } }
+        : [];
+    }
     const safePage = shouldPaginate ? Math.max(1, Number(page) || 1) : 1;
     const safePageSize = shouldPaginate ? Math.min(100, Math.max(1, Number(pageSize) || 15)) : 0;
 
@@ -279,55 +287,91 @@ export class ResourcesService {
     // !inner joins pull the ancestor lecture/section/subject that this tab
     // displays alongside each resource. Deleting any ancestor now removes the
     // resource outright via the FK cascade, so no extra filtering is needed.
-    let query = this.supabaseAdmin
-      .from('resources')
-      .select(`
-        *,
-        lecture:lectures!resources_lecture_id_fkey!inner(
-          id,
-          title,
-          section_id,
-          section:sections!lectures_section_id_fkey!inner(
+    const buildQuery = (withCount: boolean) => {
+      let query = this.supabaseAdmin
+        .from('resources')
+        .select(`
+          *,
+          lecture:lectures!resources_lecture_id_fkey!inner(
             id,
-            name,
-            subject_id,
-            subject:subjects!sections_subject_id_fkey!inner(
+            title,
+            section_id,
+            is_active,
+            section:sections!lectures_section_id_fkey!inner(
               id,
-              code,
               name,
-              year_level
+              subject_id,
+              is_active,
+              subject:subjects!sections_subject_id_fkey!inner(
+                id,
+                code,
+                name,
+                year_level,
+                is_active
+              )
             )
           )
-        )
-      `, shouldPaginate ? { count: 'exact' } : undefined);
+        `, withCount ? { count: 'exact' } : undefined);
 
-    if (lectureId) {
-      query = query.eq('lecture_id', lectureId);
-    } else if (sectionLectureIds) {
-      query = query.in('lecture_id', sectionLectureIds);
-    }
-    if (type) {
-      query = query.eq('type', type);
-    }
-    if (isActive) {
-      query = query.eq('is_active', true);
-    }
-    if (search?.trim()) {
-      const term = `%${search.trim()}%`;
-      query = query.or(`label.ilike.${term},url.ilike.${term}`);
-    }
+      if (options.activeAncestors) {
+        query = query
+          .eq('lecture.is_active', true)
+          .eq('lecture.section.is_active', true)
+          .eq('lecture.section.subject.is_active', true);
+      }
+
+      if (lectureId) {
+        query = query.eq('lecture_id', lectureId);
+      } else if (sectionLectureIds) {
+        query = query.in('lecture_id', sectionLectureIds);
+      }
+      if (type) {
+        query = query.eq('type', type as Enums<'resource_type'>);
+      }
+      if (isActive) {
+        query = query.eq('is_active', true);
+      }
+      if (search?.trim()) {
+        const term = `%${search.trim()}%`;
+        query = query.or(`label.ilike.${term},url.ilike.${term}`);
+      }
+      if (options.duplicatesOnly && duplicateIds) {
+        query = query.in('id', [...duplicateIds]);
+      }
+      return query;
+    };
 
     const sort = this.resolveSort(sortBy, sortOrder);
-    if (!sort.isDerivedField) {
-      query = query.order(sort.field, { ascending: sort.ascending });
-      if (shouldPaginate) {
-        const from = (safePage - 1) * safePageSize;
-        const to = from + safePageSize - 1;
-        query = query.range(from, to);
-      }
-    }
+    let data: any[] | null = null;
+    let error: { code?: string } | null = null;
+    let count: number | null = null;
 
-    const { data, error, count } = await query;
+    if (shouldPaginate && !sort.isDerivedField) {
+      const from = (safePage - 1) * safePageSize;
+      const to = from + safePageSize - 1;
+      ({ data, error, count } = await buildQuery(true)
+        .order(sort.field, { ascending: sort.ascending })
+        .range(from, to));
+    } else {
+      // Unpaginated reads and derived-field sorts need every row, but PostgREST
+      // returns at most 1,000 per request (D2), so page through with range().
+      const rows: any[] = [];
+      for (let from = 0; ; from += FULL_FETCH_PAGE_SIZE) {
+        const page = await buildQuery(false)
+          .order(sort.isDerivedField ? 'order_index' : sort.field, { ascending: sort.isDerivedField || sort.ascending })
+          .order('id', { ascending: true })
+          .range(from, from + FULL_FETCH_PAGE_SIZE - 1);
+        if (page.error) {
+          error = page.error;
+          break;
+        }
+        rows.push(...(page.data ?? []));
+        if ((page.data?.length ?? 0) < FULL_FETCH_PAGE_SIZE) {
+          break;
+        }
+      }
+      data = rows;
+    }
 
     if (error) {
       this.logger.warn(`Failed to fetch resources (code=${error.code ?? 'unknown'})`);
@@ -343,6 +387,7 @@ export class ResourcesService {
       subject_code: item.lecture?.section?.subject?.code ?? null,
       subject_name: item.lecture?.section?.subject?.name ?? null,
       subject_year_level: item.lecture?.section?.subject?.year_level ?? null,
+      ...(duplicateIds ? { is_duplicate: duplicateIds.has(item.id) } : {}),
     }));
 
     if (sort.isDerivedField) {
@@ -464,6 +509,87 @@ export class ResourcesService {
     }
 
     return data;
+  }
+
+  /**
+   * Recording ids (YouTube / Drive video) whose link also appears on another lecture of the same
+   * subject (YouTube compared by video id, Drive by file id). Mirrors the
+   * dashboard's "links used by more than one lecture" check.
+   */
+  private async duplicateResourceIds(): Promise<Set<string>> {
+    const rows: Array<{ id: string; url: string; lecture_id: string; lecture: { section: { subject_id: string } | null } | null }> = [];
+    for (let from = 0; ; from += FULL_FETCH_PAGE_SIZE) {
+      const { data, error } = await this.supabaseAdmin
+        .from('resources')
+        .select('id, url, lecture_id, lecture:lectures!resources_lecture_id_fkey(section:sections!lectures_section_id_fkey(subject_id))')
+        .in('type', ['youtube', 'gdrive_video'])
+        .order('id')
+        .range(from, from + FULL_FETCH_PAGE_SIZE - 1);
+      if (error) {
+        this.logger.warn(`Failed to scan for duplicate links (code=${error.code ?? 'unknown'})`);
+        throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'resource' }, 'Failed to fetch resources');
+      }
+      rows.push(...((data ?? []) as typeof rows));
+      if ((data?.length ?? 0) < FULL_FETCH_PAGE_SIZE) break;
+    }
+
+    const groups = new Map<string, Array<{ id: string; lectureId: string }>>();
+    for (const row of rows) {
+      const key = `${row.lecture?.section?.subject_id ?? ''}|${normalizeLink(row.url)}`;
+      groups.set(key, [...(groups.get(key) ?? []), { id: row.id, lectureId: row.lecture_id }]);
+    }
+    const ids = new Set<string>();
+    for (const group of groups.values()) {
+      if (new Set(group.map((entry) => entry.lectureId)).size > 1) group.forEach((entry) => ids.add(entry.id));
+    }
+    return ids;
+  }
+
+  /** Student read path: only active resources whose whole ancestor chain is active. */
+  async findAllForStudent(subjectId?: string, sectionId?: string, lectureId?: string, type?: string) {
+    return this.findAll(
+      subjectId,
+      sectionId,
+      lectureId,
+      type,
+      true,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { activeAncestors: true },
+    );
+  }
+
+  /**
+   * Student read path: an inactive resource, or one under an inactive
+   * lecture/section/subject, is reported as not found.
+   */
+  async findOneForStudent(id: string) {
+    const { data, error } = await this.supabaseAdmin
+      .from('resources')
+      .select(`
+        *,
+        parent_lecture:lectures!resources_lecture_id_fkey(
+          is_active,
+          parent_section:sections!lectures_section_id_fkey(
+            is_active,
+            parent_subject:subjects!sections_subject_id_fkey(is_active)
+          )
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    const lecture = data?.parent_lecture;
+    const ancestorsActive =
+      lecture?.is_active && lecture.parent_section?.is_active && lecture.parent_section.parent_subject?.is_active;
+    if (error || !data.is_active || !ancestorsActive) {
+      throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'resource', id }, 'Resource not found');
+    }
+
+    return omitKey(data, 'parent_lecture');
   }
 
   async create(data: any) {

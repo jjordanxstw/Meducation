@@ -7,7 +7,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { OAuth2Client, TokenPayload } from 'google-auth-library';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@medical-portal/shared';
+import { getSupabaseAdmin } from '../../../../common/supabase/supabase-admin';
 import { UserRole } from '@medical-portal/shared';
 import { ErrorCode } from '@medical-portal/shared';
 import type { StringValue } from 'ms';
@@ -15,11 +17,15 @@ import { UserWithoutPassword, Profile } from '../entities/profile.entity';
 import { AuthTokenDto } from '../dto/auth-response.dto';
 import { AppException } from '../../../../common/errors';
 
+const PROFILE_CACHE_TTL_MS = 60_000;
+const PROFILE_CACHE_MAX_ENTRIES = 1000;
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private readonly profileCache = new Map<string, { profile: Profile; expiresAt: number }>();
   private readonly googleClient: OAuth2Client;
-  private readonly supabaseAdmin: SupabaseClient;
+  private readonly supabaseAdmin: SupabaseClient<Database>;
   private readonly allowedEmailDomains: string[];
   private readonly jwtSecret: string;
   private readonly jwtExpiresIn: StringValue;
@@ -34,17 +40,7 @@ export class AuthService {
     }
     this.googleClient = new OAuth2Client(googleClientId);
 
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
-    }
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    this.supabaseAdmin = getSupabaseAdmin(this.configService);
 
     this.allowedEmailDomains = this.configService
       .get<string>('ALLOWED_EMAIL_DOMAINS', '@student.mahidol.edu,@student.mahidol.ac.th')
@@ -196,6 +192,41 @@ export class AuthService {
    * @returns Profile object if successful, null if creation fails
    */
   async getOrCreateProfile(
+    userId: string,
+    email: string,
+    name: string,
+    picture?: string,
+  ): Promise<Profile | null> {
+    const cached = this.profileCache.get(userId);
+    if (cached && cached.expiresAt > Date.now() && (!picture || cached.profile.avatar_url === picture)) {
+      return cached.profile;
+    }
+
+    const profile = await this.fetchOrCreateProfile(userId, email, name, picture);
+    if (profile) {
+      this.cacheProfile(profile);
+    } else {
+      this.profileCache.delete(userId);
+    }
+    return profile;
+  }
+
+  /**
+   * Every student request resolves the caller's profile; caching it briefly
+   * saves one Supabase round trip per request (P3). Profiles are read-only to
+   * students, so a short TTL is the only staleness window.
+   */
+  private cacheProfile(profile: Profile): void {
+    this.profileCache.delete(profile.id);
+    this.profileCache.set(profile.id, { profile, expiresAt: Date.now() + PROFILE_CACHE_TTL_MS });
+    while (this.profileCache.size > PROFILE_CACHE_MAX_ENTRIES) {
+      const oldestKey = this.profileCache.keys().next().value;
+      if (oldestKey === undefined) break;
+      this.profileCache.delete(oldestKey);
+    }
+  }
+
+  private async fetchOrCreateProfile(
     userId: string,
     email: string,
     name: string,
@@ -437,7 +468,7 @@ export class AuthService {
       return null;
     }
 
-    if (!this.isAllowedEmail(profile.email, profile.role)) {
+    if (!this.isAllowedEmail(profile.email, profile.role as UserRole)) {
       this.logger.warn(`Blocked session refresh for disallowed email domain. userId=${userId}`);
       return null;
     }

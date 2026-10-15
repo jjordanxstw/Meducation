@@ -8,7 +8,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@medical-portal/shared';
+import type { TablesInsert } from '@medical-portal/shared';
+import { getSupabaseAdmin } from '../../../../common/supabase/supabase-admin';
 import { AppException } from '../../../../common/errors';
 import { ErrorCode } from '@medical-portal/shared';
 
@@ -35,17 +38,10 @@ const NEWS_SELECT = '*, category:news_categories(id, name, color)';
 @Injectable()
 export class NewsService {
   private readonly logger = new Logger(NewsService.name);
-  private readonly supabaseAdmin: SupabaseClient;
+  private readonly supabaseAdmin: SupabaseClient<Database>;
 
   constructor(private configService: ConfigService) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
-    }
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    this.supabaseAdmin = getSupabaseAdmin(this.configService);
   }
 
   private resolveSort(sortBy?: string, sortOrder?: string): { field: string; ascending: boolean } {
@@ -191,7 +187,7 @@ export class NewsService {
    * Admin: create article.
    */
   async create(data: any) {
-    const newsData: Record<string, unknown> = {
+    const newsData: TablesInsert<'news'> = {
       title: data.title,
       summary: this.normalizeNullable(data.summary) ?? null,
       body: data.body,

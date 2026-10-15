@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryFunctionContext } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
-import type { Subject, SubjectWithSections } from '@medical-portal/shared';
+import type { SubjectWithSections, SubjectWithStats } from '@medical-portal/shared';
 
 type SubjectFilters = { yearLevel?: number | string };
 
@@ -26,7 +26,7 @@ export function useSubjects(filters: SubjectFilters) {
         params: useYear ? { year_level: Number(yearLevel) } : undefined,
         signal,
       });
-      return (res.data?.data ?? []) as Subject[];
+      return (res.data?.data ?? []) as SubjectWithStats[];
     },
   });
 }

@@ -18,6 +18,8 @@ import { SkipEnvelope } from '../../../../common';
 import type { UserWithoutPassword } from '../../auth/entities/profile.entity';
 import { AppException } from '../../../../common/errors';
 import { ErrorCode } from '@medical-portal/shared';
+import { updateProfileSchema } from '@medical-portal/shared';
+import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe';
 
 @Controller({ path: 'profiles', version: '1' })
 export class ProfilesPublicController {
@@ -40,7 +42,7 @@ export class ProfilesPublicController {
   @SkipEnvelope()
   async update(
     @Param('id') id: string,
-    @Body() updateDto: any,
+    @Body(new ZodValidationPipe(updateProfileSchema)) updateDto: any,
     @CurrentUser() user: UserWithoutPassword,
   ) {
     const data = await this.profilesService.update(

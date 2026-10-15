@@ -24,7 +24,14 @@ import { AppException } from '../../../../common/errors';
 import { AuditService } from '../../audit/services/audit.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService, IdempotencyInterceptor, ZodValidationPipe } from '../../../../common';
-import { createSubjectSchema, CreateSubjectInput, ErrorCode } from '@medical-portal/shared';
+import {
+  createSubjectSchema,
+  CreateSubjectInput,
+  ErrorCode,
+  reorderSchema,
+  saveSubjectTreeSchema,
+  updateSubjectSchema,
+} from '@medical-portal/shared';
 
 const MAX_SUBJECT_IMAGE_BYTES = 1 * 1024 * 1024; // 1 MB
 
@@ -111,10 +118,18 @@ export class SubjectsAdminController {
     return { success: true, data };
   }
 
+  // Cheap "has someone else saved?" poll for the editor's conflict banner.
+  @Get(':id/tree/version')
+  @SkipEnvelope()
+  async treeVersion(@Param('id') id: string) {
+    const data = await this.subjectsService.getTreeVersion(id);
+    return { success: true, data };
+  }
+
   // Atomic save of the whole subject tree (subject fields + sections/lectures/resources).
   @Put(':id/tree')
   @SkipEnvelope()
-  async saveTree(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+  async saveTree(@Param('id') id: string, @Body(new ZodValidationPipe(saveSubjectTreeSchema)) body: any, @Req() req: any) {
     const data = await this.subjectsService.saveTree(id, body);
     // Log a single compact UPDATE (the RPC's per-level counts) — the main path for
     // editing the curriculum. Avoids storing the whole tree to keep audit_logs small.
@@ -142,7 +157,7 @@ export class SubjectsAdminController {
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
+  async update(@Param('id') id: string, @Body(new ZodValidationPipe(updateSubjectSchema)) updateDto: any, @Req() req: any) {
     const data = await this.subjectsService.update(id, updateDto);
     await this.audit.logAdminUpdate('subjects', id, data.oldData, data.newData, req.admin, req);
     this.invalidateSubjectGraphCache();
@@ -160,7 +175,7 @@ export class SubjectsAdminController {
 
   @Patch('reorder')
   @SkipEnvelope()
-  async reorder(@Body() body: { items: Array<{ id: string; order_index: number }> }) {
+  async reorder(@Body(new ZodValidationPipe(reorderSchema)) body: { items: Array<{ id: string; order_index: number }> }) {
     const result = await this.subjectsService.reorder(body.items);
     this.invalidateSubjectGraphCache();
     return { success: true, ...result };

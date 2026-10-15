@@ -20,8 +20,12 @@ import { LecturesService } from '../services/lectures.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService } from '../../../../common';
+import { createLectureSchema, reorderSchema, updateLectureSchema } from '@medical-portal/shared';
+import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe';
 
 const INVALIDATE_LECTURE_GRAPH_PREFIXES = [
+  'v1:subjects:',
+  'v1:sections:',
   'v1:lectures:',
   'v1:resources:',
   'v1:calendar:',
@@ -86,7 +90,7 @@ export class LecturesAdminController {
 
   @Post()
   @SkipEnvelope()
-  async create(@Body() createDto: any, @Req() req: any) {
+  async create(@Body(new ZodValidationPipe(createLectureSchema)) createDto: any, @Req() req: any) {
     const data = await this.lecturesService.create(createDto);
     await this.audit.logAdminCreate('lectures', data?.id, data, req.admin, req);
     this.invalidateLectureGraphCache();
@@ -95,7 +99,7 @@ export class LecturesAdminController {
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
+  async update(@Param('id') id: string, @Body(new ZodValidationPipe(updateLectureSchema)) updateDto: any, @Req() req: any) {
     const data = await this.lecturesService.update(id, updateDto);
     await this.audit.logAdminUpdate('lectures', id, data.oldData, data.newData, req.admin, req);
     this.invalidateLectureGraphCache();
@@ -113,7 +117,7 @@ export class LecturesAdminController {
 
   @Patch('reorder')
   @SkipEnvelope()
-  async reorder(@Body() body: { items: Array<{ id: string; order_index: number }> }) {
+  async reorder(@Body(new ZodValidationPipe(reorderSchema)) body: { items: Array<{ id: string; order_index: number }> }) {
     const result = await this.lecturesService.reorder(body.items);
     this.invalidateLectureGraphCache();
     return { success: true, ...result };

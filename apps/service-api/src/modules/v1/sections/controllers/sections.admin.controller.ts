@@ -20,8 +20,11 @@ import { SectionsService } from '../services/sections.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService } from '../../../../common';
+import { createSectionSchema, reorderSchema, updateSectionSchema } from '@medical-portal/shared';
+import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe';
 
 const INVALIDATE_SECTION_GRAPH_PREFIXES = [
+  'v1:subjects:',
   'v1:sections:',
   'v1:lectures:',
   'v1:resources:',
@@ -85,7 +88,7 @@ export class SectionsAdminController {
 
   @Post()
   @SkipEnvelope()
-  async create(@Body() createDto: any, @Req() req: any) {
+  async create(@Body(new ZodValidationPipe(createSectionSchema)) createDto: any, @Req() req: any) {
     const data = await this.sectionsService.create(createDto);
     await this.audit.logAdminCreate('sections', data?.id, data, req.admin, req);
     this.invalidateSectionGraphCache();
@@ -94,7 +97,7 @@ export class SectionsAdminController {
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
+  async update(@Param('id') id: string, @Body(new ZodValidationPipe(updateSectionSchema)) updateDto: any, @Req() req: any) {
     const data = await this.sectionsService.update(id, updateDto);
     await this.audit.logAdminUpdate('sections', id, data.oldData, data.newData, req.admin, req);
     this.invalidateSectionGraphCache();
@@ -112,7 +115,7 @@ export class SectionsAdminController {
 
   @Patch('reorder')
   @SkipEnvelope()
-  async reorder(@Body() body: { items: Array<{ id: string; order_index: number }> }) {
+  async reorder(@Body(new ZodValidationPipe(reorderSchema)) body: { items: Array<{ id: string; order_index: number }> }) {
     const result = await this.sectionsService.reorder(body.items);
     this.invalidateSectionGraphCache();
     return { success: true, ...result };

@@ -22,7 +22,7 @@ export function AdminEmptyState({ icon, title, subtitle, action }: AdminEmptySta
     <div className="flex flex-col items-center justify-center gap-2 px-6 py-12 text-center">
       <span className="text-brand opacity-35 [&_svg]:size-12">{icon}</span>
       <span className="font-semibold text-slate-900">{title}</span>
-      {subtitle ? <span className="text-sm text-slate-400">{subtitle}</span> : null}
+      {subtitle ? <span className="text-sm text-ink-3">{subtitle}</span> : null}
       {action ? (
         <Button className="mt-2" size="sm" onClick={action.onClick}>
           {action.label}

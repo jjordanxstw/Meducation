@@ -1,11 +1,14 @@
 'use client';
 
 /**
- * Calendar Section — Tailwind + Radix month grid (no Ant Design).
- * English-only, single light theme.
+ * Calendar (Brilliant: Student Desktop / Calendar, Student Mobile / Calendar
+ * agenda). Monday-first month grid with tinted event pills, legend chips that
+ * filter by type, an Agenda view, and a side panel with today and the
+ * upcoming exam countdowns.
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import type * as React from 'react';
+import { useState, useMemo, useCallback, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,17 +25,19 @@ import { DataFreshnessDot } from '@/components/ui/DataFreshnessDot';
 import type { CalendarEvent } from '@medical-portal/shared';
 import {
   RefreshCw,
-  X,
   BookOpen,
   Calendar,
   Clock,
   ChevronLeft,
   ChevronRight,
+  LayoutGrid,
+  List,
   MapPin,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { CalendarCardSkeleton } from '@/components/skeletons/DashboardSkeletons';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { PillDropdown } from '@/components/ui/PillDropdown';
+import { useUpcomingEvents } from '@/hooks/use-upcoming';
 
 // Event type names + colors are admin-managed and arrive resolved on each event
 // (`event.color`). Anything without a resolved color falls back to the brand.
@@ -43,7 +48,7 @@ const MONTH_LABELS = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 type EventWithSubject = CalendarEvent & { subjects?: { name: string; code: string } };
 
@@ -87,8 +92,8 @@ function EventDetailCard({
       className="rounded-xl border border-slate-200/70 bg-white p-3 shadow-subtle"
       style={accent ? { borderLeftWidth: 4, borderLeftColor: color } : undefined}
     >
-      <p className="font-semibold text-slate-900">{event.title}</p>
-      <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-slate-500">
+      <p className="font-semibold text-ink-1 leading-thai">{event.title}</p>
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-3 tabular">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-slate-600">
           <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
           {event.type}
@@ -198,7 +203,7 @@ function HorizontalDayTimeline({ day, events }: { day: Dayjs; events: EventWithS
         {/* Hour axis — one label per hour column, left-aligned at its gridline */}
         <div className="mb-1 flex">
           {hourCells.map((h) => (
-            <div key={h} className="min-w-0 flex-1 pl-1 text-[10px] font-medium tabular-nums text-slate-400">
+            <div key={h} className="min-w-0 flex-1 pl-1 text-[10px] font-medium tabular-nums text-ink-3">
               {String(h).padStart(2, '0')}:00
             </div>
           ))}
@@ -246,7 +251,7 @@ function HorizontalDayTimeline({ day, events }: { day: Dayjs; events: EventWithS
               >
                 <p className="truncate text-xs font-semibold text-slate-800">{ev.title}</p>
                 <p className="truncate text-[10px] tabular-nums text-slate-500">{timeText}</p>
-                {ev.location && <p className="truncate text-[10px] text-slate-400">{ev.location}</p>}
+                {ev.location && <p className="truncate text-[10px] text-ink-3">{ev.location}</p>}
               </div>
             );
           })}
@@ -256,90 +261,178 @@ function HorizontalDayTimeline({ day, events }: { day: Dayjs; events: EventWithS
   );
 }
 
+type CalendarView = 'agenda' | 'month';
+
+const noopSubscribe = () => () => undefined;
+
+function readSavedView(): CalendarView | null {
+  try {
+    const saved = window.localStorage.getItem('medpi:calendar-view');
+    return saved === 'agenda' || saved === 'month' ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Agenda — the month in view as a list grouped by day (default on phones).
+ * A multi-day event is listed once, on its first visible day, with its span.
+ */
+function AgendaList({
+  events,
+  monthStart,
+  onSubject,
+}: {
+  events: EventWithSubject[];
+  monthStart: Dayjs;
+  onSubject: (subjectId: string) => void;
+}) {
+  const today = dayjs().startOf('day');
+  const from = monthStart.isSame(today, 'month') ? today : monthStart.startOf('month');
+  const fromStr = from.format('YYYY-MM-DD');
+  const toStr = monthStart.endOf('month').format('YYYY-MM-DD');
+
+  const byDay = new Map<string, EventWithSubject[]>();
+  for (const event of events) {
+    const start = event.start_date.split('T')[0];
+    const end = (event.end_date ?? event.start_date).split('T')[0];
+    if (end < fromStr || start > toStr) continue;
+    const anchor = start < fromStr ? fromStr : start;
+    byDay.set(anchor, [...(byDay.get(anchor) ?? []), event]);
+  }
+  const groups = [...byDay.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([day, dayEvents]) => [
+      day,
+      [...dayEvents].sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? '')),
+    ] as const);
+
+  if (groups.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white py-14 text-center shadow-subtle">
+        <Calendar className="h-12 w-12 text-brand/35" aria-hidden />
+        <p className="text-base font-semibold text-ink-1">Nothing scheduled</p>
+        <p className="text-sm text-ink-3">
+          {monthStart.isSame(today, 'month') ? 'No more events this month.' : 'No events this month.'}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <ol className="space-y-5">
+      {groups.map(([day, dayEvents]) => {
+        const date = dayjs(day);
+        const diff = date.diff(today, 'day');
+        const relative = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : null;
+        return (
+          <li key={day} className="grid gap-2 sm:grid-cols-[120px_minmax(0,1fr)] sm:gap-5">
+            <div className="flex items-baseline gap-2 sm:block sm:pt-3">
+              <p className={cn('text-sm font-semibold tabular', diff === 0 ? 'text-brand-hover' : 'text-ink-1')}>
+                {date.format('ddd D MMM')}
+              </p>
+              {relative ? <p className="text-xs font-medium text-ink-3">{relative}</p> : null}
+            </div>
+            <ul className="space-y-2">
+              {dayEvents.map((event) => (
+                <li key={event.id}>
+                  <EventDetailCard event={event} accent onSubject={onSubject} />
+                </li>
+              ))}
+            </ul>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/** Tinted pill colours from an event-type colour (admin-managed hex). */
+function pillStyle(color: string, solid: boolean): React.CSSProperties {
+  if (solid) return { backgroundColor: color, color: '#ffffff' };
+  return {
+    backgroundColor: `color-mix(in srgb, ${color} 14%, white)`,
+    color: `color-mix(in srgb, ${color} 72%, black)`,
+  };
+}
+
+function dayKey(date: Dayjs) {
+  return date.format('YYYY-MM-DD');
+}
+
 export function CalendarSection() {
   const router = useRouter();
   const isMobile = useMediaQuery('(max-width: 639px)');
 
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs());
-  const [filterType, setFilterType] = useState<string>('all');
+  const [hiddenTypes, setHiddenTypes] = useState<Set<string>>(new Set());
   const [dayClickDate, setDayClickDate] = useState<Dayjs | null>(null);
   const [showDayModal, setShowDayModal] = useState(false);
+  const [view, setView] = useState<CalendarView | null>(null);
+  const savedView = useSyncExternalStore(noopSubscribe, readSavedView, () => null);
 
-  const selectedMonth = currentDate.month();
-  const selectedYear = currentDate.year();
+  // Phones default to the agenda, larger screens to the month grid, until the
+  // student picks one (remembered on this device).
+  const effectiveView: CalendarView = view ?? savedView ?? (isMobile ? 'agenda' : 'month');
+  const chooseView = (next: CalendarView) => {
+    setView(next);
+    try {
+      window.localStorage.setItem('medpi:calendar-view', next);
+    } catch {
+      /* storage unavailable */
+    }
+  };
 
-  const ALL_MONTHS = useMemo(
-    () => Array.from({ length: 12 }, (_, i) => ({ value: i, label: MONTH_LABELS[i] })),
-    [],
-  );
-  const YEARS = useMemo(() => {
-    const y = dayjs().year();
-    return Array.from({ length: 5 }, (_, i) => y + i);
-  }, []);
+  const { data: events = [], isLoading, isError, isFetching, refetch } = useCalendarEvents(currentDate.format('YYYY-MM'));
+  const { data: upcoming = [] } = useUpcomingEvents(30);
 
-  const {
-    data: events = [],
-    isLoading,
-    isError,
-    isFetching,
-    refetch,
-  } = useCalendarEvents(currentDate.format('YYYY-MM'));
-
-  // Type → color across all fetched events (the query window spans ±1 month, so
-  // this also colors the leading/trailing days that spill into the grid).
   const typeColor = useMemo(() => {
     const map: Record<string, string> = {};
-    events.forEach((e) => {
-      if (e.type && !map[e.type]) map[e.type] = e.color || FALLBACK_COLOR;
-    });
+    for (const event of [...events, ...upcoming]) {
+      if (event.type && !map[event.type]) map[event.type] = event.color || FALLBACK_COLOR;
+    }
     return map;
-  }, [events]);
+  }, [events, upcoming]);
 
-  // Legend + filter options reflect only the month in view — otherwise adjacent
-  // months (also fetched) would leak their types into an otherwise-empty month.
-  const monthTypeNames = useMemo(() => {
-    const monthStart = currentDate.startOf('month').format('YYYY-MM-DD');
-    const monthEnd = currentDate.endOf('month').format('YYYY-MM-DD');
-    const seen = new Set<string>();
-    events.forEach((e) => {
-      const start = e.start_date.split('T')[0];
-      const end = (e.end_date ?? e.start_date).split('T')[0];
-      if (e.type && start <= monthEnd && end >= monthStart) seen.add(e.type);
+  const legendTypes = useMemo(() => {
+    const order = ['exam', 'lecture', 'holiday', 'event'];
+    return Object.keys(typeColor).sort((a, b) => {
+      const ia = order.indexOf(a);
+      const ib = order.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b);
     });
-    return [...seen];
-  }, [events, currentDate]);
+  }, [typeColor]);
 
-  const filteredEvents = useMemo(
-    () => events.filter((event) => filterType === 'all' || event.type === filterType),
-    [events, filterType],
-  );
+  const toggleType = (type: string) =>
+    setHiddenTypes((current) => {
+      const next = new Set(current);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+
+  const filteredEvents = useMemo(() => events.filter((event) => !hiddenTypes.has(event.type)), [events, hiddenTypes]);
 
   const getEventsForDate = useCallback(
     (dateStr: string) =>
-      filteredEvents.filter((ev) => {
-        const start = ev.start_date.split('T')[0];
-        const end = (ev.end_date ?? ev.start_date).split('T')[0];
-        return dateStr >= start && dateStr <= end;
-      }),
+      filteredEvents
+        .filter((event) => {
+          const start = event.start_date.split('T')[0];
+          const end = (event.end_date ?? event.start_date).split('T')[0];
+          return dateStr >= start && dateStr <= end;
+        })
+        .sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? '')),
     [filteredEvents],
   );
 
-  // Build the 6-week grid (42 cells) covering the current month.
+  // Monday-first grid covering the whole month (5 or 6 weeks).
   const gridDays = useMemo(() => {
-    const start = currentDate.startOf('month').startOf('week');
-    return Array.from({ length: 42 }, (_, i) => start.add(i, 'day'));
+    const monthStart = currentDate.startOf('month');
+    const offset = (monthStart.day() + 6) % 7;
+    const weeks = Math.ceil((offset + monthStart.daysInMonth()) / 7);
+    const start = monthStart.subtract(offset, 'day');
+    return Array.from({ length: weeks * 7 }, (_, i) => start.add(i, 'day'));
   }, [currentDate]);
-
-  const monthHasEvents = useMemo(() => {
-    const m = currentDate.format('YYYY-MM');
-    return filteredEvents.some((ev) => {
-      const start = ev.start_date.slice(0, 7);
-      const end = (ev.end_date ?? ev.start_date).slice(0, 7);
-      return start <= m && m <= end;
-    });
-  }, [filteredEvents, currentDate]);
-
-  const currentMonthLabel = `${MONTH_LABELS[selectedMonth]} ${selectedYear}`;
 
   const openDay = (date: Dayjs) => {
     setDayClickDate(date);
@@ -351,217 +444,226 @@ export function CalendarSection() {
     setShowDayModal(false);
   };
 
-  const dayEvents = useMemo(() => {
-    if (!dayClickDate) return [];
-    return getEventsForDate(dayClickDate.format('YYYY-MM-DD'));
-  }, [dayClickDate, getEventsForDate]);
+  const dayEvents = useMemo(() => (dayClickDate ? getEventsForDate(dayKey(dayClickDate)) : []), [dayClickDate, getEventsForDate]);
+  const allDayEvents = dayEvents.filter((event) => !event.start_time);
+  const timedEvents = dayEvents.filter((event) => !!event.start_time);
 
-  // All-day first, then timed events ordered by start time — drives the agenda.
-  const { allDayEvents, timedEvents } = useMemo(() => {
-    const allDay = dayEvents.filter((e) => !e.start_time);
-    const timed = dayEvents
-      .filter((e) => !!e.start_time)
-      .sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''));
-    return { allDayEvents: allDay, timedEvents: timed };
-  }, [dayEvents]);
-
-  const filterOptions = useMemo(
-    () => [{ value: 'all', label: 'All Events' }, ...monthTypeNames.map((name) => ({ value: name, label: name }))],
-    [monthTypeNames],
-  );
+  const today = dayjs();
+  const todayKey = dayKey(today);
+  const todayEvents = upcoming.filter((event) => event.start_date.slice(0, 10) <= todayKey && (event.end_date ?? event.start_date).slice(0, 10) >= todayKey);
+  const exams = upcoming.filter((event) => event.type === 'exam').slice(0, 4);
 
   return (
     <>
-      {/* Header: title + month navigation */}
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="font-serif text-2xl font-semibold tracking-tight text-slate-900">Academic Calendar</h2>
-          <p className="mt-0.5 text-sm text-slate-500">Exam schedules, lectures, and events</p>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Button
-            size="icon"
-            variant="secondary"
-            aria-label="Previous month"
-            className="h-9 w-9 rounded-full text-slate-600"
-            onClick={() => setCurrentDate((d) => d.subtract(1, 'month'))}
-          >
-            <ChevronLeft className="size-[17px]" />
+      {/* Header */}
+      <div className="mb-5 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex items-center gap-2">
+          <h1 className="mr-2 text-2xl font-semibold tracking-tight text-ink-1 sm:text-3xl">
+            {MONTH_LABELS[currentDate.month()]} {currentDate.year()}
+          </h1>
+          <Button size="icon" variant="secondary" aria-label="Previous month" className="h-9 w-9" onClick={() => setCurrentDate((d) => d.subtract(1, 'month'))}>
+            <ChevronLeft className="size-4" />
           </Button>
-          <button
-            type="button"
-            onClick={() => setCurrentDate(dayjs())}
-            title="Jump to today"
-            className="min-w-[150px] rounded-full border border-slate-200 bg-white px-4 py-2 text-center text-sm font-semibold text-slate-800 transition hover:border-brand/40 hover:bg-brand-subtle hover:text-brand"
-          >
-            {currentMonthLabel}
-          </button>
-          <Button
-            size="icon"
-            variant="secondary"
-            aria-label="Next month"
-            className="h-9 w-9 rounded-full text-slate-600"
-            onClick={() => setCurrentDate((d) => d.add(1, 'month'))}
-          >
-            <ChevronRight className="size-[17px]" />
+          <Button size="icon" variant="secondary" aria-label="Next month" className="h-9 w-9" onClick={() => setCurrentDate((d) => d.add(1, 'month'))}>
+            <ChevronRight className="size-4" />
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => setCurrentDate(dayjs())}>
+            Today
           </Button>
         </div>
-      </div>
-
-      {/* Controls: month/year/type filters (left) + legend (right) */}
-      <div className="mb-5 flex flex-col gap-3 border-t border-slate-200/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          <PillDropdown
-            ariaLabel="Select month"
-            value={selectedMonth}
-            options={ALL_MONTHS.map((m) => ({ value: m.value, label: m.label }))}
-            onChange={(value) => setCurrentDate((d) => d.month(Number(value)))}
-          />
-          <PillDropdown
-            ariaLabel="Select year"
-            value={selectedYear}
-            options={YEARS.map((year) => ({ value: year, label: String(year) }))}
-            onChange={(value) => setCurrentDate((d) => d.year(Number(value)))}
-          />
-          <PillDropdown
-            ariaLabel="Filter by type"
-            value={filterType}
-            options={filterOptions.map((o) => ({
-              value: o.value,
-              label: o.value === 'all' ? 'Filter by type' : `Type: ${o.label}`,
-            }))}
-            onChange={setFilterType}
-          />
-          {filterType !== 'all' && (
-            <button
-              type="button"
-              onClick={() => setFilterType('all')}
-              className="flex items-center gap-1 text-xs text-slate-400 transition hover:text-red-500"
-            >
-              <X size={12} /> Reset
-            </button>
-          )}
-        </div>
-
-        {/* Legend — only the types present in the month in view */}
-        {monthTypeNames.length > 0 && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            {monthTypeNames.map((type) => (
-              <div key={type} className="flex items-center gap-1.5">
-                <span
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: typeColor[type] || FALLBACK_COLOR }}
-                />
-                <span className="text-sm text-slate-600">{type}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Calendar grid */}
-      {isError ? (
-        <div className="rounded-2xl border border-slate-200/70 bg-white p-6 shadow-subtle">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50">
-              <RefreshCw className="text-red-500" />
-            </div>
-            <div>
-              <h3 className="text-base font-semibold text-red-600">Unable to load calendar events</h3>
-              <p className="mt-1 text-sm text-slate-500">Please retry to load your calendar.</p>
-            </div>
-          </div>
-          <Button className="mt-4 w-fit" onClick={() => void refetch()}>
-            <RefreshCw className="h-4 w-4" />
-            Retry
-          </Button>
-        </div>
-      ) : isLoading ? (
-        <CalendarCardSkeleton />
-      ) : (
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-subtle">
-          <DataFreshnessDot isFetching={isFetching && !isLoading} />
-
-          {/* Weekday header */}
-          <div className="grid grid-cols-7 border-b border-slate-200/70 bg-slate-50/70">
-            {WEEKDAY_LABELS.map((label) => (
-              <div
-                key={label}
-                className="py-2.5 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400"
-              >
-                {label}
-              </div>
-            ))}
-          </div>
-
-          {/* Day cells */}
-          <div className="grid grid-cols-7">
-            {gridDays.map((date) => {
-              const dateStr = date.format('YYYY-MM-DD');
-              const inMonth = date.month() === selectedMonth;
-              const isToday = date.isSame(dayjs(), 'day');
-              const dayEvts = getEventsForDate(dateStr);
-              const uniqueTypes = [...new Set(dayEvts.map((e) => e.type))];
-
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Show event types">
+            {legendTypes.map((type) => {
+              const hidden = hiddenTypes.has(type);
+              const color = typeColor[type] || FALLBACK_COLOR;
               return (
                 <button
+                  key={type}
                   type="button"
-                  key={dateStr}
-                  onClick={() => openDay(date)}
-                  className={`flex flex-col gap-1 border-b border-r border-slate-100 p-1.5 text-left transition-colors last:border-r-0 hover:bg-brand-subtle/60 sm:min-h-[104px] ${
-                    inMonth ? '' : 'bg-slate-50/40 opacity-50'
-                  }`}
-                >
-                  <span
-                    className={`inline-flex h-6 w-6 items-center justify-center text-[13px] font-medium ${
-                      isToday ? 'rounded-full bg-brand text-white' : 'text-slate-600'
-                    }`}
-                  >
-                    {date.date()}
-                  </span>
-
-                  {/* Mobile: dots. Desktop: event bars. */}
-                  {isMobile ? (
-                    uniqueTypes.length > 0 && (
-                      <span className="flex justify-center gap-0.5">
-                        {uniqueTypes.map((type) => (
-                          <span
-                            key={type}
-                            className="h-1.5 w-1.5 rounded-full"
-                            style={{ backgroundColor: typeColor[type] || FALLBACK_COLOR }}
-                          />
-                        ))}
-                      </span>
-                    )
-                  ) : (
-                    <span className="flex flex-1 flex-col gap-0.5 overflow-hidden">
-                      {dayEvts.slice(0, 3).map((ev) => (
-                        <span key={ev.id} className="flex items-center gap-1.5 truncate">
-                          <span
-                            className="h-3 w-[3px] shrink-0 rounded-full"
-                            style={{ backgroundColor: ev.color || FALLBACK_COLOR }}
-                          />
-                          <span className="truncate text-[11px] font-medium leading-tight text-slate-700">{ev.title}</span>
-                        </span>
-                      ))}
-                      {dayEvts.length > 3 && (
-                        <span className="px-1 text-[10px] font-semibold text-brand">+{dayEvts.length - 3} more</span>
-                      )}
-                    </span>
+                  aria-pressed={!hidden}
+                  onClick={() => toggleType(type)}
+                  className={cn(
+                    'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold capitalize transition-colors',
+                    hidden ? 'border-slate-200 bg-white text-ink-3 line-through' : 'border-transparent',
                   )}
+                  style={hidden ? undefined : pillStyle(color, false)}
+                >
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} aria-hidden />
+                  {type}
                 </button>
               );
             })}
           </div>
+          <div className="flex rounded-xl bg-slate-200/60 p-1" role="group" aria-label="Calendar view">
+            {([
+              { key: 'month', label: 'Month', icon: LayoutGrid },
+              { key: 'agenda', label: 'Agenda', icon: List },
+            ] as const).map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={effectiveView === key}
+                onClick={() => chooseView(key)}
+                className={cn(
+                  'inline-flex h-7 items-center gap-1.5 rounded-lg px-3 text-sm transition-colors',
+                  effectiveView === key ? 'bg-white font-semibold text-ink-1 shadow-subtle' : 'font-medium text-ink-2 hover:text-ink-1',
+                )}
+              >
+                <Icon className="h-3.5 w-3.5 sm:hidden" aria-hidden />
+                <span className="sr-only sm:not-sr-only">{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
-          {!monthHasEvents && (
-            <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
-              <Calendar className="h-8 w-8 text-slate-300" />
-              <p className="text-sm text-slate-400">No events this month</p>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="min-w-0">
+          {isError ? (
+            <div className="rounded-2xl border border-slate-200/70 bg-white p-6 shadow-subtle">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50">
+                  <RefreshCw className="text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-red-700">Couldn’t load the calendar</h3>
+                  <p className="mt-1 text-sm text-ink-3">Check your connection and try again.</p>
+                </div>
+              </div>
+              <Button className="mt-4 w-fit" onClick={() => void refetch()}>
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </Button>
+            </div>
+          ) : isLoading ? (
+            <CalendarCardSkeleton />
+          ) : effectiveView === 'agenda' ? (
+            <AgendaList events={filteredEvents} monthStart={currentDate} onSubject={goToSubject} />
+          ) : (
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-subtle">
+              <DataFreshnessDot isFetching={isFetching && !isLoading} />
+              <div className="grid grid-cols-7 border-b border-slate-200/70">
+                {WEEKDAY_LABELS.map((label) => (
+                  <div key={label} className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-ink-3">
+                    {label}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7">
+                {gridDays.map((date) => {
+                  const key = dayKey(date);
+                  const inMonth = date.month() === currentDate.month();
+                  const isToday = key === todayKey;
+                  const weekend = date.day() === 0 || date.day() === 6;
+                  const evts = getEventsForDate(key);
+                  const tint = evts.find((event) => event.type === 'exam') ?? evts.find((event) => event.type === 'holiday');
+                  return (
+                    <button
+                      type="button"
+                      key={key}
+                      onClick={() => openDay(date)}
+                      aria-label={`${date.format('dddd D MMMM')}${evts.length ? `, ${evts.length} events` : ''}`}
+                      className={cn(
+                        'flex min-h-[64px] flex-col gap-1 border-b border-r border-slate-100 p-1.5 text-left transition-colors hover:bg-slate-50 sm:min-h-[104px] [&:nth-child(7n)]:border-r-0',
+                        !inMonth && 'bg-slate-50/60',
+                        weekend && inMonth && 'bg-slate-50/40',
+                        isToday && 'bg-brand-subtle/60',
+                      )}
+                      style={tint && inMonth && !isToday ? { backgroundColor: `color-mix(in srgb, ${tint.color || FALLBACK_COLOR} 8%, white)` } : undefined}
+                    >
+                      <span
+                        className={cn(
+                          'inline-flex h-6 min-w-6 items-center justify-center self-start rounded-full px-1 text-[13px] font-semibold tabular',
+                          isToday ? 'bg-brand text-white' : inMonth ? (tint?.type === 'exam' ? 'text-red-700' : 'text-ink-1') : 'text-ink-4',
+                        )}
+                      >
+                        {date.date()}
+                      </span>
+                      {isMobile ? (
+                        evts.length > 0 ? (
+                          <span className="flex justify-center gap-0.5">
+                            {[...new Set(evts.map((event) => event.type))].map((type) => (
+                              <span key={type} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: typeColor[type] || FALLBACK_COLOR }} />
+                            ))}
+                          </span>
+                        ) : null
+                      ) : (
+                        <span className="flex flex-1 flex-col gap-0.5 overflow-hidden">
+                          {evts.slice(0, 2).map((event) => (
+                            <span
+                              key={event.id}
+                              className="truncate rounded px-1.5 py-0.5 text-[11px] font-semibold leading-tight"
+                              style={pillStyle(event.color || FALLBACK_COLOR, event.type === 'exam')}
+                            >
+                              {event.title}
+                              {event.start_time ? ` ${event.start_time.slice(0, 5)}` : ''}
+                            </span>
+                          ))}
+                          {evts.length > 2 ? <span className="px-1 text-[10px] font-semibold text-brand-hover">+{evts.length - 2} more</span> : null}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
-      )}
+
+        {/* Side panel */}
+        <aside className="space-y-4" aria-label="Today and upcoming exams">
+          <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-subtle">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-hover">Today · {today.format('ddd D MMM')}</p>
+            {todayEvents.length === 0 ? (
+              <p className="mt-2 text-sm text-ink-3">Nothing scheduled today.</p>
+            ) : (
+              <ul className="mt-2 space-y-3">
+                {todayEvents.map((event) => (
+                  <li key={event.id} className="border-l-2 pl-3" style={{ borderColor: event.color || FALLBACK_COLOR }}>
+                    <p className="text-sm font-semibold text-ink-1">{event.title}</p>
+                    {event.description ? <p className="line-clamp-1 text-xs text-ink-2">{event.description}</p> : null}
+                    <p className="text-xs text-ink-3 tabular">{[eventTimeLabel(event), event.location].filter(Boolean).join(' · ')}</p>
+                    {event.subject_id ? (
+                      <button
+                        type="button"
+                        onClick={() => goToSubject(event.subject_id as string)}
+                        className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-hover hover:text-brand"
+                      >
+                        <BookOpen className="h-3.5 w-3.5" aria-hidden />
+                        Open subject
+                      </button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {exams.length > 0 ? (
+            <section className="rounded-2xl border border-red-200/70 bg-white p-4 shadow-subtle">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-red-700">Upcoming exams</p>
+              <ul className="mt-2 divide-y divide-slate-100">
+                {exams.map((exam, index) => {
+                  const days = dayjs(exam.start_date.slice(0, 10)).startOf('day').diff(today.startOf('day'), 'day');
+                  return (
+                    <li key={exam.id} className="flex items-center gap-3 py-2.5">
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-ink-1">{exam.title}</span>
+                        <span className="block truncate text-xs text-ink-3">
+                          {[dayjs(exam.start_date).format('ddd D MMM'), exam.location].filter(Boolean).join(' · ')}
+                        </span>
+                      </span>
+                      <span className={cn('text-lg font-bold tabular', index === 0 ? 'text-red-700' : 'text-ink-2')}>
+                        {days === 0 ? 'Today' : `${days}d`}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ) : null}
+        </aside>
+      </div>
 
       {/* Day timeline — one click shows every event with full details */}
       <Dialog open={showDayModal} onOpenChange={setShowDayModal}>
@@ -577,16 +679,14 @@ export function CalendarSection() {
 
               {dayEvents.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
-                  <Calendar className="h-8 w-8 text-slate-300" />
-                  <p className="text-sm text-slate-400">No events on this day</p>
+                  <Calendar className="h-12 w-12 text-brand/35" />
+                  <p className="text-sm text-ink-3">No events on this day</p>
                 </div>
               ) : (
                 <div className="flex-1 space-y-7 overflow-y-auto px-6 py-5">
                   {allDayEvents.length > 0 && (
                     <section className="space-y-3">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                        All day · {allDayEvents.length}
-                      </p>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-ink-3">All day · {allDayEvents.length}</p>
                       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                         {allDayEvents.map((ev) => (
                           <EventDetailCard key={ev.id} event={ev} accent onSubject={goToSubject} />
@@ -594,15 +694,10 @@ export function CalendarSection() {
                       </div>
                     </section>
                   )}
-
                   {timedEvents.length > 0 && (
                     <section className="space-y-3">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                        Schedule · {timedEvents.length}
-                      </p>
-                      {/* Horizontal timeline overview — spans the full modal width */}
+                      <p className="text-xs font-semibold uppercase tracking-wider text-ink-3">Schedule · {timedEvents.length}</p>
                       <HorizontalDayTimeline day={dayClickDate} events={timedEvents} />
-                      {/* Full detail cards — every event's info without extra clicks */}
                       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                         {timedEvents.map((ev) => (
                           <EventDetailCard key={ev.id} event={ev} accent onSubject={goToSubject} />

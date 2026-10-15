@@ -5,12 +5,18 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { randomUUID } from 'crypto';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createHash, randomUUID } from 'crypto';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@medical-portal/shared';
+import { getSupabaseAdmin } from '../../../../common/supabase/supabase-admin';
 import { AppException } from '../../../../common/errors';
 import { ErrorCode } from '@medical-portal/shared';
 
 const SUBJECT_IMAGE_BUCKET = 'subject-images';
+/** PostgREST's per-request row cap. */
+const PAGE_SIZE = 1000;
+/** A lecture counts as "new" on subject cards for this many days. */
+const NEW_LECTURE_WINDOW_DAYS = 7;
 
 // Minimal shape of a multer file (memoryStorage). Declared locally to avoid a
 // dependency on @types/multer; multer ships with @nestjs/platform-express.
@@ -30,20 +36,10 @@ const EXTENSION_BY_MIME: Record<string, string> = {
 @Injectable()
 export class SubjectsService {
   private readonly logger = new Logger(SubjectsService.name);
-  private readonly supabaseAdmin: SupabaseClient;
+  private readonly supabaseAdmin: SupabaseClient<Database>;
 
   constructor(private configService: ConfigService) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
-    }
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    this.supabaseAdmin = getSupabaseAdmin(this.configService);
   }
 
   private mapSubjectWriteError(error: { code?: string; message?: string; details?: string | null; hint?: string | null }): never {
@@ -166,7 +162,114 @@ export class SubjectsService {
     return data;
   }
 
-  async findOne(id: string) {
+  /**
+   * Student subject list with the counts the subject cards show
+   * ("4 sections · 24 lectures", "2 new"). Computed from the existing tables —
+   * no schema change — with every query paged past PostgREST's 1,000-row cap.
+   * "New" means a lecture created in the last `NEW_LECTURE_WINDOW_DAYS` days.
+   */
+  async findAllForStudentWithStats(yearLevel?: number) {
+    const subjects = ((await this.findAll(yearLevel, true)) ?? []) as Array<Record<string, unknown> & { id: string }>;
+    if (subjects.length === 0) {
+      return [];
+    }
+
+    const subjectIds = subjects.map((subject) => subject.id);
+    const sections = await this.fetchAllPages<{ id: string; subject_id: string }>((from, to) =>
+      this.supabaseAdmin
+        .from('sections')
+        .select('id, subject_id')
+        .in('subject_id', subjectIds)
+        .eq('is_active', true)
+        .order('id')
+        .range(from, to),
+    );
+
+    const subjectBySection = new Map(sections.map((section) => [section.id, section.subject_id]));
+    const lectures = sections.length
+      ? await this.fetchAllPages<{ section_id: string; created_at: string }>((from, to) =>
+          this.supabaseAdmin
+            .from('lectures')
+            .select('section_id, created_at')
+            .in('section_id', [...subjectBySection.keys()])
+            .eq('is_active', true)
+            .order('id')
+            .range(from, to),
+        )
+      : [];
+
+    // Files = every active non-video resource (slides, PDFs, links) under an active lecture.
+    const files = sections.length
+      ? await this.fetchAllPages<{ type: string; lecture: { section_id: string } | null }>((from, to) =>
+          this.supabaseAdmin
+            .from('resources')
+            .select('type, lecture:lectures!resources_lecture_id_fkey!inner(section_id, is_active)')
+            .eq('is_active', true)
+            .eq('lecture.is_active', true)
+            .in('lecture.section_id', [...subjectBySection.keys()])
+            .not('type', 'in', '(youtube,gdrive_video)')
+            .order('id')
+            .range(from, to),
+        )
+      : [];
+
+    const newSince = Date.now() - NEW_LECTURE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+    const stats = new Map<
+      string,
+      { sections: number; lectures: number; files: number; newLectures: number; latest: string | null }
+    >();
+    for (const id of subjectIds) {
+      stats.set(id, { sections: 0, lectures: 0, files: 0, newLectures: 0, latest: null });
+    }
+    for (const file of files) {
+      const subjectId = file.lecture ? subjectBySection.get(file.lecture.section_id) : undefined;
+      if (subjectId) stats.get(subjectId)!.files += 1;
+    }
+    for (const section of sections) {
+      stats.get(section.subject_id)!.sections += 1;
+    }
+    for (const lecture of lectures) {
+      const subjectId = subjectBySection.get(lecture.section_id);
+      const entry = subjectId ? stats.get(subjectId) : undefined;
+      if (!entry) continue;
+      entry.lectures += 1;
+      if (new Date(lecture.created_at).getTime() >= newSince) entry.newLectures += 1;
+      if (!entry.latest || lecture.created_at > entry.latest) entry.latest = lecture.created_at;
+    }
+
+    return subjects.map((subject) => {
+      const entry = stats.get(subject.id)!;
+      return {
+        ...subject,
+        sections_count: entry.sections,
+        lectures_count: entry.lectures,
+        files_count: entry.files,
+        new_lectures_count: entry.newLectures,
+        latest_lecture_at: entry.latest,
+      };
+    });
+  }
+
+  private async fetchAllPages<T>(
+    buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { code?: string } | null }>,
+  ): Promise<T[]> {
+    const rows: T[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data, error } = await buildQuery(from, from + PAGE_SIZE - 1);
+      if (error) {
+        this.logger.warn(`Failed to fetch subject stats (code=${error.code ?? 'unknown'})`);
+        throw new AppException(ErrorCode.RESOURCE_OPERATION_FAILED, { resource: 'subject' }, 'Failed to fetch subjects');
+      }
+      rows.push(...(data ?? []));
+      if ((data?.length ?? 0) < PAGE_SIZE) return rows;
+    }
+  }
+
+  /**
+   * `activeOnly` is the student read path: an inactive subject is reported as
+   * not found instead of being served by direct ID.
+   */
+  async findOne(id: string, options: { activeOnly?: boolean } = {}) {
     // Get subject
     const { data: subject, error: subjectError } = await this.supabaseAdmin
       .from('subjects')
@@ -174,7 +277,7 @@ export class SubjectsService {
       .eq('id', id)
       .single();
 
-    if (subjectError) {
+    if (subjectError || (options.activeOnly && !subject.is_active)) {
       throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'subject', id }, 'Subject not found');
     }
 
@@ -260,7 +363,49 @@ export class SubjectsService {
         })),
     }));
 
-    return { ...subject, sections: sortedSections };
+    return { ...subject, sections: sortedSections, tree_version: this.treeVersion(subject, sortedSections) };
+  }
+
+  /**
+   * Current tree fingerprint plus who saved the subject last (from the audit
+   * log), so an open editor can warn before it overwrites someone else's save.
+   */
+  async getTreeVersion(id: string) {
+    const [tree, audit] = await Promise.all([
+      this.findOneForEdit(id),
+      this.supabaseAdmin
+        .from('audit_logs')
+        .select('user_email, created_at')
+        .eq('table_name', 'subjects')
+        .eq('record_id', id)
+        .order('created_at', { ascending: false })
+        .limit(1),
+    ]);
+    const last = audit.data?.[0];
+    return {
+      tree_version: tree.tree_version,
+      last_saved_by: last?.user_email ?? null,
+      last_saved_at: last?.created_at ?? null,
+    };
+  }
+
+  /**
+   * Fingerprint of the whole editable tree: every row's id + updated_at. Any
+   * edit, insert or delete anywhere in the subject changes it, so the editor can
+   * tell when someone else saved in the meantime (no schema change needed).
+   */
+  private treeVersion(subject: { id: string; updated_at: string }, sections: any[]): string {
+    const rows = [`subject:${subject.id}:${subject.updated_at}`];
+    for (const section of sections) {
+      rows.push(`section:${section.id}:${section.updated_at}`);
+      for (const lecture of section.lectures ?? []) {
+        rows.push(`lecture:${lecture.id}:${lecture.updated_at}`);
+        for (const resource of lecture.resources ?? []) {
+          rows.push(`resource:${resource.id}:${resource.updated_at}`);
+        }
+      }
+    }
+    return createHash('sha1').update(rows.sort().join('|')).digest('hex');
   }
 
   /**
@@ -270,6 +415,19 @@ export class SubjectsService {
    */
   async saveTree(id: string, payload: any) {
     const rpcPayload = this.normalizeTreePayload(id, payload);
+
+    // Optimistic concurrency: refuse to overwrite a tree that changed after the
+    // editor loaded it (two admins, or two tabs). Older clients omit the field.
+    if (typeof payload?.expected_version === 'string') {
+      const current = await this.findOneForEdit(id);
+      if (current.tree_version !== payload.expected_version) {
+        throw new AppException(
+          ErrorCode.RESOURCE_CONFLICT,
+          { resource: 'subject', id },
+          'This subject was changed by someone else after you opened it. Reload to see the latest version before saving.',
+        );
+      }
+    }
 
     const { data, error } = await this.supabaseAdmin.rpc('admin_save_subject_tree', {
       payload: rpcPayload,

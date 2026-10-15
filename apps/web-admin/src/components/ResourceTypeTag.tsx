@@ -1,4 +1,4 @@
-import { MonitorPlay, Video, FileText, ExternalLink } from 'lucide-react';
+import { MonitorPlay, Video, FileText, ExternalLink, Link2 } from 'lucide-react';
 import { ResourceType } from '@medical-portal/shared';
 import type { ReactNode } from 'react';
 
@@ -37,12 +37,27 @@ const FALLBACK: TagConfig = {
   icon: <FileText className="size-3" />,
 };
 
+const COMPACT: Record<string, { icon: ReactNode; className: string }> = {
+  [ResourceType.YOUTUBE]: { icon: <MonitorPlay className="size-4" />, className: 'text-brand' },
+  [ResourceType.GDRIVE_VIDEO]: { icon: <Video className="size-4" />, className: 'text-ink-2' },
+  [ResourceType.GDRIVE_PDF]: { icon: <FileText className="size-4" />, className: 'text-red-600' },
+  [ResourceType.EXTERNAL]: { icon: <Link2 className="size-4" />, className: 'text-ink-2' },
+};
+
 /**
- * Color-coded pill for a resource's content type. Used in the resources table
- * and in the resource form's type selector for visual consistency.
+ * Color-coded pill for a resource's content type. `compact` renders just the
+ * icon (with the type as its accessible name) for dense tables.
  */
-export function ResourceTypeTag({ type }: { type: string }) {
+export function ResourceTypeTag({ type, compact = false }: { type: string; compact?: boolean }) {
   const config = CONFIG[type] ?? FALLBACK;
+  if (compact) {
+    const icon = COMPACT[type] ?? { icon: config.icon, className: 'text-ink-3' };
+    return (
+      <span className={`inline-flex ${icon.className}`} title={config.label} role="img" aria-label={config.label}>
+        {icon.icon}
+      </span>
+    );
+  }
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${config.className}`}

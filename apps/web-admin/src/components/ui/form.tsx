@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import type * as React from 'react';
 import { createContext, forwardRef, useContext, useId } from 'react';
 import {
   Controller,
@@ -89,7 +90,7 @@ FormControl.displayName = 'FormControl';
 const FormDescription = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
   ({ className, ...props }, ref) => {
     const { formDescriptionId } = useFormField();
-    return <p ref={ref} id={formDescriptionId} className={cn('text-xs text-slate-400', className)} {...props} />;
+    return <p ref={ref} id={formDescriptionId} className={cn('text-xs text-ink-3', className)} {...props} />;
   },
 );
 FormDescription.displayName = 'FormDescription';

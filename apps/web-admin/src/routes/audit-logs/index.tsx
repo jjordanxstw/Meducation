@@ -1,28 +1,31 @@
 /**
- * Audit Logs List Page (read-only).
+ * Audit log (Brilliant: 04 Admin — Audit log): every admin change, newest
+ * first, with a "What changed" panel for the selected entry. Filters live in
+ * the URL (?admin=, ?action=, ?area=, ?range=, ?page=, ?id=).
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useTable } from '@refinedev/core';
-import { ScrollText } from 'lucide-react';
-import { getFilterValue, useDebouncedValue } from '../../utils/table-filters';
-import { useTableSorting } from '../../utils/use-table-sorting';
+import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useList } from '@refinedev/core';
+import dayjs from 'dayjs';
+import { CalendarRange, History, X } from 'lucide-react';
+import { actorName, formatUpdated } from '../../utils/relative-time';
+import { NOUNS } from '../../utils/describe-change';
+import { AdminEmptyState } from '../../components/AdminEmptyState';
+import { StatusPill, type StatusTone } from '../../components/StatusPill';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { DatePicker } from '@/components/ui/date-picker';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { AdminEmptyState } from '../../components/AdminEmptyState';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { DataTable, type ColumnDef } from '@/components/ui/data-table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useMediaQuery } from '@/lib/use-media-query';
+import { useSubjectsHealth } from '../subjects/subjects-health';
 
 interface AuditLog {
   id: string;
-  user_id: string | null;
   user_email: string | null;
   action: string;
   table_name: string;
-  record_id: string;
+  record_id: string | null;
   old_data: Record<string, unknown> | null;
   new_data: Record<string, unknown> | null;
   ip_address: string | null;
@@ -30,290 +33,260 @@ interface AuditLog {
   created_at: string;
 }
 
-const ACTION_BADGE: Record<string, 'success' | 'brand' | 'danger'> = {
-  INSERT: 'success',
-  UPDATE: 'brand',
-  DELETE: 'danger',
+const PAGE_SIZE = 25;
+const ACTIONS: Record<string, { label: string; tone: StatusTone }> = {
+  INSERT: { label: 'Create', tone: 'live' },
+  UPDATE: { label: 'Update', tone: 'brand' },
+  DELETE: { label: 'Delete', tone: 'danger' },
+};
+const AREAS = Object.keys(NOUNS);
+const RANGES: Record<string, { label: string; days: number | null }> = {
+  '7': { label: 'Last 7 days', days: 7 },
+  '30': { label: 'Last 30 days', days: 30 },
+  '90': { label: 'Last 90 days', days: 90 },
+  all: { label: 'All time', days: null },
+};
+const HIDDEN_KEYS = new Set(['id', 'created_at', 'updated_at', 'tree_version']);
+
+const capitalise = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+function labelOf(data: Record<string, unknown> | null): string | null {
+  const value = data?.title ?? data?.name ?? data?.code ?? data?.label ?? data?.full_name;
+  return typeof value === 'string' ? value : null;
+}
+
+const show = (value: unknown) => {
+  if (value === null || value === undefined || value === '') return '—';
+  const text = typeof value === 'string' ? value : JSON.stringify(value);
+  return text.length > 80 ? `${text.slice(0, 80)}…` : text;
 };
 
-const TABLE_OPTIONS = ['profiles', 'subjects', 'sections', 'lectures', 'resources', 'calendar_events'];
-
-function previewJson(value: unknown): string {
-  if (!value || typeof value !== 'object') return '-';
-  try {
-    const text = JSON.stringify(value);
-    return text.length > 50 ? `${text.slice(0, 50)}…` : text;
-  } catch {
-    return '-';
-  }
+/** "Chrome on Windows" from a user agent string. */
+function deviceOf(agent: string | null): string | null {
+  if (!agent) return null;
+  const browser = /Edg\//.test(agent) ? 'Edge' : /Firefox\//.test(agent) ? 'Firefox' : /Chrome\//.test(agent) ? 'Chrome' : /Safari\//.test(agent) ? 'Safari' : null;
+  const os = /Windows/.test(agent) ? 'Windows' : /Mac OS X|Macintosh/.test(agent) ? 'macOS' : /Android/.test(agent) ? 'Android' : /iPhone|iPad/.test(agent) ? 'iOS' : /Linux/.test(agent) ? 'Linux' : null;
+  return [browser, os].filter(Boolean).join(' on ') || null;
 }
 
-function formatJson(value: unknown): string {
-  if (value === null || value === undefined) return '—';
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return String(value);
+/** "203.150.x.x" — enough to recognise, without printing the full address. */
+const maskIp = (ip: string | null) => (ip ? ip.replace(/^(\d+\.\d+)\.\d+\.\d+$/, '$1.x.x') : null);
+
+type Line = { sign: '+' | '−' | '·'; text: string };
+
+function changeLines(log: AuditLog): Line[] {
+  const before = log.old_data ?? {};
+  const after = log.new_data ?? {};
+  if (log.action === 'INSERT') return [{ sign: '+', text: `Created ${labelOf(log.new_data) ?? 'record'}` }];
+  if (log.action === 'DELETE') return [{ sign: '−', text: `Deleted ${labelOf(log.old_data) ?? 'record'}` }];
+  if (!log.old_data) {
+    // Tree saves and session revokes log a compact summary only.
+    return Object.entries(after)
+      .filter(([key]) => !HIDDEN_KEYS.has(key))
+      .map(([key, value]) => ({ sign: '·' as const, text: `${key.replace(/_/g, ' ')}: ${show(value)}` }));
   }
+  const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(
+    (key) => !HIDDEN_KEYS.has(key) && JSON.stringify(before[key]) !== JSON.stringify(after[key]),
+  );
+  return keys.flatMap((key) => [
+    { sign: '−' as const, text: `${key.replace(/_/g, ' ')}: ${show(before[key])}` },
+    { sign: '+' as const, text: `${key.replace(/_/g, ' ')}: ${show(after[key])}` },
+  ]);
 }
 
-/** Keys whose value changed between old and new (for UPDATE entries). */
-function changedKeys(oldData: unknown, newData: unknown): string[] {
-  if (!oldData || !newData || typeof oldData !== 'object' || typeof newData !== 'object') return [];
-  const a = oldData as Record<string, unknown>;
-  const b = newData as Record<string, unknown>;
-  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
-  return [...keys].filter((k) => JSON.stringify(a[k]) !== JSON.stringify(b[k])).sort();
+function ChangePanel({ log, title, onClose }: { log: AuditLog; title: string; onClose: () => void }) {
+  const [raw, setRaw] = useState(false);
+  const lines = changeLines(log);
+  const device = deviceOf(log.user_agent);
+  return (
+    <div className="flex flex-col gap-3 p-4">
+      <div className="flex items-start justify-between gap-2">
+        <h2 className="text-[13px] font-semibold text-ink-1">What changed · {title}</h2>
+        <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close panel">
+          <X />
+        </Button>
+      </div>
+      {raw ? (
+        <pre className="max-h-[60vh] overflow-auto rounded-lg bg-slate-50 p-3 text-[11px] leading-relaxed text-ink-2">
+          {JSON.stringify({ old_data: log.old_data, new_data: log.new_data }, null, 2)}
+        </pre>
+      ) : (
+        <ul className="space-y-1 rounded-lg border border-slate-200/70 bg-slate-50/70 p-3 font-mono text-[11px] leading-relaxed">
+          {lines.length === 0 ? <li className="text-ink-3">No field changes recorded.</li> : null}
+          {lines.map((line, i) => (
+            <li key={i} className={line.sign === '+' ? 'text-emerald-700' : line.sign === '−' ? 'text-red-700' : 'text-ink-2'}>
+              {line.sign} {line.text}
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex items-center justify-between gap-2 text-[11px] text-ink-3">
+        <span className="truncate">
+          {[maskIp(log.ip_address) && `IP ${maskIp(log.ip_address)}`, device, dayjs(log.created_at).format('D MMM YYYY HH:mm')].filter(Boolean).join(' · ')}
+        </span>
+        <button type="button" onClick={() => setRaw(!raw)} className="shrink-0 font-semibold text-brand hover:text-brand-hover">
+          {raw ? 'Summary' : 'Raw JSON'}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 const AuditLogsList = () => {
-  const { tableQueryResult, current, setCurrent, pageSize, pageCount, setFilters, filters, sorters, setSorters } =
-    useTable<AuditLog>({ resource: 'audit-logs', syncWithLocation: true });
-  const { sorting, onSortingChange } = useTableSorting(sorters, setSorters);
+  const [params, setParams] = useSearchParams();
+  const admin = params.get('admin') ?? 'all';
+  const action = params.get('action') ?? 'all';
+  const area = params.get('area') ?? 'all';
+  const range = params.get('range') ?? '30';
+  const page = Math.max(1, Number(params.get('page')) || 1);
+  const selectedId = params.get('id');
+  const wide = useMediaQuery('(min-width: 1280px)');
+  const { subjects } = useSubjectsHealth();
 
-  const [selected, setSelected] = useState<AuditLog | null>(null);
-  const [search, setSearch] = useState('');
-  const [action, setAction] = useState<string | undefined>(undefined);
-  const [tableName, setTableName] = useState<string | undefined>(undefined);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const debouncedSearch = useDebouncedValue(search, 350);
-  const hasHydratedFromUrl = useRef(false);
+  const setParam = (key: string, value: string | null) =>
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (value === null || (value === 'all' && key !== 'range')) next.delete(key);
+        else next.set(key, value);
+        if (key !== 'page' && key !== 'id') next.delete('page');
+        return next;
+      },
+      { replace: true },
+    );
 
-  const buildFilters = useCallback(
-    (searchValue: string) => {
-      const next: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
-      if (searchValue.trim()) next.push({ field: 'search', operator: 'contains', value: searchValue.trim() });
-      if (action) next.push({ field: 'action', operator: 'eq', value: action });
-      if (tableName) next.push({ field: 'table_name', operator: 'eq', value: tableName });
-      if (startDate && endDate) {
-        next.push({ field: 'start_date', operator: 'eq', value: new Date(`${startDate}T00:00:00`).toISOString() });
-        next.push({ field: 'end_date', operator: 'eq', value: new Date(`${endDate}T23:59:59`).toISOString() });
-      }
-      return next;
-    },
-    [action, tableName, startDate, endDate],
+  const days = RANGES[range]?.days ?? null;
+  const since = days ? dayjs().subtract(days, 'day').startOf('day').toISOString() : null;
+  const filters = useMemo(() => {
+    const list: Array<{ field: string; operator: 'eq' | 'contains'; value: unknown }> = [];
+    if (admin !== 'all') list.push({ field: 'search', operator: 'contains', value: admin });
+    if (action !== 'all') list.push({ field: 'action', operator: 'eq', value: action });
+    if (area !== 'all') list.push({ field: 'table_name', operator: 'eq', value: area });
+    if (since) list.push({ field: 'start_date', operator: 'eq', value: since });
+    return list;
+  }, [admin, action, area, since]);
+
+  const { data, isLoading } = useList<AuditLog>({
+    resource: 'audit-logs',
+    filters,
+    sorters: [{ field: 'created_at', order: 'desc' }],
+    pagination: { current: page, pageSize: PAGE_SIZE },
+  });
+  const rows = data?.data ?? [];
+  const total = data?.total ?? 0;
+  // Admin filter options: everyone seen recently (admins aren't listed anywhere else).
+  const { data: recent } = useList<AuditLog>({ resource: 'audit-logs', pagination: { current: 1, pageSize: 100 }, sorters: [{ field: 'created_at', order: 'desc' }] });
+  const admins = useMemo(
+    () => [...new Set([...(recent?.data ?? []).map((log) => log.user_email).filter((email): email is string => Boolean(email)), ...(admin !== 'all' ? [admin] : [])])].sort(),
+    [recent, admin],
   );
 
-  useEffect(() => {
-    if (hasHydratedFromUrl.current) return;
-    setSearch(typeof getFilterValue(filters, 'search') === 'string' ? (getFilterValue(filters, 'search') as string) : '');
-    setAction(typeof getFilterValue(filters, 'action') === 'string' ? (getFilterValue(filters, 'action') as string) : undefined);
-    setTableName(typeof getFilterValue(filters, 'table_name') === 'string' ? (getFilterValue(filters, 'table_name') as string) : undefined);
-    hasHydratedFromUrl.current = true;
-  }, [filters]);
-
-  useEffect(() => {
-    if (!hasHydratedFromUrl.current) return;
-    setFilters(buildFilters(debouncedSearch), 'replace');
-  }, [buildFilters, debouncedSearch, setFilters]);
-
-  const resetFilters = () => {
-    setSearch('');
-    setAction(undefined);
-    setTableName(undefined);
-    setStartDate('');
-    setEndDate('');
-    setFilters([], 'replace');
+  const codeById = useMemo(() => new Map(subjects.map((subject) => [subject.id, subject.code])), [subjects]);
+  const titleOf = (log: AuditLog) => {
+    const noun = capitalise(NOUNS[log.table_name] ?? log.table_name.replace(/_/g, ' '));
+    if (log.table_name === 'subjects' && log.action === 'UPDATE' && !labelOf(log.new_data)) {
+      return `${log.record_id ? codeById.get(log.record_id) ?? 'Subject' : 'Subject'} subject tree`;
+    }
+    if (log.table_name === 'refresh_tokens') return 'Signed a student out of all devices';
+    const label = labelOf(log.new_data) ?? labelOf(log.old_data);
+    return label ? `${noun}: ${label}` : noun;
   };
 
-  const columns: ColumnDef<AuditLog, unknown>[] = useMemo(
-    () => [
-      {
-        accessorKey: 'user_email',
-        header: 'Admin',
-        cell: ({ getValue }) => (
-          <span className="text-sm text-slate-600">{(getValue() as string | null) ?? '—'}</span>
-        ),
+  const columns: ColumnDef<AuditLog, unknown>[] = [
+    {
+      id: 'action',
+      header: 'Action',
+      size: 90,
+      cell: ({ row }) => {
+        const meta = ACTIONS[row.original.action] ?? { label: row.original.action, tone: 'neutral' as const };
+        return <StatusPill tone={meta.tone} className="uppercase tracking-wide">{meta.label}</StatusPill>;
       },
-      {
-        accessorKey: 'table_name',
-        header: 'Table',
-        cell: ({ getValue }) => <Badge variant="neutral">{getValue() as string}</Badge>,
-      },
-      {
-        accessorKey: 'action',
-        header: 'Action',
-        cell: ({ getValue }) => {
-          const value = getValue() as string;
-          return <Badge variant={ACTION_BADGE[value] ?? 'neutral'}>{value}</Badge>;
-        },
-      },
-      { accessorKey: 'record_id', header: 'Record ID' },
-      {
-        accessorKey: 'old_data',
-        header: 'Old Values',
-        enableSorting: false,
-        cell: ({ getValue }) => <span className="font-mono text-xs text-slate-500">{previewJson(getValue())}</span>,
-      },
-      {
-        accessorKey: 'new_data',
-        header: 'New Values',
-        enableSorting: false,
-        cell: ({ getValue }) => <span className="font-mono text-xs text-slate-500">{previewJson(getValue())}</span>,
-      },
-      {
-        accessorKey: 'created_at',
-        header: 'Created At',
-        cell: ({ getValue }) =>
-          new Date(getValue() as string).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }),
-      },
-      {
-        id: 'actions',
-        header: '',
-        enableSorting: false,
-        cell: ({ row }) => (
-          <Button size="sm" variant="ghost" onClick={() => setSelected(row.original)}>
-            View
-          </Button>
-        ),
-      },
-    ],
-    [],
+    },
+    {
+      id: 'what',
+      header: 'Change',
+      cell: ({ row }) => (
+        <div className="min-w-0">
+          <p className="truncate font-medium text-ink-1">{titleOf(row.original)}</p>
+          <p className="truncate text-[11px] text-ink-3">
+            {row.original.table_name} · {actorName(row.original.user_email)}
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: 'when',
+      header: 'When',
+      size: 110,
+      cell: ({ row }) => <span className="whitespace-nowrap text-ink-3" title={dayjs(row.original.created_at).format('D MMM YYYY HH:mm:ss')}>{formatUpdated(row.original.created_at)}</span>,
+    },
+  ];
+
+  const selected = rows.find((log) => log.id === selectedId) ?? null;
+  const panel = selected ? <ChangePanel key={selected.id} log={selected} title={titleOf(selected)} onClose={() => setParam('id', null)} /> : null;
+
+  const filterSelect = (key: string, value: string, label: string, options: Array<{ value: string; label: string }>, allLabel: string) => (
+    <Select value={value} onValueChange={(next) => setParam(key, next)}>
+      <SelectTrigger className="h-8 w-auto gap-2" aria-label={label}>
+        <SelectValue>
+          {label}: {value === 'all' ? 'All' : options.find((option) => option.value === value)?.label ?? value}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">{allLabel}</SelectItem>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 
   return (
     <div>
-      <PageHeader title="Audit Logs" description="Immutable record of administrative changes." />
-
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200/70 bg-white p-4 shadow-subtle">
-        <Input
-          className="w-full sm:w-56"
-          placeholder="Search logs…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <div className="w-full sm:w-40">
-          <Select value={action ?? '__all'} onValueChange={(v) => setAction(v === '__all' ? undefined : v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Action" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all">All actions</SelectItem>
-              <SelectItem value="INSERT">INSERT</SelectItem>
-              <SelectItem value="UPDATE">UPDATE</SelectItem>
-              <SelectItem value="DELETE">DELETE</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="w-full sm:w-44">
-          <Select value={tableName ?? '__all'} onValueChange={(v) => setTableName(v === '__all' ? undefined : v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Table" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all">All tables</SelectItem>
-              {TABLE_OPTIONS.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {t}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <DatePicker
-          className="w-full sm:w-40"
-          value={startDate}
-          onChange={setStartDate}
-          placeholder="Start date"
-        />
-        <DatePicker
-          className="w-full sm:w-40"
-          value={endDate}
-          onChange={setEndDate}
-          placeholder="End date"
-        />
-        <Button variant="ghost" size="sm" onClick={resetFilters}>
-          Clear
-        </Button>
+      <PageHeader title="Audit log" description="Every admin change, newest first · kept permanently" />
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        {filterSelect('admin', admin, 'Admin', admins.map((email) => ({ value: email, label: actorName(email) })), 'All admins')}
+        {filterSelect('action', action, 'Action', Object.entries(ACTIONS).map(([value, meta]) => ({ value, label: meta.label })), 'All actions')}
+        {filterSelect('area', area, 'Area', AREAS.map((value) => ({ value, label: capitalise(NOUNS[value]) })), 'All areas')}
+        <Select value={range} onValueChange={(next) => setParam('range', next)}>
+          <SelectTrigger className="h-8 w-auto gap-2" aria-label="Date range">
+            <CalendarRange className="size-3.5 text-ink-3" />
+            <SelectValue>{RANGES[range]?.label ?? 'Last 30 days'}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(RANGES).map(([value, meta]) => (
+              <SelectItem key={value} value={value}>
+                {meta.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-
-      <DataTable
-        columns={columns}
-        data={tableQueryResult?.data?.data ?? []}
-        loading={tableQueryResult?.isLoading}
-        getRowId={(row) => row.id}
-        pageIndex={current - 1}
-        pageSize={pageSize}
-        pageCount={pageCount}
-        total={tableQueryResult?.data?.total}
-        onPageChange={(idx) => setCurrent(idx + 1)}
-        sorting={sorting}
-        onSortingChange={onSortingChange}
-        emptyState={<AdminEmptyState icon={<ScrollText />} title="No audit logs found" subtitle="Adjust your filters." />}
-      />
-
-      <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Audit entry</DialogTitle>
-          </DialogHeader>
-          {selected && (
-            <div className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto">
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <div>
-                  <dt className="text-xs text-slate-400">Admin</dt>
-                  <dd className="text-slate-700">{selected.user_email ?? '—'}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-slate-400">Action</dt>
-                  <dd>
-                    <Badge variant={ACTION_BADGE[selected.action] ?? 'neutral'}>{selected.action}</Badge>
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-slate-400">Table</dt>
-                  <dd className="text-slate-700">{selected.table_name}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-slate-400">Record ID</dt>
-                  <dd className="break-all font-mono text-xs text-slate-700">{selected.record_id}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-slate-400">IP address</dt>
-                  <dd className="text-slate-700">{selected.ip_address ?? '—'}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-slate-400">When</dt>
-                  <dd className="text-slate-700">{new Date(selected.created_at).toLocaleString()}</dd>
-                </div>
-              </dl>
-
-              {selected.action === 'UPDATE' && changedKeys(selected.old_data, selected.new_data).length > 0 && (
-                <div>
-                  <p className="mb-1 text-xs font-medium text-slate-400">Changed fields</p>
-                  <div className="flex flex-wrap gap-1">
-                    {changedKeys(selected.old_data, selected.new_data).map((k) => (
-                      <Badge key={k} variant="brand">
-                        {k}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                {selected.old_data && (
-                  <div>
-                    <p className="mb-1 text-xs font-medium text-slate-400">Old values</p>
-                    <pre className="max-h-64 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-xs text-slate-600">
-                      {formatJson(selected.old_data)}
-                    </pre>
-                  </div>
-                )}
-                {selected.new_data && (
-                  <div>
-                    <p className="mb-1 text-xs font-medium text-slate-400">New values</p>
-                    <pre className="max-h-64 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-xs text-slate-600">
-                      {formatJson(selected.new_data)}
-                    </pre>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <DataTable
+          columns={columns}
+          data={rows}
+          loading={isLoading}
+          getRowId={(row) => row.id}
+          pageIndex={page - 1}
+          pageSize={PAGE_SIZE}
+          pageCount={Math.max(1, Math.ceil(total / PAGE_SIZE))}
+          total={total}
+          onPageChange={(index) => setParam('page', index === 0 ? null : String(index + 1))}
+          onRowClick={(row) => setParam('id', row.id)}
+          selectedRowId={selectedId}
+          emptyState={<AdminEmptyState icon={<History />} title="No changes in this range" subtitle="Try a longer date range or another filter." />}
+        />
+        {panel && wide ? <aside className="sticky top-6 rounded-xl border border-slate-200/70 bg-white shadow-subtle">{panel}</aside> : null}
+      </div>
+      <Sheet open={Boolean(panel) && !wide} onOpenChange={(open) => !open && setParam('id', null)}>
+        <SheetContent side="right" className="p-0">
+          <SheetTitle>What changed</SheetTitle>
+          {panel}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

@@ -6,7 +6,9 @@ import {
   NestInterceptor,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database, Json } from '@medical-portal/shared';
+import { tryGetSupabaseAdmin } from '../supabase/supabase-admin';
 import { createHash } from 'crypto';
 import { Observable, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -27,15 +29,10 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
   private readonly logger = new Logger(IdempotencyInterceptor.name);
-  private readonly client: SupabaseClient | null;
+  private readonly client: SupabaseClient<Database> | null;
 
   constructor(config: ConfigService) {
-    const url = config.get<string>('SUPABASE_URL');
-    const key = config.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-    this.client =
-      url && key
-        ? createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-        : null;
+    this.client = tryGetSupabaseAdmin(config);
   }
 
   async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<unknown>> {
@@ -90,7 +87,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
               key,
               request_hash: requestHash,
               response_status: responseStatus,
-              response_body: body ?? null,
+              response_body: (body ?? null) as Json,
             },
             { onConflict: 'key' },
           )

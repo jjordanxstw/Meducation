@@ -79,6 +79,17 @@ export interface Subject extends BaseEntity, OrderableEntity {
   thumbnail_url: string | null;
 }
 
+/** Student subject list row: the subject plus the counts its card shows. */
+export interface SubjectWithStats extends Subject {
+  sections_count: number;
+  lectures_count: number;
+  /** Active slides, PDFs and links (non-video resources). */
+  files_count: number;
+  /** Lectures created in the last 7 days. */
+  new_lectures_count: number;
+  latest_lecture_at: string | null;
+}
+
 export interface CreateSubjectDto {
   name: string;
   code: string;
@@ -712,3 +723,4 @@ export interface AuditLogFilters {
   start_date?: string;
   end_date?: string;
 }
+export type { Database, Json, Tables, TablesInsert, TablesUpdate, Enums } from './database.generated';

@@ -1,5 +1,6 @@
-import { TeamMemberForm } from './team-member-form';
+import { Navigate } from 'react-router-dom';
 
-const TeamMembersCreate = () => <TeamMemberForm />;
+/** Old URL — members are added in the side panel. */
+const TeamMembersCreate = () => <Navigate to="/team-members?new=1" replace />;
 
 export default TeamMembersCreate;

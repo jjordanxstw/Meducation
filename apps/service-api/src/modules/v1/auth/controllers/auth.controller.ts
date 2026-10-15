@@ -366,7 +366,7 @@ export class AuthController {
   @Get('sessions')
   @UseGuards(GoogleAuthGuard)
   @SkipEnvelope()
-  async getSessions(@CurrentUser() user: UserWithoutPassword): Promise<{
+  async getSessions(@CurrentUser() user: UserWithoutPassword, @Request() req: Request): Promise<{
     success: true;
     data: {
       sessions: Array<{
@@ -376,10 +376,14 @@ export class AuthController {
         ipAddress: string | null;
         device: string;
         browser: string;
+        current: boolean;
       }>;
     };
   }> {
     const sessions = await this.refreshTokenService.getActiveSessions(user.id);
+    // Mark the session behind this browser's refresh cookie as "This device".
+    const refreshToken = (req as StudentRequest).cookies?.student_refresh_token;
+    const currentTokenId = refreshToken ? (await this.refreshTokenService.verifyRefreshToken(refreshToken))?.tokenId : undefined;
 
     return {
       success: true,
@@ -391,6 +395,7 @@ export class AuthController {
           ipAddress: s.ip_address,
           device: s.device_info?.device || 'unknown',
           browser: s.device_info?.browser || 'unknown',
+          current: s.id === currentTokenId,
         })),
       },
     };
@@ -406,11 +411,13 @@ export class AuthController {
   @SkipEnvelope()
   async revokeSession(
     @Param('tokenId') tokenId: string,
+    @CurrentUser() user: UserWithoutPassword,
   ): Promise<{
     success: true;
     data: { message: string };
   }> {
-    const success = await this.refreshTokenService.revokeRefreshToken(tokenId);
+    // Ownership is enforced in the query: another student's token ID is a 404.
+    const success = await this.refreshTokenService.revokeOwnSession(tokenId, user.id);
     if (!success) {
       throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, { resource: 'session' }, 'Session not found or already revoked');
     }

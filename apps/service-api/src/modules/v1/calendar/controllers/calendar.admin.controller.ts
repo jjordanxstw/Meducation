@@ -20,6 +20,8 @@ import { CalendarService } from '../services/calendar.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { AdminJwtAuthGuard } from '../../admin-auth/guards';
 import { SkipEnvelope, ResponseCacheService, IdempotencyInterceptor } from '../../../../common';
+import { createCalendarEventSchema, updateCalendarEventSchema } from '@medical-portal/shared';
+import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe';
 
 const INVALIDATE_CALENDAR_PREFIXES = ['v1:calendar:', 'v1:admin:statistics:'];
 
@@ -98,7 +100,7 @@ export class CalendarAdminController {
   @Post()
   @UseInterceptors(IdempotencyInterceptor)
   @SkipEnvelope()
-  async create(@Body() createDto: any, @Req() req: any) {
+  async create(@Body(new ZodValidationPipe(createCalendarEventSchema)) createDto: any, @Req() req: any) {
     const data = await this.calendarService.create(createDto, req.admin?.id);
     await this.audit.logAdminCreate('calendar_events', data?.id, data, req.admin, req);
     this.invalidateCalendarCache();
@@ -107,7 +109,7 @@ export class CalendarAdminController {
 
   @Put(':id')
   @SkipEnvelope()
-  async update(@Param('id') id: string, @Body() updateDto: any, @Req() req: any) {
+  async update(@Param('id') id: string, @Body(new ZodValidationPipe(updateCalendarEventSchema)) updateDto: any, @Req() req: any) {
     const data = await this.calendarService.update(id, updateDto);
     await this.audit.logAdminUpdate('calendar_events', id, data.oldData, data.newData, req.admin, req);
     this.invalidateCalendarCache();

@@ -20,6 +20,11 @@ export const queryKeys = {
   },
   calendar: {
     events: (month: string) => ['calendar', 'events', month] as const,
+    upcoming: (limit: number) => ['calendar', 'upcoming', limit] as const,
+    recent: (limit: number) => ['calendar', 'recent', limit] as const,
+  },
+  lectures: {
+    all: () => ['lectures', 'all'] as const,
   },
   hotNews: {
     all: () => ['hotNews'] as const,

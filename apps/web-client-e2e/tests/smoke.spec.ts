@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { signInStudent } from './support/env';
 
 /**
- * Minimal e2e smoke suite (8.3). Designed to run against APP_ENV=test with a
- * test Supabase project. OAuth is mocked via network interception in CI.
+ * Minimal e2e smoke suite (8.3), run against the local Supabase stack with mock
+ * data. OAuth is mocked via network interception; signed-in tests use locally
+ * minted cookies (see support/env.ts).
  */
 
 test('login page shows the Google sign-in button and redirects to Google', async ({ page }) => {
@@ -23,25 +25,13 @@ test('login page shows the Google sign-in button and redirects to Google', async
 });
 
 test('unauthenticated access to a dashboard route redirects to login', async ({ page }) => {
-  await page.goto('/subjects');
+  await page.goto('/subjects?year=all');
   await expect(page).toHaveURL(/\/login/);
 });
 
 test('authenticated user can see the subjects list', async ({ page, context }) => {
-  // Seed an authenticated session cookie issued by the test backend. The token
-  // is provided by the CI harness for the test Supabase project.
-  const token = process.env.E2E_STUDENT_ACCESS_TOKEN;
-  test.skip(!token, 'E2E_STUDENT_ACCESS_TOKEN not provided');
-
-  await context.addCookies([
-    {
-      name: 'student_access_token',
-      value: token as string,
-      url: process.env.E2E_BASE_URL ?? 'http://localhost:3001',
-      httpOnly: true,
-    },
-  ]);
-
-  await page.goto('/subjects');
-  await expect(page.getByRole('main')).toBeVisible();
+  await signInStudent(context);
+  await page.goto('/subjects?year=all');
+  await expect(page.getByRole('heading', { level: 1, name: 'Subjects' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Cardiovascular System/ })).toBeVisible();
 });
