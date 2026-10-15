@@ -159,6 +159,11 @@ jobs:
           }
 
       - name: Build apps
+        # The job runs with NODE_ENV=development (local cookies for the API);
+        # a Next.js production build fails under it while prerendering
+        # /_global-error, so builds get production explicitly.
+        env:
+          NODE_ENV: production
         run: |
           pnpm --filter @medical-portal/shared build
           pnpm --filter service-api build
