@@ -119,7 +119,7 @@ export function PlaylistImportDialog({
         <div className="flex flex-col gap-3 px-6 py-5">
           <div className="grid gap-3 sm:grid-cols-[3fr_2fr]">
             <label className="space-y-1.5">
-              <span className="block text-xs font-medium text-slate-700">Playlist link</span>
+              <span className="block text-xs font-medium text-slate-700">Playlist or video links</span>
               <Input
                 autoFocus
                 value={input}
@@ -134,7 +134,7 @@ export function PlaylistImportDialog({
                     void resolve(input);
                   }
                 }}
-                placeholder="youtube.com/playlist?list=… or video links"
+                placeholder="youtube.com/playlist?list=… or youtu.be/… youtu.be/…"
                 wrapperClassName={cn('h-9', resolvedFor && resolvedFor === input.trim() && 'border-brand')}
                 endContent={
                   loading ? (
@@ -212,9 +212,9 @@ export function PlaylistImportDialog({
           <p className="flex items-start gap-1.5 text-[11px] text-ink-3">
             <Info className="mt-px size-3.5 shrink-0" aria-hidden />
             <span>
-              Uses the free YouTube Data API (10,000 units/day).{' '}
-              {videos ? `This import costs about ${quotaUnits} ${quotaUnits === 1 ? 'unit' : 'units'}. ` : ''}
-              Lecturer and taught date can be filled in afterwards.
+              A whole playlist needs the YouTube Data API key on the server (free, 10,000 units/day)
+              {videos ? `; this import costs about ${quotaUnits} ${quotaUnits === 1 ? 'unit' : 'units'}` : ''}. Separate video
+              links always work. Lecturer and taught date can be filled in afterwards.
             </span>
           </p>
         </div>
