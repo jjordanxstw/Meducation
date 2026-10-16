@@ -42,6 +42,12 @@ const ERROR_CODE_MESSAGES: Record<string, string> = {
   SYSTEM_EXTERNAL_SERVICE_ERROR: 'External service error',
 };
 
+/**
+ * Catch-all codes whose fixed text says nothing useful ("Invalid input"); the
+ * API's own message for these explains what went wrong, so it wins.
+ */
+const GENERIC_CODES = new Set(['VALIDATION_FAILED', 'VALIDATION_INVALID_INPUT', 'RESOURCE_CONFLICT', 'RESOURCE_OPERATION_FAILED']);
+
 const FALLBACK_MESSAGE_BY_STATUS: Record<number, string> = {
   400: 'Validation failed',
   401: 'Invalid session, please log in again',
@@ -72,11 +78,14 @@ export function resolveApiErrorMessage(error: unknown, fallback = 'Something wen
   const detail = payload?.error;
 
   const errorCode = detail?.errorCode;
+  const payloadMessage = normalizeMessage(detail?.message) ?? normalizeMessage(payload?.message);
+  if (errorCode && GENERIC_CODES.has(errorCode) && payloadMessage && payloadMessage !== ERROR_CODE_MESSAGES[errorCode]) {
+    return payloadMessage;
+  }
   if (errorCode && ERROR_CODE_MESSAGES[errorCode]) {
     return ERROR_CODE_MESSAGES[errorCode];
   }
 
-  const payloadMessage = normalizeMessage(detail?.message) ?? normalizeMessage(payload?.message);
   if (payloadMessage) {
     return payloadMessage;
   }
